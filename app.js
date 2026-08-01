@@ -570,7 +570,7 @@
     closeAppMenu();
     renderAll();
     if (changed) window.scrollTo({ top:0, behavior:'auto' });
-    if (announce && changed) showToast(appView === APP_VIEW_VAULT ? 'Season Vault' : 'Current Tracker');
+    if (announce && changed) showToast(appView === APP_VIEW_VAULT ? 'Sprite Vault' : 'Current Tracker');
   }
 
   function applySeasonViewControls() {
@@ -3415,6 +3415,6 @@
   const activeHash = isUnownedPage() ? `#${missingView}` : `#${activeRarity.toLowerCase()}`;
   if (location.hash !== activeHash) history.replaceState({ rarity:activeRarity },'',activeHash);
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./service-worker.js?v=96',{ updateViaCache:'none' }).then((registration) => registration.update()).catch(() => {});
+    navigator.serviceWorker.register('./service-worker.js?v=97',{ updateViaCache:'none' }).then((registration) => registration.update()).catch(() => {});
   }
 })();
