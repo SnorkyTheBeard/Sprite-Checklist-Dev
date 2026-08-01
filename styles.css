@@ -1521,72 +1521,40 @@ body.unowned-page .sprite-editor-toggle {
 
 /* Season Vault keeps retired Sprites and their progress available. */
 .season-vault-bar {
-  width:min(100%,620px);
-  display:block;
-  margin:14px auto 2px;
-  padding:14px;
-  color:#fff;
-  border:1px solid rgba(139,216,255,.32);
-  border-radius:22px;
-  background:
-    radial-gradient(circle at 15% 0%,rgba(84,191,255,.17),transparent 36%),
-    linear-gradient(145deg,rgba(13,21,42,.91),rgba(5,8,20,.83));
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.13),0 10px 30px rgba(0,0,0,.28),0 0 24px rgba(71,179,255,.08);
-  -webkit-backdrop-filter:blur(16px);
-  backdrop-filter:blur(16px);
-}
-
-.season-vault-heading {
-  display:flex;
+  width:min(100%,560px);
+  display:grid;
+  grid-template-columns:auto minmax(0,1fr) auto;
   align-items:center;
-  justify-content:space-between;
-  gap:12px;
-}
-
-.season-vault-title-wrap {
-  min-width:0;
-}
-
-.season-vault-kicker {
-  display:block;
-  margin-bottom:2px;
-  color:#85dcff;
-  font-size:10px;
-  font-weight:900;
-  letter-spacing:.13em;
-  line-height:1;
-  text-transform:uppercase;
-}
-
-#seasonVaultTitle {
-  display:block;
-  overflow:hidden;
+  gap:9px;
+  margin:12px auto 0;
+  padding:8px 10px;
   color:#fff;
-  font-family:var(--font-heading);
-  font-size:23px;
-  line-height:1;
-  text-overflow:ellipsis;
-  text-shadow:0 3px 0 rgba(0,0,0,.45),0 0 16px rgba(95,202,255,.2);
-  white-space:nowrap;
+  border:1px solid rgba(255,255,255,.23);
+  border-radius:16px;
+  background:rgba(8,10,20,.7);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 6px 18px rgba(0,0,0,.22);
+  -webkit-backdrop-filter:blur(12px);
+  backdrop-filter:blur(12px);
 }
 
-.season-vault-picker {
-  flex:0 1 260px;
-  min-width:0;
+.season-vault-bar label {
+  font-size:12px;
+  font-weight:900;
+  white-space:nowrap;
 }
 
 .season-vault-bar select {
   width:100%;
   min-width:0;
-  min-height:40px;
-  padding:8px 31px 8px 11px;
+  min-height:38px;
+  padding:7px 30px 7px 10px;
   color:#fff;
-  border:1px solid rgba(255,255,255,.25);
-  border-radius:12px;
+  border:1px solid rgba(255,255,255,.2);
+  border-radius:11px;
   outline:none;
-  background:#182342;
+  background:#252552;
   font-family:var(--font-body) !important;
-  font-size:13px;
+  font-size:14px;
   font-weight:800;
 }
 
@@ -1595,103 +1563,17 @@ body.unowned-page .sprite-editor-toggle {
   box-shadow:0 0 0 3px rgba(89,200,255,.22);
 }
 
-.season-vault-status {
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:10px;
-  margin:10px 0 12px;
-  color:#d8e7f7;
-  font-size:11px;
-  font-weight:800;
-}
-
-.season-vault-mode {
-  display:inline-flex;
-  flex:0 0 auto;
-  align-items:center;
-  padding:4px 8px;
-  color:#06101d;
-  border-radius:999px;
-  background:#84dcff;
-  font-size:9px;
-  font-weight:900;
-  letter-spacing:.05em;
-  line-height:1;
-  text-transform:uppercase;
-}
-
-#seasonVaultCount {
-  min-width:0;
-  overflow:hidden;
-  text-align:right;
-  text-overflow:ellipsis;
-  white-space:nowrap;
-}
-
-.season-vault-metrics {
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:12px;
-}
-
-.season-vault-metric > span:first-child {
-  display:flex;
-  align-items:baseline;
-  gap:5px;
-  margin-bottom:5px;
-  color:#dce9f7;
-  font-size:11px;
-  font-weight:700;
-}
-
-.season-vault-metric strong {
+.season-vault-bar span {
   color:#fff;
-  font-size:14px;
+  font-size:11px;
   font-weight:900;
-}
-
-.season-vault-track {
-  display:block;
-  height:6px;
-  overflow:hidden;
-  border:1px solid rgba(255,255,255,.12);
-  border-radius:999px;
-  background:rgba(255,255,255,.08);
-}
-
-.season-vault-track i {
-  display:block;
-  width:0;
-  height:100%;
-  border-radius:inherit;
-  background:linear-gradient(90deg,#51bfff,#a6ecff);
-  box-shadow:0 0 10px rgba(81,191,255,.45);
-  transition:width .24s ease;
+  white-space:nowrap;
 }
 
 body.previous-season-view .season-vault-bar {
   border-color:rgba(255,212,95,.55);
-  background:
-    radial-gradient(circle at 15% 0%,rgba(255,212,95,.16),transparent 36%),
-    linear-gradient(145deg,rgba(30,25,18,.92),rgba(8,9,16,.84));
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 0 24px rgba(255,212,95,.12);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 0 22px rgba(255,212,95,.12);
 }
-
-body.previous-season-view .season-vault-kicker { color:#ffda70; }
-body.previous-season-view .season-vault-mode { color:#1d1404; background:#ffda70; }
-body.previous-season-view .season-vault-track i { background:linear-gradient(90deg,#e6a93c,#ffe690); box-shadow:0 0 10px rgba(255,212,95,.4); }
-
-body.all-seasons-view .season-vault-bar {
-  border-color:rgba(195,142,255,.46);
-  background:
-    radial-gradient(circle at 15% 0%,rgba(185,118,255,.17),transparent 36%),
-    linear-gradient(145deg,rgba(29,18,47,.91),rgba(7,8,19,.84));
-}
-
-body.all-seasons-view .season-vault-kicker { color:#d8adff; }
-body.all-seasons-view .season-vault-mode { color:#160822; background:#d8adff; }
-body.all-seasons-view .season-vault-track i { background:linear-gradient(90deg,#a75cff,#e3c2ff); box-shadow:0 0 10px rgba(190,119,255,.42); }
 
 .collection-title-wrap {
   min-width:0;
@@ -1756,37 +1638,15 @@ body.all-seasons-view .season-vault-track i { background:linear-gradient(90deg,#
 
 @media (max-width:480px) {
   .season-vault-bar {
-    padding:12px;
+    grid-template-columns:minmax(0,1fr) auto;
   }
 
-  .season-vault-heading {
-    align-items:stretch;
-    flex-direction:column;
-    gap:9px;
+  .season-vault-bar label {
+    grid-column:1 / -1;
   }
 
-  .season-vault-picker {
-    flex-basis:auto;
-    width:100%;
-  }
-
-  #seasonVaultTitle {
-    font-size:21px;
-  }
-
-  .season-vault-status {
-    align-items:flex-start;
-    flex-direction:column;
-    gap:6px;
-  }
-
-  #seasonVaultCount {
-    width:100%;
-    text-align:left;
-  }
-
-  .season-vault-metrics {
-    gap:9px;
+  .season-vault-bar span {
+    font-size:10px;
   }
 
   .showcase-filters {
@@ -2220,207 +2080,4 @@ body[data-page="unowned"] {
   .collection[data-rarity="Epic"] .card { background:rgba(82,39,126,.91) !important; }
   .collection[data-rarity="Legendary"] .card { background:rgba(132,55,17,.91) !important; }
   .collection[data-rarity="Mythic"] .card { background:rgba(119,84,12,.91) !important; }
-}
-
-/* v93: full missing-status pages with distinct art, tabs, title glow, and undo history. */
-body[data-missing-view="unowned"] {
-  --rarity-haze:rgba(85,211,255,.27);
-  --rarity-sheen:rgba(137,168,207,.16);
-  --missing-accent:#8be5ff;
-  --missing-accent-soft:rgba(105,210,245,.34);
-}
-
-body[data-missing-view="unmastered"] {
-  --rarity-haze:rgba(190,104,255,.24);
-  --rarity-sheen:rgba(255,169,63,.18);
-  --missing-accent:#ffc46d;
-  --missing-accent-soft:rgba(207,121,255,.32);
-}
-
-body.unowned-page #activePageTitle {
-  font-size:clamp(30px,8vw,48px) !important;
-}
-
-body[data-missing-view="unowned"] #activePageTitle {
-  color:#e3f8ff !important;
-  text-shadow:
-    0 2px 0 rgba(2,8,18,.96),
-    0 0 10px rgba(112,221,255,.78),
-    0 0 24px rgba(66,165,231,.48),
-    0 7px 18px rgba(0,0,0,.6);
-}
-
-body[data-missing-view="unmastered"] #activePageTitle {
-  color:#fff0d2 !important;
-  text-shadow:
-    0 2px 0 rgba(10,3,17,.96),
-    0 0 10px rgba(255,185,79,.72),
-    0 0 24px rgba(179,87,237,.48),
-    0 7px 18px rgba(0,0,0,.62);
-}
-
-#tab-unowned,
-#tab-unmastered {
-  min-width:112px;
-  min-height:44px;
-  border:1px solid rgba(255,255,255,.52);
-  border-radius:14px;
-  color:#fff;
-  background-image:
-    linear-gradient(180deg,rgba(255,255,255,.24),transparent 48%),
-    linear-gradient(135deg,var(--missing-tab-a),var(--missing-tab-b));
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.3),
-    inset 0 -2px 5px rgba(0,0,0,.22),
-    0 5px 14px rgba(0,0,0,.26);
-  text-shadow:0 1px 3px rgba(0,0,0,.78);
-}
-
-#tab-unowned {
-  --missing-tab-a:#62d7f5;
-  --missing-tab-b:#40516e;
-  --missing-tab-glow:rgba(92,209,245,.42);
-}
-
-#tab-unmastered {
-  --missing-tab-a:#ffbd61;
-  --missing-tab-b:#713aa6;
-  --missing-tab-glow:rgba(213,116,255,.4);
-}
-
-#tab-unowned[aria-selected="true"],
-#tab-unmastered[aria-selected="true"] {
-  color:#fff;
-  border-color:#fff;
-  background-image:
-    linear-gradient(180deg,rgba(255,255,255,.34),transparent 48%),
-    linear-gradient(135deg,var(--missing-tab-a),var(--missing-tab-b));
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.42),
-    0 0 0 2px rgba(255,255,255,.3),
-    0 0 18px var(--missing-tab-glow),
-    0 6px 16px rgba(0,0,0,.3);
-}
-
-.missing-recent-changes {
-  margin:8px 2px 18px;
-  padding:11px;
-  border:1px solid var(--missing-accent-soft);
-  border-radius:16px;
-  background:rgba(6,9,18,.58);
-  -webkit-backdrop-filter:blur(16px) saturate(118%);
-  backdrop-filter:blur(16px) saturate(118%);
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 9px 22px rgba(0,0,0,.25);
-}
-
-.missing-recent-changes[hidden] {
-  display:none !important;
-}
-
-.missing-recent-heading {
-  display:flex;
-  align-items:baseline;
-  justify-content:space-between;
-  gap:10px;
-  margin:0 2px 8px;
-}
-
-.missing-recent-heading h3 {
-  margin:0;
-  color:#fff;
-  font-family:var(--font-heading) !important;
-  font-size:17px;
-  letter-spacing:.025em;
-  text-shadow:0 0 10px var(--missing-accent-soft),0 2px 4px #000;
-}
-
-.missing-recent-heading span {
-  color:#dce7f5;
-  font-size:10px;
-  text-align:right;
-}
-
-.missing-recent-list {
-  display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(min(230px,100%),1fr));
-  gap:7px;
-}
-
-.missing-recent-item {
-  display:grid;
-  grid-template-columns:44px minmax(0,1fr) auto;
-  align-items:center;
-  gap:9px;
-  min-width:0;
-  padding:7px;
-  border:1px solid rgba(255,255,255,.13);
-  border-radius:12px;
-  background:rgba(4,7,14,.58);
-}
-
-.missing-recent-thumb {
-  display:grid;
-  width:44px;
-  height:44px;
-  overflow:hidden;
-  place-items:center;
-  color:#fff;
-  border:1px solid var(--missing-accent-soft);
-  border-radius:10px;
-  background:rgba(255,255,255,.08);
-  font-weight:900;
-}
-
-.missing-recent-thumb img {
-  width:100%;
-  height:100%;
-  object-fit:cover;
-}
-
-.missing-recent-copy {
-  min-width:0;
-}
-
-.missing-recent-copy strong,
-.missing-recent-copy span {
-  display:block;
-  overflow:hidden;
-  text-overflow:ellipsis;
-  white-space:nowrap;
-}
-
-.missing-recent-copy strong {
-  color:#fff;
-  font-size:12px;
-}
-
-.missing-recent-copy span {
-  margin-top:2px;
-  color:#c9d6e8;
-  font-size:10px;
-}
-
-.missing-recent-undo {
-  min-width:58px;
-  min-height:34px;
-  padding:6px 10px;
-  color:#07111b;
-  border:1px solid rgba(255,255,255,.7);
-  border-radius:999px;
-  background:var(--missing-accent);
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.48),0 3px 9px rgba(0,0,0,.28);
-  font-size:11px;
-  font-weight:900;
-}
-
-@media (max-width:420px) {
-  .missing-recent-heading {
-    align-items:flex-start;
-    flex-direction:column;
-    gap:1px;
-  }
-
-  .missing-recent-heading span {
-    text-align:left;
-  }
 }

@@ -36,8 +36,6 @@
   <link rel="preload" as="image" type="image/webp" href="assets/variant-backgrounds/variant-well-gummy.webp">
   <link rel="preload" as="image" type="image/webp" href="assets/variant-backgrounds/variant-well-galaxy.webp">
   <link rel="preload" as="image" type="image/webp" href="assets/variant-backgrounds/variant-well-john-wick.webp?v=92">
-  <link rel="preload" as="image" type="image/webp" href="assets/page-backgrounds/page-bg-unowned.webp?v=93">
-  <link rel="preload" as="image" type="image/webp" href="assets/page-backgrounds/page-bg-unmastered.webp?v=93">
   <script src="published-design.js?v=67" fetchpriority="high"></script>
   <script src="art-config.js?v=67"></script>
   <script>
@@ -132,15 +130,6 @@
           if (pageConfig.color) pageColor = pageConfig.color;
         }
       }
-      if (hashName === 'unowned') {
-        pageImage = 'assets/page-backgrounds/page-bg-unowned.webp?v=93';
-        pageColor = '#06101f';
-        pageFit = 'cover';
-      } else if (hashName === 'unmastered') {
-        pageImage = 'assets/page-backgrounds/page-bg-unmastered.webp?v=93';
-        pageColor = '#100a18';
-        pageFit = 'cover';
-      }
       set('--theme-page-bg',pageColor);
       setImage('page',pageImage,pageFit);
       if (pageImage) {
@@ -152,7 +141,7 @@
       }
     })();
   </script>
-<link rel="stylesheet" href="styles.css?v=94">
+<link rel="stylesheet" href="styles.css?v=92">
 </head>
 <body>
   <a class="skip-link" href="#mainContent">Skip to checklist</a>
@@ -202,34 +191,13 @@
       </button>
     </section>
 
-    <section class="season-vault-bar" aria-label="Season Vault" aria-live="polite" hidden>
-      <div class="season-vault-heading">
-        <div class="season-vault-title-wrap">
-          <span class="season-vault-kicker">Season Vault</span>
-          <strong id="seasonVaultTitle">Chapter 7 Season 3</strong>
-        </div>
-        <label class="season-vault-picker" for="seasonViewSelect">
-          <span class="visually-hidden">Choose a season</span>
-          <select id="seasonViewSelect">
-            <option value="chapter-7-season-3">Chapter 7 Season 3 · Current</option>
-            <option value="all">All Seasons</option>
-          </select>
-        </label>
-      </div>
-      <div class="season-vault-status">
-        <span class="season-vault-mode" id="seasonVaultMode">Current season</span>
-        <span id="seasonVaultCount">Vault ready for the next season</span>
-      </div>
-      <div class="season-vault-metrics">
-        <div class="season-vault-metric">
-          <span><strong id="seasonVaultCollected">0 / 0</strong> collected</span>
-          <span class="season-vault-track" aria-hidden="true"><i id="seasonVaultCollectedBar"></i></span>
-        </div>
-        <div class="season-vault-metric">
-          <span><strong id="seasonVaultMastered">0 / 0</strong> mastered</span>
-          <span class="season-vault-track" aria-hidden="true"><i id="seasonVaultMasteredBar"></i></span>
-        </div>
-      </div>
+    <section class="season-vault-bar" aria-label="Season Vault" hidden>
+      <label for="seasonViewSelect">Season Vault</label>
+      <select id="seasonViewSelect">
+        <option value="chapter-7-season-3">Chapter 7 Season 3</option>
+        <option value="all">All Seasons</option>
+      </select>
+      <span id="seasonVaultCount">0 outside current season</span>
     </section>
 
     <nav class="rarity-tabs" id="rarityTabs" aria-label="Sprite rarity pages" role="tablist"></nav>
@@ -250,13 +218,6 @@
             <button class="publish-sprites-button" id="publishSpritesBtn" type="button">No changes to publish</button>
           </div>
         </header>
-        <section class="missing-recent-changes" id="missingRecentChanges" aria-labelledby="missingRecentTitle" hidden>
-          <div class="missing-recent-heading">
-            <h3 id="missingRecentTitle">Recently changed</h3>
-            <span id="missingRecentDescription"></span>
-          </div>
-          <div class="missing-recent-list" id="missingRecentList"></div>
-        </section>
         <div id="collections"></div>
         <p class="page-swipe-hint">Swipe a sprite row left or right to see every variant.</p>
       </section>
@@ -414,6 +375,6 @@
   <noscript>This checklist needs JavaScript enabled to save progress.</noscript>
 
   <script src="data.js?v=82"></script>
-  <script src="app.js?v=94"></script>
+  <script src="app.js?v=92"></script>
 </body>
 </html>

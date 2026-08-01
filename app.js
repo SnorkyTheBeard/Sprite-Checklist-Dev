@@ -15,7 +15,7 @@
   const CURRENT_SEASON_ID = seasonCatalog.some((season) => season.id === window.CURRENT_SPRITE_SEASON)
     ? window.CURRENT_SPRITE_SEASON
     : seasonCatalog[0].id;
-  const SEASON_FEATURE_VISIBLE = true;
+  const SEASON_FEATURE_VISIBLE = false;
   const SEASON_VIEW_ALL = 'all';
 
   function appStorageScope() {
@@ -27,7 +27,6 @@
   const PROGRESS_KEY = `galaxy_sprite_tracker_progress_v2_${STORAGE_SCOPE}`;
   const VIEW_MODES_KEY = `galaxy_sprite_tracker_view_modes_v1_${STORAGE_SCOPE}`;
   const MISSING_VIEW_KEY = `galaxy_sprite_tracker_missing_view_v1_${STORAGE_SCOPE}`;
-  const RECENT_MISSING_KEY = `galaxy_sprite_tracker_recent_missing_v1_${STORAGE_SCOPE}`;
   const SEASON_VIEW_KEY = `galaxy_sprite_tracker_season_view_v1_${STORAGE_SCOPE}`;
   const SPRITE_CARD_EDITS_KEY = `galaxy_sprite_tracker_sprite_cards_v1_${STORAGE_SCOPE}`;
   const PRE_RESTORE_PROGRESS_KEY = `galaxy_sprite_tracker_progress_before_restore_v1_${STORAGE_SCOPE}`;
@@ -41,7 +40,7 @@
   const GITHUB_API_VERSION = '2026-03-10';
   const GITHUB_PUBLISH_TARGET = {
     owner:'SnorkyTheBeard',
-    repo:'Sprite-Checklist-Dev',
+    repo:'Real-Sprite-Checklist',
     branch:'main'
   };
 
@@ -93,18 +92,6 @@
       return localStorage.getItem(MISSING_VIEW_KEY) === 'unmastered' ? 'unmastered' : 'unowned';
     } catch {
       return 'unowned';
-    }
-  }
-
-  function loadRecentMissingChanges() {
-    try {
-      const saved = JSON.parse(sessionStorage.getItem(RECENT_MISSING_KEY) || 'null');
-      return {
-        unowned:Array.isArray(saved?.unowned) ? saved.unowned.slice(0,4) : [],
-        unmastered:Array.isArray(saved?.unmastered) ? saved.unmastered.slice(0,4) : []
-      };
-    } catch {
-      return { unowned:[], unmastered:[] };
     }
   }
 
@@ -181,11 +168,6 @@
     Epic:{ enabled:true, color:'#12071d', image:'assets/page-backgrounds/page-bg-epic.webp', mode:'cover' },
     Legendary:{ enabled:true, color:'#1a0d05', image:'assets/page-backgrounds/page-bg-legendary.webp', mode:'cover' },
     Mythic:{ enabled:true, color:'#100c08', image:'assets/page-backgrounds/page-bg-mythic.webp', mode:'cover' }
-  };
-
-  const DEFAULT_MISSING_PAGE_BACKGROUNDS = {
-    unowned:{ enabled:true, color:'#06101f', image:'assets/page-backgrounds/page-bg-unowned.webp?v=93', mode:'cover' },
-    unmastered:{ enabled:true, color:'#100a18', image:'assets/page-backgrounds/page-bg-unmastered.webp?v=93', mode:'cover' }
   };
 
   const DEFAULT_THEME = {
@@ -405,7 +387,6 @@
   let seasonView = loadSeasonView();
   let spriteEditMode = false;
   let missingView = loadMissingView();
-  let recentMissingChanges = loadRecentMissingChanges();
   let activeRarity = rarityFromHash() || defaultRarity;
   let toastTimer = 0;
   let pendingRestore = null;
@@ -418,9 +399,6 @@
   const pageTitleEl = document.getElementById('activePageTitle');
   const pageEyebrowEl = document.getElementById('pageEyebrow');
   const pageDescriptionEl = document.getElementById('pageDescription');
-  const missingRecentChangesEl = document.getElementById('missingRecentChanges');
-  const missingRecentListEl = document.getElementById('missingRecentList');
-  const missingRecentDescriptionEl = document.getElementById('missingRecentDescription');
   const pageCountEl = document.getElementById('pageCount');
   const collectedTotalEl = document.getElementById('collectedTotal');
   const masteredTotalEl = document.getElementById('masteredTotal');
@@ -469,13 +447,7 @@
   const confirmRestoreBtn = document.getElementById('confirmRestoreBtn');
   const undoRestoreBtn = document.getElementById('undoRestoreBtn');
   const seasonViewSelect = document.getElementById('seasonViewSelect');
-  const seasonVaultTitle = document.getElementById('seasonVaultTitle');
-  const seasonVaultMode = document.getElementById('seasonVaultMode');
   const seasonVaultCount = document.getElementById('seasonVaultCount');
-  const seasonVaultCollected = document.getElementById('seasonVaultCollected');
-  const seasonVaultMastered = document.getElementById('seasonVaultMastered');
-  const seasonVaultCollectedBar = document.getElementById('seasonVaultCollectedBar');
-  const seasonVaultMasteredBar = document.getElementById('seasonVaultMasteredBar');
 
   function saveProgress() {
     try {
@@ -511,10 +483,7 @@
   function applySeasonViewControls() {
     const syncOptions = (select,includeAll = true) => {
       const wanted = [
-        ...seasonCatalog.map((season) => ({
-          value:season.id,
-          label:`${season.label}${season.id === CURRENT_SEASON_ID ? ' · Current' : ' · Archived'}`
-        })),
+        ...seasonCatalog.map((season) => ({ value:season.id, label:season.label })),
         ...(includeAll ? [{ value:SEASON_VIEW_ALL, label:'All Seasons' }] : [])
       ];
       const current = [...select.options].map((option) => `${option.value}:${option.textContent}`).join('|');
@@ -533,23 +502,9 @@
     document.querySelector('.season-vault-bar').hidden = !SEASON_FEATURE_VISIBLE;
     document.querySelector('.showcase-season-filter').hidden = !SEASON_FEATURE_VISIBLE;
     seasonViewSelect.value = seasonView;
-    const isAllSeasons = seasonView === SEASON_VIEW_ALL;
-    const isArchivedSeason = seasonView !== CURRENT_SEASON_ID && !isAllSeasons;
-    const stats = overallStats(seasonView);
-    const percentage = (value) => stats.total ? Math.round((value / stats.total) * 100) : 0;
-    const archivedCount = vaultedSpriteCount();
-    seasonVaultTitle.textContent = seasonViewLabel();
-    seasonVaultMode.textContent = isAllSeasons ? 'Complete collection' : (isArchivedSeason ? 'Archived season' : 'Current season');
-    seasonVaultCount.textContent = archivedCount
-      ? `${archivedCount} ${archivedCount === 1 ? 'Sprite' : 'Sprites'} in the vault`
-      : 'Vault ready for the next season';
-    seasonVaultCollected.textContent = `${stats.collected} / ${stats.total}`;
-    seasonVaultMastered.textContent = `${stats.mastered} / ${stats.total}`;
-    seasonVaultCollectedBar.style.width = `${percentage(stats.collected)}%`;
-    seasonVaultMasteredBar.style.width = `${percentage(stats.mastered)}%`;
-    document.body.classList.toggle('previous-season-view',isArchivedSeason);
-    document.body.classList.toggle('all-seasons-view',isAllSeasons);
-    document.body.dataset.seasonMode = isAllSeasons ? 'all' : (isArchivedSeason ? 'archived' : 'current');
+    seasonVaultCount.textContent = `${vaultedSpriteCount()} outside current season`;
+    document.body.classList.toggle('previous-season-view',seasonView !== CURRENT_SEASON_ID && seasonView !== SEASON_VIEW_ALL);
+    document.body.classList.toggle('all-seasons-view',seasonView === SEASON_VIEW_ALL);
     document.body.dataset.seasonView = seasonView;
   }
 
@@ -1353,7 +1308,6 @@
     const themeRarity = activeThemeRarity();
     document.body.dataset.rarity = themeRarity.toLowerCase();
     document.body.dataset.page = activeRarity.toLowerCase();
-    document.body.dataset.missingView = isUnownedPage() ? missingView : '';
     const pageHeader = theme.pageHeaderBackgrounds?.[themeRarity] || {};
     const usePageHeader = Boolean(pageHeader.enabled && pageHeader.image);
     applyImageSurface(root,'header',usePageHeader ? pageHeader.image : theme.headerBgImage,usePageHeader ? pageHeader.mode : theme.headerBgMode);
@@ -1361,9 +1315,7 @@
     applyImageSurface(root,'collection',theme.collectionBgImage,theme.collectionBgMode,theme.useBuiltInCollectionArt ? 'linear-gradient(180deg,rgba(255,255,255,.24),rgba(255,255,255,0))' : 'none');
     applyImageSurface(root,'card',theme.cardBgImage,theme.cardBgMode);
     applyImageSurface(root,'well',theme.wellBgImage,theme.wellBgMode,theme.useBuiltInWellArt ? 'radial-gradient(circle at 40% 25%,#fff 0,#e7ddfa 42%,#b8a1e8 100%)' : 'none');
-    const page = isUnownedPage()
-      ? DEFAULT_MISSING_PAGE_BACKGROUNDS[missingView]
-      : (theme.pageBackgrounds?.[themeRarity] || {});
+    const page = theme.pageBackgrounds?.[themeRarity] || {};
     root.style.setProperty('--theme-page-bg',page.enabled ? page.color || 'transparent' : 'transparent');
     applyImageSurface(root,'page',page.enabled ? page.image : '',page.mode || 'cover');
 
@@ -1462,121 +1414,7 @@
     masterLabel.hidden = !masterText;
   }
 
-  function saveRecentMissingChanges() {
-    try {
-      sessionStorage.setItem(RECENT_MISSING_KEY,JSON.stringify(recentMissingChanges));
-    } catch {
-      /* Recent actions can remain available for this visit. */
-    }
-  }
-
-  function recentMissingEntryMatches(entry) {
-    const current = state[entry.familyId]?.[entry.variantId];
-    return Boolean(current)
-      && Boolean(current.collected) === Boolean(entry.after?.collected)
-      && Boolean(current.mastered) === Boolean(entry.after?.mastered);
-  }
-
-  function recordRecentMissingChange(family,variant,before,current) {
-    if (!isUnownedPage() || !before) return;
-    const mode = missingView === 'unmastered' ? 'unmastered' : 'unowned';
-    const movedOut = mode === 'unmastered'
-      ? !before.mastered && current.mastered
-      : !before.collected && current.collected;
-    if (!movedOut) return;
-    const existing = recentMissingChanges[mode] || [];
-    recentMissingChanges[mode] = [
-      {
-        id:`${family.id}:${variant.id}:${Date.now()}`,
-        familyId:family.id,
-        variantId:variant.id,
-        before:{ collected:Boolean(before.collected), mastered:Boolean(before.mastered) },
-        after:{ collected:Boolean(current.collected), mastered:Boolean(current.mastered) }
-      },
-      ...existing.filter((entry) => entry.familyId !== family.id || entry.variantId !== variant.id)
-    ].slice(0,4);
-    saveRecentMissingChanges();
-  }
-
-  function undoRecentMissingChange(mode,entryId) {
-    const entries = recentMissingChanges[mode] || [];
-    const entry = entries.find((item) => item.id === entryId);
-    if (!entry) return;
-    const family = allFamilies().find((item) => item.id === entry.familyId);
-    const variant = family && orderedVariants(family).find((item) => item.id === entry.variantId);
-    const current = variantState(entry.familyId,entry.variantId);
-    current.collected = Boolean(entry.before?.collected);
-    current.mastered = Boolean(entry.before?.mastered);
-    recentMissingChanges[mode] = entries.filter((item) => item.id !== entryId);
-    saveProgress();
-    saveRecentMissingChanges();
-    renderTabs();
-    renderCollections();
-    updateCounters();
-    showToast(`${variant ? variantView(family,variant).name : 'Sprite'} restored`);
-  }
-
-  function renderRecentMissingChanges() {
-    if (!missingRecentChangesEl || !missingRecentListEl) return;
-    if (!isUnownedPage()) {
-      missingRecentChangesEl.hidden = true;
-      missingRecentListEl.replaceChildren();
-      return;
-    }
-    const mode = missingView === 'unmastered' ? 'unmastered' : 'unowned';
-    const previousEntries = recentMissingChanges[mode] || [];
-    const entries = previousEntries.filter(recentMissingEntryMatches);
-    if (entries.length !== previousEntries.length) {
-      recentMissingChanges[mode] = entries;
-      saveRecentMissingChanges();
-    }
-    missingRecentChangesEl.hidden = !entries.length;
-    missingRecentDescriptionEl.textContent = mode === 'unmastered'
-      ? 'Sprites just marked Mastered'
-      : 'Sprites just added to your collection';
-    missingRecentListEl.replaceChildren();
-    entries.forEach((entry) => {
-      const family = allFamilies().find((item) => item.id === entry.familyId);
-      const variant = family && orderedVariants(family).find((item) => item.id === entry.variantId);
-      if (!family || !variant) return;
-      const familyInfo = familyView(family);
-      const view = variantView(family,variant);
-      const row = document.createElement('div');
-      row.className = 'missing-recent-item';
-      const thumb = document.createElement('div');
-      thumb.className = 'missing-recent-thumb';
-      const imageSource = displayImageSource(view.image);
-      if (imageSource) {
-        const image = document.createElement('img');
-        image.src = imageSource;
-        image.alt = '';
-        image.width = 52;
-        image.height = 52;
-        image.loading = 'lazy';
-        thumb.appendChild(image);
-      } else {
-        thumb.textContent = (familyInfo.name || 'S').slice(0,1).toUpperCase();
-      }
-      const copy = document.createElement('div');
-      copy.className = 'missing-recent-copy';
-      const name = document.createElement('strong');
-      name.textContent = `${familyInfo.name || 'Sprite'} · ${view.name || 'Variant'}`;
-      const action = document.createElement('span');
-      action.textContent = mode === 'unmastered' ? 'Marked Mastered' : 'Added to collection';
-      copy.append(name,action);
-      const undo = document.createElement('button');
-      undo.type = 'button';
-      undo.className = 'missing-recent-undo';
-      undo.textContent = 'Undo';
-      undo.setAttribute('aria-label',`Undo change to ${familyInfo.name || 'Sprite'} ${view.name || 'variant'}`);
-      undo.addEventListener('click',() => undoRecentMissingChange(mode,entry.id));
-      row.append(thumb,copy,undo);
-      missingRecentListEl.appendChild(row);
-    });
-  }
-
-  function commitCardChange(card,family,variant,current,message,before = null) {
-    recordRecentMissingChange(family,variant,before,current);
+  function commitCardChange(card,family,variant,current,message) {
     updateCard(card,current,family,variant);
     saveProgress();
     if (isUnownedPage()) renderCollections();
@@ -1802,10 +1640,9 @@
     card.append(crown,seasonBadge,imageWrap,editorTools,percentageEditor,variantLine,listLabel,collect,masterLabel);
 
     const toggleCollected = () => {
-      const before = { collected:Boolean(current.collected), mastered:Boolean(current.mastered) };
       current.collected = !current.collected;
       if (!current.collected) current.mastered = false;
-      commitCardChange(card,family,variant,current,current.collected ? 'Added to collection' : 'Removed from collection',before);
+      commitCardChange(card,family,variant,current,current.collected ? 'Added to collection' : 'Removed from collection');
     };
     imageButton.addEventListener('click',() => {
       if (spriteEditMode) return fileInput.click();
@@ -1813,10 +1650,9 @@
     });
     collect.addEventListener('click',toggleCollected);
     crown.addEventListener('click',() => {
-      const before = { collected:Boolean(current.collected), mastered:Boolean(current.mastered) };
       current.mastered = !current.mastered;
       if (current.mastered) current.collected = true;
-      commitCardChange(card,family,variant,current,current.mastered ? 'Mastered' : 'Mastery removed',before);
+      commitCardChange(card,family,variant,current,current.mastered ? 'Mastered' : 'Mastery removed');
     });
     moveLeft.addEventListener('click',() => moveSpriteCard(family,variant.id,-1));
     moveRight.addEventListener('click',() => moveSpriteCard(family,variant.id,1));
@@ -2020,7 +1856,6 @@
 
   function renderCollections() {
     collectionsEl.replaceChildren();
-    renderRecentMissingChanges();
     const page = design.pages[activeRarity] || DEFAULT_PAGES[activeRarity];
     renderOptionalText(pageEyebrowEl,isUnownedPage() ? '' : page.eyebrow);
     renderOptionalText(
@@ -3148,8 +2983,6 @@
 
   function resetProgress() {
     state = {};
-    recentMissingChanges = { unowned:[], unmastered:[] };
-    try { sessionStorage.removeItem(RECENT_MISSING_KEY); } catch { /* Nothing else to clear. */ }
     saveProgress();
     resetDialog.close();
     renderAll();
@@ -3325,6 +3158,6 @@
   const activeHash = isUnownedPage() ? `#${missingView}` : `#${activeRarity.toLowerCase()}`;
   if (location.hash !== activeHash) history.replaceState({ rarity:activeRarity },'',activeHash);
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./service-worker.js?v=94',{ updateViaCache:'none' }).then((registration) => registration.update()).catch(() => {});
+    navigator.serviceWorker.register('./service-worker.js?v=92',{ updateViaCache:'none' }).then((registration) => registration.update()).catch(() => {});
   }
 })();
