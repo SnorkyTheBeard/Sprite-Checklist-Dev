@@ -479,7 +479,6 @@
   const seasonViewSelect = document.getElementById('seasonViewSelect');
   const seasonVaultTitle = document.getElementById('seasonVaultTitle');
   const seasonVaultMode = document.getElementById('seasonVaultMode');
-  const seasonVaultCount = document.getElementById('seasonVaultCount');
   const seasonVaultCollected = document.getElementById('seasonVaultCollected');
   const seasonVaultMastered = document.getElementById('seasonVaultMastered');
   const seasonVaultCollectedBar = document.getElementById('seasonVaultCollectedBar');
@@ -602,12 +601,8 @@
     const isArchivedSeason = seasonView !== CURRENT_SEASON_ID && !isAllSeasons;
     const stats = overallStats(seasonView);
     const percentage = (value) => stats.total ? Math.round((value / stats.total) * 100) : 0;
-    const archivedCount = vaultedSpriteCount();
     seasonVaultTitle.textContent = seasonViewLabel();
     seasonVaultMode.textContent = isAllSeasons ? 'Complete collection' : (isArchivedSeason ? 'Archived season' : 'Current season');
-    seasonVaultCount.textContent = archivedCount
-      ? `${archivedCount} ${archivedCount === 1 ? 'Sprite' : 'Sprites'} in the vault`
-      : 'Vault ready for the next season';
     seasonVaultCollected.textContent = `${stats.collected} / ${stats.total}`;
     seasonVaultMastered.textContent = `${stats.mastered} / ${stats.total}`;
     seasonVaultCollectedBar.style.width = `${percentage(stats.collected)}%`;
@@ -1521,6 +1516,10 @@
     collectButton.setAttribute('aria-pressed',String(Boolean(current.collected)));
     crownButton.setAttribute('aria-label',masteredAction);
     crownButton.setAttribute('aria-pressed',String(Boolean(current.mastered)));
+    crownButton.disabled = appView === APP_VIEW_VAULT;
+    crownButton.tabIndex = appView === APP_VIEW_VAULT ? -1 : 0;
+    if (appView === APP_VIEW_VAULT) crownButton.setAttribute('aria-hidden','true');
+    else crownButton.removeAttribute('aria-hidden');
     collectButton.querySelector('.collect-label').textContent = design.header.collectedLabel || 'In Collection';
     const masterText = current.mastered ? (design.header.masteredLabel || 'Mastered') : design.header.masterPrompt;
     const masterLabel = card.querySelector('.master-label');
@@ -3415,6 +3414,6 @@
   const activeHash = isUnownedPage() ? `#${missingView}` : `#${activeRarity.toLowerCase()}`;
   if (location.hash !== activeHash) history.replaceState({ rarity:activeRarity },'',activeHash);
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./service-worker.js?v=97',{ updateViaCache:'none' }).then((registration) => registration.update()).catch(() => {});
+    navigator.serviceWorker.register('./service-worker.js?v=98',{ updateViaCache:'none' }).then((registration) => registration.update()).catch(() => {});
   }
 })();

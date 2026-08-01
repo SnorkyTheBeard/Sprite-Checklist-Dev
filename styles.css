@@ -814,6 +814,185 @@ footer {
     height:28px;
   }
 }
+
+/* v98: metallic trophy-vault presentation and glass display cases. */
+body.vault-view {
+  isolation:isolate;
+  background:#05070b!important;
+}
+
+body.vault-view::after {
+  content:"";
+  position:fixed;
+  inset:0;
+  z-index:0;
+  pointer-events:none;
+  background-color:#05070b;
+  background-image:
+    linear-gradient(180deg,rgba(2,5,10,.08),rgba(2,5,10,.34)),
+    url("assets/page-backgrounds/page-bg-sprite-vault-v98.webp");
+  background-position:center top;
+  background-size:cover;
+  background-repeat:no-repeat;
+}
+
+body.vault-view .app-shell {
+  position:relative;
+  z-index:1;
+}
+
+body.vault-view .season-vault-page {
+  background:linear-gradient(180deg,rgba(3,8,16,.5),rgba(3,7,14,.18));
+}
+
+body.vault-view #checklistPage {
+  background-color:transparent!important;
+  background-image:none!important;
+}
+
+body.vault-view .rarity-tabs {
+  border-top:1px solid rgba(255,214,111,.12);
+  border-bottom:1px solid rgba(194,218,238,.13);
+  background:linear-gradient(180deg,rgba(7,11,18,.94) 72%,rgba(7,11,18,.2));
+}
+
+.season-vault-page-head > span {
+  color:#e5bd63;
+  background:linear-gradient(180deg,#fff1b0 0%,#d49a2f 44%,#fff0a0 61%,#9d6717 100%);
+  -webkit-background-clip:text;
+  background-clip:text;
+  -webkit-text-fill-color:transparent;
+  text-shadow:0 2px 0 rgba(31,18,2,.62),0 0 13px rgba(231,178,62,.16);
+}
+
+.season-vault-page-head h2 {
+  color:#dce3eb;
+  background:linear-gradient(180deg,#fff 0%,#b9c3cf 38%,#f5f8fb 55%,#778391 100%);
+  -webkit-background-clip:text;
+  background-clip:text;
+  -webkit-text-fill-color:transparent;
+  text-shadow:0 4px 0 rgba(0,0,0,.52),0 0 18px rgba(210,226,240,.14);
+}
+
+.season-vault-status {
+  justify-content:flex-start;
+  margin-bottom:12px;
+}
+
+body.vault-view .collection {
+  border:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+}
+
+body.vault-view .collection .card {
+  overflow:hidden;
+  color:#f3f7fb!important;
+  border:1px solid rgba(214,231,244,.52)!important;
+  border-radius:21px!important;
+  background:
+    linear-gradient(145deg,rgba(255,255,255,.19),rgba(120,159,187,.07) 30%,rgba(3,8,14,.42) 76%,rgba(0,0,0,.5))!important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.3),
+    inset 0 -1px 0 rgba(134,176,207,.17),
+    0 12px 28px rgba(0,0,0,.42),
+    0 0 0 3px rgba(8,13,21,.42)!important;
+  -webkit-backdrop-filter:blur(13px) saturate(1.12);
+  backdrop-filter:blur(13px) saturate(1.12);
+}
+
+body.vault-view .collection .card::before {
+  content:"";
+  position:absolute;
+  inset:0;
+  z-index:8;
+  border-radius:inherit;
+  background:
+    linear-gradient(118deg,rgba(255,255,255,.2) 0 7%,transparent 17% 72%,rgba(255,255,255,.06) 83%,transparent 93%);
+  pointer-events:none;
+}
+
+body.vault-view .collection .card.collected {
+  border-color:rgba(117,213,255,.74)!important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.33),
+    inset 0 -1px 0 rgba(89,190,239,.19),
+    0 12px 28px rgba(0,0,0,.42),
+    0 0 16px rgba(76,193,255,.15)!important;
+}
+
+body.vault-view .collection .card.mastered {
+  border-color:rgba(255,218,116,.84)!important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.38),
+    inset 0 -1px 0 rgba(231,174,47,.21),
+    0 12px 28px rgba(0,0,0,.44),
+    0 0 20px rgba(255,199,67,.2)!important;
+}
+
+body.vault-view .card .image-wrap {
+  border-color:rgba(205,227,242,.38)!important;
+  background-color:rgba(3,8,14,.42)!important;
+  box-shadow:inset 0 0 24px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.16);
+}
+
+body.vault-view .card .sprite-variant-line h4,
+body.vault-view .card .sprite-list-label,
+body.vault-view .card .master-label {
+  color:#f2f6fb!important;
+  text-shadow:0 2px 4px rgba(0,0,0,.78);
+}
+
+body.vault-view .card .collect-button {
+  color:#fff!important;
+  border-color:rgba(224,237,248,.3)!important;
+  background:linear-gradient(180deg,rgba(58,68,82,.78),rgba(3,5,9,.88))!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.18),0 5px 12px rgba(0,0,0,.28);
+}
+
+body.vault-view .card .crown-button {
+  top:8px;
+  left:8px;
+  z-index:12;
+  width:44px;
+  height:44px;
+  padding:7px;
+  visibility:hidden;
+  border:2px solid #ffe69a;
+  border-radius:50%;
+  background:linear-gradient(145deg,#fff2a4 0%,#e7ad37 42%,#8e580d 100%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.72),0 4px 9px rgba(0,0,0,.45),0 0 10px rgba(255,196,56,.24);
+  filter:none;
+  transform:rotate(-9deg);
+  pointer-events:none;
+}
+
+body.vault-view .card.mastered .crown-button {
+  visibility:visible;
+}
+
+body.vault-view .card .crown-button svg,
+body.vault-view .card.mastered .crown-button svg {
+  width:100%;
+  height:100%;
+  fill:#fff0a0;
+  stroke:#704309;
+  stroke-width:4.2;
+  filter:drop-shadow(0 1px 1px rgba(255,255,255,.35));
+  transform:none;
+}
+
+body.vault-view .sprite-season-badge {
+  top:auto;
+  bottom:7px;
+  left:7px;
+}
+
+@supports not ((-webkit-backdrop-filter:blur(1px)) or (backdrop-filter:blur(1px))) {
+  body.vault-view .collection .card {
+    background:rgba(21,30,42,.94)!important;
+  }
+}
 #activePageTitle {
   color: #f7f8ff !important;
   -webkit-text-stroke: 1px rgba(7,10,28,.9);
