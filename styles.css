@@ -331,17 +331,16 @@ h4,
 }
 
 /* One continuous rarity background, including the title area. */
-.app-shell::before {
-  content: "";
+body::after {
+content: "";
   position: fixed;
   inset: 0;
-  z-index: -1;
+  z-index: 0;
   pointer-events: none;
   background-color: var(--theme-page-bg);
   background-image:
     radial-gradient(ellipse at 14% 4%,var(--rarity-haze),transparent 38%),
     radial-gradient(ellipse at 88% 36%,var(--rarity-sheen),transparent 42%),
-    repeating-linear-gradient(128deg,rgba(255,255,255,.022) 0 1px,transparent 1px 13px),
     linear-gradient(180deg,rgba(3,5,15,.12),rgba(3,5,15,.36)),
     var(--theme-page-image);
   background-position:center,center,center,center,center;
@@ -1653,4 +1652,280 @@ body.previous-season-view .season-vault-bar {
   .showcase-filters {
     grid-template-columns:1fr;
   }
+}
+
+/* v85: streamlined headings, progress layout, and compact tool icons. */
+:root {
+  --rarity-title-color:#65d4ff;
+}
+
+body[data-rarity="rare"] { --rarity-title-color:#65d4ff; }
+body[data-rarity="epic"] { --rarity-title-color:#c785ff; }
+body[data-rarity="legendary"] { --rarity-title-color:#ff9f43; }
+body[data-rarity="mythic"] { --rarity-title-color:#ffd45f; }
+body[data-page="unowned"] { --rarity-title-color:#f5f7ff; }
+
+#headerTitle {
+  color:var(--rarity-title-color) !important;
+  transition:color .2s ease;
+}
+
+.page-head > div:first-child {
+  width:100%;
+  text-align:center;
+}
+
+#activePageTitle {
+  margin-inline:auto;
+  font-size:clamp(30px,8vw,48px) !important;
+  text-align:center;
+}
+
+body.unowned-page .page-eyebrow,
+body.unowned-page #pageDescription {
+  display:none !important;
+}
+
+body.unowned-page #activePageTitle {
+  font-size:clamp(40px,11vw,62px) !important;
+}
+
+.collection-head {
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:7px;
+  text-align:center;
+}
+
+.collection-title-wrap,
+.collection-head-actions,
+.collection-meta {
+  width:100%;
+}
+
+.collection-head h3 {
+  font-size:clamp(23px,6.5vw,30px) !important;
+  text-align:center;
+}
+
+.collection-head-actions,
+.collection-meta {
+  align-items:center;
+}
+
+.collection-progress-counts {
+  justify-content:center;
+  flex-wrap:wrap;
+}
+
+.row-hint {
+  display:none !important;
+}
+
+.tracker-tools button {
+  display:grid;
+  width:46px;
+  height:46px;
+  min-height:46px;
+  padding:0;
+  place-items:center;
+  border-radius:50%;
+}
+
+.tracker-tools button svg {
+  width:24px;
+  height:24px;
+  fill:none;
+  stroke:#fff;
+  stroke-width:1.8;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+}
+
+/* v86: consistent missing filter, cloud backup icon, modal scrolling, and rarity title glow. */
+:root {
+  --rarity-title-light:#dff7ff;
+  --rarity-title-dark:#28aee9;
+  --rarity-title-glow:rgba(63,190,255,.62);
+}
+
+body[data-rarity="rare"] {
+  --rarity-title-light:#e0f8ff;
+  --rarity-title-dark:#2eb9f3;
+  --rarity-title-glow:rgba(65,195,255,.68);
+}
+
+body[data-rarity="epic"] {
+  --rarity-title-light:#f2ddff;
+  --rarity-title-dark:#a354ed;
+  --rarity-title-glow:rgba(187,99,255,.66);
+}
+
+body[data-rarity="legendary"] {
+  --rarity-title-light:#ffe4bc;
+  --rarity-title-dark:#f5741c;
+  --rarity-title-glow:rgba(255,137,43,.68);
+}
+
+body[data-rarity="mythic"] {
+  --rarity-title-light:#fff7b8;
+  --rarity-title-dark:#eaae00;
+  --rarity-title-glow:rgba(255,205,52,.7);
+}
+
+body[data-page="unowned"] {
+  --rarity-title-light:#fff;
+  --rarity-title-color:#dde3f1;
+  --rarity-title-dark:#aab4c9;
+  --rarity-title-glow:rgba(205,216,239,.4);
+}
+
+#headerTitle {
+  color:transparent !important;
+  background-image:linear-gradient(180deg,var(--rarity-title-light) 4%,var(--rarity-title-color) 55%,var(--rarity-title-dark) 100%);
+  background-clip:text;
+  -webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;
+  filter:
+    drop-shadow(0 3px 0 rgba(3,6,18,.96))
+    drop-shadow(0 0 12px var(--rarity-title-glow));
+}
+
+.missing-filter-select,
+.missing-filter-select[aria-selected="true"] {
+  width:auto;
+  min-width:174px;
+  min-height:48px;
+  padding:10px 40px 10px 18px;
+  color:#fff;
+  border:1px solid rgba(255,255,255,.38);
+  border-radius:999px;
+  background-color:rgba(18,22,34,.94);
+  background-image:
+    linear-gradient(45deg,transparent 50%,#fff 50%),
+    linear-gradient(135deg,#fff 50%,transparent 50%);
+  background-position:calc(100% - 18px) 52%,calc(100% - 13px) 52%;
+  background-size:5px 5px,5px 5px;
+  background-repeat:no-repeat;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 5px 16px rgba(0,0,0,.3);
+  font-size:13px;
+  font-weight:850;
+  line-height:1;
+  cursor:pointer;
+}
+
+.missing-filter-select:hover,
+.missing-filter-select:focus-visible {
+  border-color:#9be8ff;
+  background-color:rgba(27,34,54,.98);
+}
+
+.tracker-tools button svg {
+  width:25px;
+  height:25px;
+  stroke-width:1.9;
+}
+
+body.backup-dialog-open {
+  position:fixed;
+  right:0;
+  left:0;
+  width:100%;
+  overflow:hidden;
+}
+
+.backup-dialog {
+  max-height:min(90vh,760px);
+  max-height:min(90dvh,760px);
+  overflow-x:hidden;
+  overflow-y:auto;
+  overscroll-behavior:contain;
+  touch-action:pan-y;
+  -webkit-overflow-scrolling:touch;
+}
+
+.backup-dialog form {
+  min-height:min-content;
+}
+
+/* v87: crisp metallic title treatment for each rarity. */
+:root {
+  --metal-1:#f5fdff;
+  --metal-2:#91e3ff;
+  --metal-3:#176f9f;
+  --metal-4:#e4faff;
+  --metal-5:#238fbd;
+}
+
+body[data-rarity="rare"] {
+  --metal-1:#f5fdff;
+  --metal-2:#91e3ff;
+  --metal-3:#176f9f;
+  --metal-4:#e4faff;
+  --metal-5:#238fbd;
+  --rarity-title-glow:rgba(55,190,255,.58);
+}
+
+body[data-rarity="epic"] {
+  --metal-1:#fff6ff;
+  --metal-2:#d4a8ff;
+  --metal-3:#6f2caa;
+  --metal-4:#f0ddff;
+  --metal-5:#9149ce;
+  --rarity-title-glow:rgba(182,92,255,.56);
+}
+
+body[data-rarity="legendary"] {
+  --metal-1:#fff4df;
+  --metal-2:#ffbd76;
+  --metal-3:#9b3c0f;
+  --metal-4:#ffe0ad;
+  --metal-5:#df5c16;
+  --rarity-title-glow:rgba(255,126,35,.58);
+}
+
+body[data-rarity="mythic"] {
+  --metal-1:#fffbd9;
+  --metal-2:#ffe484;
+  --metal-3:#9b6800;
+  --metal-4:#fff0a6;
+  --metal-5:#dda500;
+  --rarity-title-glow:rgba(255,204,48,.6);
+}
+
+body[data-page="unowned"] {
+  --metal-1:#fff;
+  --metal-2:#dbe2ef;
+  --metal-3:#687487;
+  --metal-4:#f6f8fc;
+  --metal-5:#98a5b9;
+  --rarity-title-glow:rgba(210,220,239,.34);
+}
+
+#headerTitle {
+  font-family:"Fredoka","Arial Rounded MT Bold",sans-serif !important;
+  font-weight:900;
+  letter-spacing:-.045em;
+  color:transparent !important;
+  background-image:linear-gradient(
+    180deg,
+    var(--metal-1) 0%,
+    var(--metal-2) 24%,
+    var(--metal-3) 47%,
+    var(--metal-4) 57%,
+    var(--metal-5) 77%,
+    var(--metal-1) 100%
+  );
+  background-position:center 44%;
+  background-size:100% 135%;
+  background-clip:text;
+  -webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;
+  -webkit-text-stroke:.65px rgba(3,6,18,.96);
+  text-shadow:none !important;
+  filter:
+    drop-shadow(0 2px 0 rgba(2,4,12,.98))
+    drop-shadow(0 0 7px var(--rarity-title-glow))
+    drop-shadow(0 5px 10px rgba(0,0,0,.38));
 }

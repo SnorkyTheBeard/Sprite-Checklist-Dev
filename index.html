@@ -140,7 +140,7 @@
       }
     })();
   </script>
-  <link rel="stylesheet" href="styles.css?v=82">
+<link rel="stylesheet" href="styles.css?v=87">
 </head>
 <body>
   <a class="skip-link" href="#mainContent">Skip to checklist</a>
@@ -177,8 +177,17 @@
     </section>
 
     <section class="tracker-tools" aria-label="Collection tools">
-      <button id="showcaseBtn" type="button">Create collection image</button>
-      <button id="backupBtn" type="button">Save / restore progress</button>
+      <button id="showcaseBtn" type="button" aria-label="Create collection image" title="Create collection image">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path d="M4 7.5h3.2L8.8 5h6.4l1.6 2.5H20v11.5H4z"></path>
+          <circle cx="12" cy="13" r="3.5"></circle>
+        </svg>
+      </button>
+      <button id="backupBtn" type="button" aria-label="Save or restore progress" title="Save or restore progress">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path d="M17.5 19H8.8A5.8 5.8 0 0 1 8 7.45 7 7 0 0 1 21.1 10 4.7 4.7 0 0 1 17.5 19Z"></path>
+        </svg>
+      </button>
     </section>
 
     <section class="season-vault-bar" aria-label="Season Vault" hidden>
@@ -365,6 +374,6 @@
   <noscript>This checklist needs JavaScript enabled to save progress.</noscript>
 
   <script src="data.js?v=82"></script>
-  <script src="app.js?v=82"></script>
+  <script src="app.js?v=87"></script>
 </body>
 </html>

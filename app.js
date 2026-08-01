@@ -1320,7 +1320,7 @@
 
   function renderHeader() {
     renderOptionalText(document.getElementById('headerKicker'),design.header.kicker);
-    renderOptionalText(document.getElementById('headerTitle'),design.header.title);
+    renderOptionalText(document.getElementById('headerTitle'),'My Sprite Tracker');
     renderOptionalText(document.getElementById('headerSubtitle'),design.header.subtitle);
     document.getElementById('collectedLabel').textContent = design.header.collectedLabel || 'In Collection';
     document.getElementById('masteredLabel').textContent = design.header.masteredLabel || 'Mastered';
@@ -1777,7 +1777,7 @@
         select.setAttribute('aria-label',`Missing Sprite view: ${missing} unowned and ${unmastered} unmastered`);
         select.setAttribute('aria-selected',String(isUnownedPage()));
         placeholder.value = '';
-        placeholder.textContent = 'Missing Sprites ▾';
+        placeholder.textContent = 'Missing Sprites';
         placeholder.disabled = true;
         unownedOption.value = 'unowned';
         unownedOption.textContent = `Unowned (${missing})`;
@@ -1814,19 +1814,12 @@
   function renderCollections() {
     collectionsEl.replaceChildren();
     const page = design.pages[activeRarity] || DEFAULT_PAGES[activeRarity];
-    renderOptionalText(pageEyebrowEl,page.eyebrow);
+    renderOptionalText(pageEyebrowEl,isUnownedPage() ? '' : page.eyebrow);
     renderOptionalText(
       pageTitleEl,
       isUnownedPage() ? (missingView === 'unmastered' ? 'Unmastered Sprites' : 'Unowned Sprites') : page.title
     );
-    renderOptionalText(
-      pageDescriptionEl,
-      isUnownedPage()
-        ? (missingView === 'unmastered'
-            ? 'Every Sprite not yet marked Mastered.'
-            : 'Every Sprite not yet marked In Collection.')
-        : page.description
-    );
+    renderOptionalText(pageDescriptionEl,isUnownedPage() ? '' : page.description);
     document.getElementById('checklistPage').setAttribute('aria-labelledby','activePageTitle');
     let eagerImagesRemaining = 2;
     const unownedPage = isUnownedPage();
@@ -1879,7 +1872,7 @@
         count.textContent = `${stats.collected} / ${stats.total} collected`;
         hint.className = 'row-hint';
         hint.setAttribute('aria-hidden','true');
-        hint.textContent = 'Swipe variants →';
+        hint.textContent = '';
         progressCounts.append(masteredCount,count);
         meta.append(progressCounts,hint);
         headerActions.className = 'collection-head-actions';
@@ -2301,6 +2294,21 @@
     undoRestoreBtn.hidden = !safeStorageGet(PRE_RESTORE_PROGRESS_KEY);
   }
 
+  let backupDialogScrollY = 0;
+
+  function lockPageForBackupDialog() {
+    backupDialogScrollY = window.scrollY;
+    document.body.style.top = `-${backupDialogScrollY}px`;
+    document.body.classList.add('backup-dialog-open');
+  }
+
+  function unlockPageForBackupDialog() {
+    if (!document.body.classList.contains('backup-dialog-open')) return;
+    document.body.classList.remove('backup-dialog-open');
+    document.body.style.top = '';
+    window.scrollTo(0,backupDialogScrollY);
+  }
+
   function openBackupDialog() {
     pendingRestore = null;
     backupFileInput.value = '';
@@ -2308,6 +2316,7 @@
     backupRestoreStatus.dataset.state = '';
     backupRestoreStatus.textContent = 'No backup selected.';
     updateUndoRestoreButton();
+    lockPageForBackupDialog();
     backupDialog.showModal();
   }
 
@@ -2975,6 +2984,7 @@
   confirmRestoreBtn.addEventListener('click',restoreSelectedBackup);
   undoRestoreBtn.addEventListener('click',undoLastRestore);
   document.getElementById('closeBackupBtn').addEventListener('click',() => backupDialog.close());
+  backupDialog.addEventListener('close',unlockPageForBackupDialog);
 
   spriteSearchInput.addEventListener('input',renderSpriteSearchResults);
   spriteSearchInput.addEventListener('focus',() => {
@@ -3099,6 +3109,6 @@
   const activeHash = isUnownedPage() ? `#${missingView}` : `#${activeRarity.toLowerCase()}`;
   if (location.hash !== activeHash) history.replaceState({ rarity:activeRarity },'',activeHash);
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./service-worker.js?v=82',{ updateViaCache:'none' }).then((registration) => registration.update()).catch(() => {});
+    navigator.serviceWorker.register('./service-worker.js?v=87',{ updateViaCache:'none' }).then((registration) => registration.update()).catch(() => {});
   }
 })();
