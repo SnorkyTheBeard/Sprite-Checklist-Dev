@@ -152,7 +152,7 @@
       }
     })();
   </script>
-<link rel="stylesheet" href="styles.css?v=95">
+<link rel="stylesheet" href="styles.css?v=96">
 </head>
 <body>
   <a class="skip-link" href="#mainContent">Skip to checklist</a>
@@ -167,28 +167,26 @@
     <dialog class="app-menu-dialog" id="appMenuDialog" aria-labelledby="appMenuTitle">
       <div class="app-menu-panel">
         <header class="app-menu-head">
-          <div>
-            <span>Navigation</span>
-            <strong id="appMenuTitle">My Sprite Tracker</strong>
-          </div>
+          <strong id="appMenuTitle">My Sprite Tracker</strong>
           <button class="app-menu-close" id="closeAppMenuBtn" type="button" aria-label="Close app menu">×</button>
         </header>
         <nav class="app-menu-nav" aria-label="App pages">
           <button class="app-menu-item is-active" type="button" data-app-view="tracker" aria-current="page">
             <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-              <path d="M6 4h12a2 2 0 0 1 2 2v14H4V6a2 2 0 0 1 2-2Z"></path>
-              <path d="m8 9 1.5 1.5L12 8M14 9h3M8 15l1.5 1.5L12 14M14 15h3"></path>
+              <path d="m3.5 11 8.5-7 8.5 7v9H15v-6H9v6H3.5Z"></path>
             </svg>
-            <span><strong>Current Tracker</strong><small>Your normal live-season checklist</small></span>
+            <span>Current Tracker</span>
           </button>
           <button class="app-menu-item" type="button" data-app-view="vault">
             <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
               <path d="M4 7h16v13H4zM3 4h18v3H3zM9 11h6"></path>
             </svg>
-            <span><strong>Season Vault</strong><small>Browse seasons and their progress</small></span>
+            <span>Season Vault</span>
+            <svg class="app-menu-chevron" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="m9 5 7 7-7 7"></path>
+            </svg>
           </button>
         </nav>
-        <p class="app-menu-note">New tracker tools will be added here as they are built.</p>
       </div>
     </dialog>
 
@@ -455,6 +453,6 @@
   <noscript>This checklist needs JavaScript enabled to save progress.</noscript>
 
   <script src="data.js?v=82"></script>
-  <script src="app.js?v=95"></script>
+  <script src="app.js?v=96"></script>
 </body>
 </html>
