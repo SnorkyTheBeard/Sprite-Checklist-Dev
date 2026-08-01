@@ -1,12 +1,12 @@
-const CACHE = 'galaxy-sprite-checklist-v86';
+const CACHE = 'galaxy-sprite-checklist-v94';
 const CORE = [
   './',
   './index.html',
-  './styles.css?v=86',
+  './styles.css?v=94',
   './published-design.js',
   './art-config.js?v=67',
   './data.js?v=82',
-  './app.js?v=86',
+  './app.js?v=94',
   './manifest.webmanifest?v=67',
   './fonts/Burbank Big Condensed Black.otf',
   './fonts/Fredoka-Regular.woff2',
@@ -29,10 +29,14 @@ const CORE = [
   './assets/variant-backgrounds/variant-well-gem.webp',
   './assets/variant-backgrounds/variant-well-quack.webp',
   './assets/variant-backgrounds/variant-well-holofoil.webp',
+  './assets/variant-backgrounds/variant-well-john-wick.webp?v=92',
+  './published-assets/sprite-custom-john-wick-base.webp',
   './assets/page-backgrounds/page-bg-rare.webp',
   './assets/page-backgrounds/page-bg-epic.webp',
   './assets/page-backgrounds/page-bg-legendary.webp',
   './assets/page-backgrounds/page-bg-mythic.webp',
+  './assets/page-backgrounds/page-bg-unowned.webp?v=93',
+  './assets/page-backgrounds/page-bg-unmastered.webp?v=93',
   './assets/header/main-header.webp?v=3'
 ];
 const FRESH_CODE_FILES = new Set(['styles.css','art-config.js','data.js','app.js','manifest.webmanifest']);

@@ -1521,40 +1521,72 @@ body.unowned-page .sprite-editor-toggle {
 
 /* Season Vault keeps retired Sprites and their progress available. */
 .season-vault-bar {
-  width:min(100%,560px);
-  display:grid;
-  grid-template-columns:auto minmax(0,1fr) auto;
-  align-items:center;
-  gap:9px;
-  margin:12px auto 0;
-  padding:8px 10px;
+  width:min(100%,620px);
+  display:block;
+  margin:14px auto 2px;
+  padding:14px;
   color:#fff;
-  border:1px solid rgba(255,255,255,.23);
-  border-radius:16px;
-  background:rgba(8,10,20,.7);
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 6px 18px rgba(0,0,0,.22);
-  -webkit-backdrop-filter:blur(12px);
-  backdrop-filter:blur(12px);
+  border:1px solid rgba(139,216,255,.32);
+  border-radius:22px;
+  background:
+    radial-gradient(circle at 15% 0%,rgba(84,191,255,.17),transparent 36%),
+    linear-gradient(145deg,rgba(13,21,42,.91),rgba(5,8,20,.83));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.13),0 10px 30px rgba(0,0,0,.28),0 0 24px rgba(71,179,255,.08);
+  -webkit-backdrop-filter:blur(16px);
+  backdrop-filter:blur(16px);
 }
 
-.season-vault-bar label {
-  font-size:12px;
+.season-vault-heading {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+}
+
+.season-vault-title-wrap {
+  min-width:0;
+}
+
+.season-vault-kicker {
+  display:block;
+  margin-bottom:2px;
+  color:#85dcff;
+  font-size:10px;
   font-weight:900;
+  letter-spacing:.13em;
+  line-height:1;
+  text-transform:uppercase;
+}
+
+#seasonVaultTitle {
+  display:block;
+  overflow:hidden;
+  color:#fff;
+  font-family:var(--font-heading);
+  font-size:23px;
+  line-height:1;
+  text-overflow:ellipsis;
+  text-shadow:0 3px 0 rgba(0,0,0,.45),0 0 16px rgba(95,202,255,.2);
   white-space:nowrap;
+}
+
+.season-vault-picker {
+  flex:0 1 260px;
+  min-width:0;
 }
 
 .season-vault-bar select {
   width:100%;
   min-width:0;
-  min-height:38px;
-  padding:7px 30px 7px 10px;
+  min-height:40px;
+  padding:8px 31px 8px 11px;
   color:#fff;
-  border:1px solid rgba(255,255,255,.2);
-  border-radius:11px;
+  border:1px solid rgba(255,255,255,.25);
+  border-radius:12px;
   outline:none;
-  background:#252552;
+  background:#182342;
   font-family:var(--font-body) !important;
-  font-size:14px;
+  font-size:13px;
   font-weight:800;
 }
 
@@ -1563,17 +1595,103 @@ body.unowned-page .sprite-editor-toggle {
   box-shadow:0 0 0 3px rgba(89,200,255,.22);
 }
 
-.season-vault-bar span {
-  color:#fff;
+.season-vault-status {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  margin:10px 0 12px;
+  color:#d8e7f7;
   font-size:11px;
+  font-weight:800;
+}
+
+.season-vault-mode {
+  display:inline-flex;
+  flex:0 0 auto;
+  align-items:center;
+  padding:4px 8px;
+  color:#06101d;
+  border-radius:999px;
+  background:#84dcff;
+  font-size:9px;
   font-weight:900;
+  letter-spacing:.05em;
+  line-height:1;
+  text-transform:uppercase;
+}
+
+#seasonVaultCount {
+  min-width:0;
+  overflow:hidden;
+  text-align:right;
+  text-overflow:ellipsis;
   white-space:nowrap;
+}
+
+.season-vault-metrics {
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+}
+
+.season-vault-metric > span:first-child {
+  display:flex;
+  align-items:baseline;
+  gap:5px;
+  margin-bottom:5px;
+  color:#dce9f7;
+  font-size:11px;
+  font-weight:700;
+}
+
+.season-vault-metric strong {
+  color:#fff;
+  font-size:14px;
+  font-weight:900;
+}
+
+.season-vault-track {
+  display:block;
+  height:6px;
+  overflow:hidden;
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:999px;
+  background:rgba(255,255,255,.08);
+}
+
+.season-vault-track i {
+  display:block;
+  width:0;
+  height:100%;
+  border-radius:inherit;
+  background:linear-gradient(90deg,#51bfff,#a6ecff);
+  box-shadow:0 0 10px rgba(81,191,255,.45);
+  transition:width .24s ease;
 }
 
 body.previous-season-view .season-vault-bar {
   border-color:rgba(255,212,95,.55);
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 0 22px rgba(255,212,95,.12);
+  background:
+    radial-gradient(circle at 15% 0%,rgba(255,212,95,.16),transparent 36%),
+    linear-gradient(145deg,rgba(30,25,18,.92),rgba(8,9,16,.84));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 0 24px rgba(255,212,95,.12);
 }
+
+body.previous-season-view .season-vault-kicker { color:#ffda70; }
+body.previous-season-view .season-vault-mode { color:#1d1404; background:#ffda70; }
+body.previous-season-view .season-vault-track i { background:linear-gradient(90deg,#e6a93c,#ffe690); box-shadow:0 0 10px rgba(255,212,95,.4); }
+
+body.all-seasons-view .season-vault-bar {
+  border-color:rgba(195,142,255,.46);
+  background:
+    radial-gradient(circle at 15% 0%,rgba(185,118,255,.17),transparent 36%),
+    linear-gradient(145deg,rgba(29,18,47,.91),rgba(7,8,19,.84));
+}
+
+body.all-seasons-view .season-vault-kicker { color:#d8adff; }
+body.all-seasons-view .season-vault-mode { color:#160822; background:#d8adff; }
+body.all-seasons-view .season-vault-track i { background:linear-gradient(90deg,#a75cff,#e3c2ff); box-shadow:0 0 10px rgba(190,119,255,.42); }
 
 .collection-title-wrap {
   min-width:0;
@@ -1638,15 +1756,37 @@ body.previous-season-view .season-vault-bar {
 
 @media (max-width:480px) {
   .season-vault-bar {
-    grid-template-columns:minmax(0,1fr) auto;
+    padding:12px;
   }
 
-  .season-vault-bar label {
-    grid-column:1 / -1;
+  .season-vault-heading {
+    align-items:stretch;
+    flex-direction:column;
+    gap:9px;
   }
 
-  .season-vault-bar span {
-    font-size:10px;
+  .season-vault-picker {
+    flex-basis:auto;
+    width:100%;
+  }
+
+  #seasonVaultTitle {
+    font-size:21px;
+  }
+
+  .season-vault-status {
+    align-items:flex-start;
+    flex-direction:column;
+    gap:6px;
+  }
+
+  #seasonVaultCount {
+    width:100%;
+    text-align:left;
+  }
+
+  .season-vault-metrics {
+    gap:9px;
   }
 
   .showcase-filters {
@@ -1847,4 +1987,440 @@ body.backup-dialog-open {
 
 .backup-dialog form {
   min-height:min-content;
+}
+
+/* v89: Burbank chrome title and unclipped cloud icon. */
+:root {
+  --chrome-highlight:#e8fbff;
+  --chrome-light:#75d9ff;
+  --chrome-mid:#2398d1;
+  --chrome-deep:#053b6f;
+  --chrome-edge:#13c8ff;
+  --chrome-glow:rgba(34,177,255,.44);
+}
+
+body[data-rarity="rare"] {
+  --chrome-highlight:#e8fbff;
+  --chrome-light:#75d9ff;
+  --chrome-mid:#2398d1;
+  --chrome-deep:#053b6f;
+  --chrome-edge:#13c8ff;
+  --chrome-glow:rgba(34,177,255,.44);
+}
+
+body[data-rarity="epic"] {
+  --chrome-highlight:#fff1ff;
+  --chrome-light:#dfa0ff;
+  --chrome-mid:#9c45d0;
+  --chrome-deep:#3d0c69;
+  --chrome-edge:#f36bd8;
+  --chrome-glow:rgba(184,72,242,.42);
+}
+
+body[data-rarity="legendary"] {
+  --chrome-highlight:#fff3dc;
+  --chrome-light:#ffb55f;
+  --chrome-mid:#df6818;
+  --chrome-deep:#6c1e07;
+  --chrome-edge:#ffd06b;
+  --chrome-glow:rgba(245,107,30,.44);
+}
+
+body[data-rarity="mythic"] {
+  --chrome-highlight:#fffbd0;
+  --chrome-light:#ffe16c;
+  --chrome-mid:#e4a512;
+  --chrome-deep:#684100;
+  --chrome-edge:#fff39a;
+  --chrome-glow:rgba(242,191,25,.46);
+}
+
+body[data-page="unowned"] {
+  --chrome-highlight:#fff;
+  --chrome-light:#d9e0eb;
+  --chrome-mid:#8e9aaa;
+  --chrome-deep:#394555;
+  --chrome-edge:#eef3fa;
+  --chrome-glow:rgba(205,218,236,.28);
+}
+
+#headerTitle {
+  max-width:100%;
+  font-family:"Sprite Display","Burbank Big Condensed","Arial Black",sans-serif !important;
+  font-size:clamp(38px,10vw,70px) !important;
+  font-weight:900;
+  line-height:.94;
+  letter-spacing:.005em;
+  white-space:nowrap;
+  color:transparent !important;
+  background-image:linear-gradient(
+    180deg,
+    var(--chrome-highlight) 0%,
+    var(--chrome-light) 22%,
+    var(--chrome-edge) 39%,
+    var(--chrome-highlight) 48%,
+    var(--chrome-mid) 55%,
+    var(--chrome-deep) 72%,
+    var(--chrome-light) 89%,
+    var(--chrome-highlight) 100%
+  );
+  background-position:center;
+  background-size:100% 100%;
+  background-clip:text;
+  -webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;
+  -webkit-text-stroke:.85px rgba(2,4,11,.96);
+  paint-order:stroke fill;
+  text-shadow:none !important;
+  filter:
+    drop-shadow(0 2px 0 var(--chrome-deep))
+    drop-shadow(0 0 8px var(--chrome-glow))
+    drop-shadow(0 5px 9px rgba(0,0,0,.42));
+}
+
+#backupBtn svg {
+  overflow:visible;
+}
+
+/* v90: soft title edge and direct missing-status tabs. */
+#headerTitle {
+  -webkit-text-stroke:1.05px rgba(232,236,243,.76);
+  filter:
+    drop-shadow(0 1px 0 rgba(3,5,13,.96))
+    drop-shadow(0 3px 0 var(--chrome-deep))
+    drop-shadow(0 0 7px var(--chrome-glow))
+    drop-shadow(0 5px 9px rgba(0,0,0,.4));
+}
+
+.missing-filter-tab {
+  flex:0 0 auto;
+  width:auto;
+  min-width:108px;
+  min-height:42px;
+  padding:8px 12px;
+  color:#fff;
+  border:1px solid rgba(255,255,255,.34);
+  border-radius:999px;
+  background:rgba(18,22,34,.88);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.1),0 4px 12px rgba(0,0,0,.24);
+  font-size:12px;
+  font-weight:850;
+  line-height:1;
+  white-space:nowrap;
+}
+
+.missing-filter-tab[aria-selected="true"] {
+  color:#fff;
+  border-color:rgba(255,255,255,.58);
+  background:rgba(74,82,99,.94);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.16),0 5px 14px rgba(0,0,0,.28);
+}
+
+.missing-filter-tab:hover,
+.missing-filter-tab:focus-visible {
+  border-color:#9be8ff;
+  background-color:rgba(34,42,63,.96);
+}
+
+/* v91: in-game rarity badges and matching tinted glass cards. */
+#tab-rare,
+#tab-epic,
+#tab-legendary,
+#tab-mythic {
+  --rarity-tab-a:#44bfff;
+  --rarity-tab-b:#0b5fce;
+  --rarity-tab-glow:rgba(55,180,255,.38);
+  min-width:92px;
+  border:1px solid rgba(255,255,255,.52);
+  border-radius:14px;
+  color:#fff;
+  background-image:
+    linear-gradient(180deg,rgba(255,255,255,.25),transparent 48%),
+    linear-gradient(135deg,var(--rarity-tab-a),var(--rarity-tab-b));
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.34),
+    inset 0 -2px 5px rgba(0,0,0,.22),
+    0 5px 14px rgba(0,0,0,.26);
+  text-shadow:0 1px 3px rgba(0,0,0,.72);
+}
+
+#tab-rare { --rarity-tab-a:#50c7ff; --rarity-tab-b:#075dca; --rarity-tab-glow:rgba(55,180,255,.42); }
+#tab-epic { --rarity-tab-a:#d479ff; --rarity-tab-b:#7125c8; --rarity-tab-glow:rgba(187,85,255,.42); }
+#tab-legendary { --rarity-tab-a:#ffb64f; --rarity-tab-b:#d95211; --rarity-tab-glow:rgba(255,132,40,.42); }
+#tab-mythic { --rarity-tab-a:#ffe56f; --rarity-tab-b:#bd7d00; --rarity-tab-glow:rgba(255,204,52,.42); }
+
+#tab-rare small,
+#tab-epic small,
+#tab-legendary small,
+#tab-mythic small,
+#tab-rare[aria-selected="true"] small,
+#tab-epic[aria-selected="true"] small,
+#tab-legendary[aria-selected="true"] small,
+#tab-mythic[aria-selected="true"] small {
+  color:#fff;
+}
+
+#tab-rare[aria-selected="true"],
+#tab-epic[aria-selected="true"],
+#tab-legendary[aria-selected="true"],
+#tab-mythic[aria-selected="true"] {
+  color:#fff;
+  border-color:#fff;
+  background-image:
+    linear-gradient(180deg,rgba(255,255,255,.34),transparent 48%),
+    linear-gradient(135deg,var(--rarity-tab-a),var(--rarity-tab-b));
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.42),
+    0 0 0 2px rgba(255,255,255,.34),
+    0 0 18px var(--rarity-tab-glow),
+    0 6px 16px rgba(0,0,0,.3);
+}
+
+/* Ready for a future Special rarity tab. */
+#tab-special {
+  color:#fff;
+  border-color:rgba(255,255,255,.58);
+  border-radius:14px;
+  background-image:
+    linear-gradient(180deg,rgba(255,255,255,.24),transparent 48%),
+    linear-gradient(135deg,#ffcb30,#e33f91,#7248f5,#18cea6);
+  text-shadow:0 1px 3px rgba(0,0,0,.72);
+}
+
+.collection[data-rarity="Rare"] .card {
+  border-color:rgba(117,202,255,.48) !important;
+  background:linear-gradient(145deg,rgba(59,157,235,.34),rgba(7,61,137,.24)) !important;
+}
+
+.collection[data-rarity="Epic"] .card {
+  border-color:rgba(208,142,255,.46) !important;
+  background:linear-gradient(145deg,rgba(158,82,218,.34),rgba(71,25,132,.24)) !important;
+}
+
+.collection[data-rarity="Legendary"] .card {
+  border-color:rgba(255,168,87,.48) !important;
+  background:linear-gradient(145deg,rgba(232,113,33,.34),rgba(124,43,8,.24)) !important;
+}
+
+.collection[data-rarity="Mythic"] .card {
+  border-color:rgba(255,220,107,.48) !important;
+  background:linear-gradient(145deg,rgba(222,168,35,.32),rgba(112,71,0,.24)) !important;
+}
+
+.collection .card.collected {
+  border-color:#45bdf8 !important;
+}
+
+.collection .card.mastered {
+  border-color:var(--gold) !important;
+}
+
+@supports not ((-webkit-backdrop-filter:blur(1px)) or (backdrop-filter:blur(1px))) {
+  .collection[data-rarity="Rare"] .card { background:rgba(20,83,145,.91) !important; }
+  .collection[data-rarity="Epic"] .card { background:rgba(82,39,126,.91) !important; }
+  .collection[data-rarity="Legendary"] .card { background:rgba(132,55,17,.91) !important; }
+  .collection[data-rarity="Mythic"] .card { background:rgba(119,84,12,.91) !important; }
+}
+
+/* v93: full missing-status pages with distinct art, tabs, title glow, and undo history. */
+body[data-missing-view="unowned"] {
+  --rarity-haze:rgba(85,211,255,.27);
+  --rarity-sheen:rgba(137,168,207,.16);
+  --missing-accent:#8be5ff;
+  --missing-accent-soft:rgba(105,210,245,.34);
+}
+
+body[data-missing-view="unmastered"] {
+  --rarity-haze:rgba(190,104,255,.24);
+  --rarity-sheen:rgba(255,169,63,.18);
+  --missing-accent:#ffc46d;
+  --missing-accent-soft:rgba(207,121,255,.32);
+}
+
+body.unowned-page #activePageTitle {
+  font-size:clamp(30px,8vw,48px) !important;
+}
+
+body[data-missing-view="unowned"] #activePageTitle {
+  color:#e3f8ff !important;
+  text-shadow:
+    0 2px 0 rgba(2,8,18,.96),
+    0 0 10px rgba(112,221,255,.78),
+    0 0 24px rgba(66,165,231,.48),
+    0 7px 18px rgba(0,0,0,.6);
+}
+
+body[data-missing-view="unmastered"] #activePageTitle {
+  color:#fff0d2 !important;
+  text-shadow:
+    0 2px 0 rgba(10,3,17,.96),
+    0 0 10px rgba(255,185,79,.72),
+    0 0 24px rgba(179,87,237,.48),
+    0 7px 18px rgba(0,0,0,.62);
+}
+
+#tab-unowned,
+#tab-unmastered {
+  min-width:112px;
+  min-height:44px;
+  border:1px solid rgba(255,255,255,.52);
+  border-radius:14px;
+  color:#fff;
+  background-image:
+    linear-gradient(180deg,rgba(255,255,255,.24),transparent 48%),
+    linear-gradient(135deg,var(--missing-tab-a),var(--missing-tab-b));
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.3),
+    inset 0 -2px 5px rgba(0,0,0,.22),
+    0 5px 14px rgba(0,0,0,.26);
+  text-shadow:0 1px 3px rgba(0,0,0,.78);
+}
+
+#tab-unowned {
+  --missing-tab-a:#62d7f5;
+  --missing-tab-b:#40516e;
+  --missing-tab-glow:rgba(92,209,245,.42);
+}
+
+#tab-unmastered {
+  --missing-tab-a:#ffbd61;
+  --missing-tab-b:#713aa6;
+  --missing-tab-glow:rgba(213,116,255,.4);
+}
+
+#tab-unowned[aria-selected="true"],
+#tab-unmastered[aria-selected="true"] {
+  color:#fff;
+  border-color:#fff;
+  background-image:
+    linear-gradient(180deg,rgba(255,255,255,.34),transparent 48%),
+    linear-gradient(135deg,var(--missing-tab-a),var(--missing-tab-b));
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.42),
+    0 0 0 2px rgba(255,255,255,.3),
+    0 0 18px var(--missing-tab-glow),
+    0 6px 16px rgba(0,0,0,.3);
+}
+
+.missing-recent-changes {
+  margin:8px 2px 18px;
+  padding:11px;
+  border:1px solid var(--missing-accent-soft);
+  border-radius:16px;
+  background:rgba(6,9,18,.58);
+  -webkit-backdrop-filter:blur(16px) saturate(118%);
+  backdrop-filter:blur(16px) saturate(118%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 9px 22px rgba(0,0,0,.25);
+}
+
+.missing-recent-changes[hidden] {
+  display:none !important;
+}
+
+.missing-recent-heading {
+  display:flex;
+  align-items:baseline;
+  justify-content:space-between;
+  gap:10px;
+  margin:0 2px 8px;
+}
+
+.missing-recent-heading h3 {
+  margin:0;
+  color:#fff;
+  font-family:var(--font-heading) !important;
+  font-size:17px;
+  letter-spacing:.025em;
+  text-shadow:0 0 10px var(--missing-accent-soft),0 2px 4px #000;
+}
+
+.missing-recent-heading span {
+  color:#dce7f5;
+  font-size:10px;
+  text-align:right;
+}
+
+.missing-recent-list {
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(min(230px,100%),1fr));
+  gap:7px;
+}
+
+.missing-recent-item {
+  display:grid;
+  grid-template-columns:44px minmax(0,1fr) auto;
+  align-items:center;
+  gap:9px;
+  min-width:0;
+  padding:7px;
+  border:1px solid rgba(255,255,255,.13);
+  border-radius:12px;
+  background:rgba(4,7,14,.58);
+}
+
+.missing-recent-thumb {
+  display:grid;
+  width:44px;
+  height:44px;
+  overflow:hidden;
+  place-items:center;
+  color:#fff;
+  border:1px solid var(--missing-accent-soft);
+  border-radius:10px;
+  background:rgba(255,255,255,.08);
+  font-weight:900;
+}
+
+.missing-recent-thumb img {
+  width:100%;
+  height:100%;
+  object-fit:cover;
+}
+
+.missing-recent-copy {
+  min-width:0;
+}
+
+.missing-recent-copy strong,
+.missing-recent-copy span {
+  display:block;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.missing-recent-copy strong {
+  color:#fff;
+  font-size:12px;
+}
+
+.missing-recent-copy span {
+  margin-top:2px;
+  color:#c9d6e8;
+  font-size:10px;
+}
+
+.missing-recent-undo {
+  min-width:58px;
+  min-height:34px;
+  padding:6px 10px;
+  color:#07111b;
+  border:1px solid rgba(255,255,255,.7);
+  border-radius:999px;
+  background:var(--missing-accent);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.48),0 3px 9px rgba(0,0,0,.28);
+  font-size:11px;
+  font-weight:900;
+}
+
+@media (max-width:420px) {
+  .missing-recent-heading {
+    align-items:flex-start;
+    flex-direction:column;
+    gap:1px;
+  }
+
+  .missing-recent-heading span {
+    text-align:left;
+  }
 }

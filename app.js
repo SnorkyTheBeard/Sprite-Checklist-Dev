@@ -15,7 +15,7 @@
   const CURRENT_SEASON_ID = seasonCatalog.some((season) => season.id === window.CURRENT_SPRITE_SEASON)
     ? window.CURRENT_SPRITE_SEASON
     : seasonCatalog[0].id;
-  const SEASON_FEATURE_VISIBLE = false;
+  const SEASON_FEATURE_VISIBLE = true;
   const SEASON_VIEW_ALL = 'all';
 
   function appStorageScope() {
@@ -27,6 +27,7 @@
   const PROGRESS_KEY = `galaxy_sprite_tracker_progress_v2_${STORAGE_SCOPE}`;
   const VIEW_MODES_KEY = `galaxy_sprite_tracker_view_modes_v1_${STORAGE_SCOPE}`;
   const MISSING_VIEW_KEY = `galaxy_sprite_tracker_missing_view_v1_${STORAGE_SCOPE}`;
+  const RECENT_MISSING_KEY = `galaxy_sprite_tracker_recent_missing_v1_${STORAGE_SCOPE}`;
   const SEASON_VIEW_KEY = `galaxy_sprite_tracker_season_view_v1_${STORAGE_SCOPE}`;
   const SPRITE_CARD_EDITS_KEY = `galaxy_sprite_tracker_sprite_cards_v1_${STORAGE_SCOPE}`;
   const PRE_RESTORE_PROGRESS_KEY = `galaxy_sprite_tracker_progress_before_restore_v1_${STORAGE_SCOPE}`;
@@ -40,7 +41,7 @@
   const GITHUB_API_VERSION = '2026-03-10';
   const GITHUB_PUBLISH_TARGET = {
     owner:'SnorkyTheBeard',
-    repo:'Real-Sprite-Checklist',
+    repo:'Sprite-Checklist-Dev',
     branch:'main'
   };
 
@@ -92,6 +93,18 @@
       return localStorage.getItem(MISSING_VIEW_KEY) === 'unmastered' ? 'unmastered' : 'unowned';
     } catch {
       return 'unowned';
+    }
+  }
+
+  function loadRecentMissingChanges() {
+    try {
+      const saved = JSON.parse(sessionStorage.getItem(RECENT_MISSING_KEY) || 'null');
+      return {
+        unowned:Array.isArray(saved?.unowned) ? saved.unowned.slice(0,4) : [],
+        unmastered:Array.isArray(saved?.unmastered) ? saved.unmastered.slice(0,4) : []
+      };
+    } catch {
+      return { unowned:[], unmastered:[] };
     }
   }
 
@@ -159,11 +172,20 @@
     holofoil:'assets/variant-backgrounds/variant-well-holofoil.webp'
   };
 
+  const FEATURED_VARIANT_BACKGROUNDS = Object.freeze({
+    'custom-john-wick':'assets/variant-backgrounds/variant-well-john-wick.webp?v=92'
+  });
+
   const DEFAULT_PAGE_BACKGROUNDS = {
     Rare:{ enabled:true, color:'#031328', image:'assets/page-backgrounds/page-bg-rare.webp', mode:'cover' },
     Epic:{ enabled:true, color:'#12071d', image:'assets/page-backgrounds/page-bg-epic.webp', mode:'cover' },
     Legendary:{ enabled:true, color:'#1a0d05', image:'assets/page-backgrounds/page-bg-legendary.webp', mode:'cover' },
     Mythic:{ enabled:true, color:'#100c08', image:'assets/page-backgrounds/page-bg-mythic.webp', mode:'cover' }
+  };
+
+  const DEFAULT_MISSING_PAGE_BACKGROUNDS = {
+    unowned:{ enabled:true, color:'#06101f', image:'assets/page-backgrounds/page-bg-unowned.webp?v=93', mode:'cover' },
+    unmastered:{ enabled:true, color:'#100a18', image:'assets/page-backgrounds/page-bg-unmastered.webp?v=93', mode:'cover' }
   };
 
   const DEFAULT_THEME = {
@@ -343,12 +365,47 @@
     normalizeDesign(window.PUBLISHED_DESIGN && typeof window.PUBLISHED_DESIGN === 'object' ? window.PUBLISHED_DESIGN : {}),
     window.SPRITE_ART_CONFIG
   );
+  const johnWickFamilyId = 'custom-john-wick';
+  const hasJohnWickFamily = baseData.some((family) => family?.id === johnWickFamilyId)
+    || design.customFamilies.some((family) => family?.id === johnWickFamilyId);
+  if (!hasJohnWickFamily) {
+    design.customFamilies.push({
+      id:johnWickFamilyId,
+      name:'John Wick',
+      rarity:'Mythic',
+      seasonId:CURRENT_SEASON_ID,
+      variants:[{ id:'base', name:'Base', image:'' }]
+    });
+    design.families[johnWickFamilyId] = {
+      ...(design.families[johnWickFamilyId] || {}),
+      name:'John Wick',
+      rarity:'Mythic',
+      seasonId:CURRENT_SEASON_ID,
+      visible:true,
+      deleted:false,
+      variants:{
+        ...(design.families[johnWickFamilyId]?.variants || {}),
+        base:{
+          ...(design.families[johnWickFamilyId]?.variants?.base || {}),
+          image:'published-assets/sprite-custom-john-wick-base.webp',
+          rarityPercentage:'0%'
+        }
+      },
+      addedVariants:Array.isArray(design.families[johnWickFamilyId]?.addedVariants)
+        ? design.families[johnWickFamilyId].addedVariants
+        : [],
+      order:Array.isArray(design.families[johnWickFamilyId]?.order)
+        ? design.families[johnWickFamilyId].order
+        : ['base']
+    };
+  }
   let state = loadProgress();
   let spriteCardEdits = loadSpriteCardEdits();
   let spriteViewModes = loadViewModes();
   let seasonView = loadSeasonView();
   let spriteEditMode = false;
   let missingView = loadMissingView();
+  let recentMissingChanges = loadRecentMissingChanges();
   let activeRarity = rarityFromHash() || defaultRarity;
   let toastTimer = 0;
   let pendingRestore = null;
@@ -361,6 +418,9 @@
   const pageTitleEl = document.getElementById('activePageTitle');
   const pageEyebrowEl = document.getElementById('pageEyebrow');
   const pageDescriptionEl = document.getElementById('pageDescription');
+  const missingRecentChangesEl = document.getElementById('missingRecentChanges');
+  const missingRecentListEl = document.getElementById('missingRecentList');
+  const missingRecentDescriptionEl = document.getElementById('missingRecentDescription');
   const pageCountEl = document.getElementById('pageCount');
   const collectedTotalEl = document.getElementById('collectedTotal');
   const masteredTotalEl = document.getElementById('masteredTotal');
@@ -409,7 +469,13 @@
   const confirmRestoreBtn = document.getElementById('confirmRestoreBtn');
   const undoRestoreBtn = document.getElementById('undoRestoreBtn');
   const seasonViewSelect = document.getElementById('seasonViewSelect');
+  const seasonVaultTitle = document.getElementById('seasonVaultTitle');
+  const seasonVaultMode = document.getElementById('seasonVaultMode');
   const seasonVaultCount = document.getElementById('seasonVaultCount');
+  const seasonVaultCollected = document.getElementById('seasonVaultCollected');
+  const seasonVaultMastered = document.getElementById('seasonVaultMastered');
+  const seasonVaultCollectedBar = document.getElementById('seasonVaultCollectedBar');
+  const seasonVaultMasteredBar = document.getElementById('seasonVaultMasteredBar');
 
   function saveProgress() {
     try {
@@ -445,7 +511,10 @@
   function applySeasonViewControls() {
     const syncOptions = (select,includeAll = true) => {
       const wanted = [
-        ...seasonCatalog.map((season) => ({ value:season.id, label:season.label })),
+        ...seasonCatalog.map((season) => ({
+          value:season.id,
+          label:`${season.label}${season.id === CURRENT_SEASON_ID ? ' · Current' : ' · Archived'}`
+        })),
         ...(includeAll ? [{ value:SEASON_VIEW_ALL, label:'All Seasons' }] : [])
       ];
       const current = [...select.options].map((option) => `${option.value}:${option.textContent}`).join('|');
@@ -464,9 +533,23 @@
     document.querySelector('.season-vault-bar').hidden = !SEASON_FEATURE_VISIBLE;
     document.querySelector('.showcase-season-filter').hidden = !SEASON_FEATURE_VISIBLE;
     seasonViewSelect.value = seasonView;
-    seasonVaultCount.textContent = `${vaultedSpriteCount()} outside current season`;
-    document.body.classList.toggle('previous-season-view',seasonView !== CURRENT_SEASON_ID && seasonView !== SEASON_VIEW_ALL);
-    document.body.classList.toggle('all-seasons-view',seasonView === SEASON_VIEW_ALL);
+    const isAllSeasons = seasonView === SEASON_VIEW_ALL;
+    const isArchivedSeason = seasonView !== CURRENT_SEASON_ID && !isAllSeasons;
+    const stats = overallStats(seasonView);
+    const percentage = (value) => stats.total ? Math.round((value / stats.total) * 100) : 0;
+    const archivedCount = vaultedSpriteCount();
+    seasonVaultTitle.textContent = seasonViewLabel();
+    seasonVaultMode.textContent = isAllSeasons ? 'Complete collection' : (isArchivedSeason ? 'Archived season' : 'Current season');
+    seasonVaultCount.textContent = archivedCount
+      ? `${archivedCount} ${archivedCount === 1 ? 'Sprite' : 'Sprites'} in the vault`
+      : 'Vault ready for the next season';
+    seasonVaultCollected.textContent = `${stats.collected} / ${stats.total}`;
+    seasonVaultMastered.textContent = `${stats.mastered} / ${stats.total}`;
+    seasonVaultCollectedBar.style.width = `${percentage(stats.collected)}%`;
+    seasonVaultMasteredBar.style.width = `${percentage(stats.mastered)}%`;
+    document.body.classList.toggle('previous-season-view',isArchivedSeason);
+    document.body.classList.toggle('all-seasons-view',isAllSeasons);
+    document.body.dataset.seasonMode = isAllSeasons ? 'all' : (isArchivedSeason ? 'archived' : 'current');
     document.body.dataset.seasonView = seasonView;
   }
 
@@ -1270,6 +1353,7 @@
     const themeRarity = activeThemeRarity();
     document.body.dataset.rarity = themeRarity.toLowerCase();
     document.body.dataset.page = activeRarity.toLowerCase();
+    document.body.dataset.missingView = isUnownedPage() ? missingView : '';
     const pageHeader = theme.pageHeaderBackgrounds?.[themeRarity] || {};
     const usePageHeader = Boolean(pageHeader.enabled && pageHeader.image);
     applyImageSurface(root,'header',usePageHeader ? pageHeader.image : theme.headerBgImage,usePageHeader ? pageHeader.mode : theme.headerBgMode);
@@ -1277,7 +1361,9 @@
     applyImageSurface(root,'collection',theme.collectionBgImage,theme.collectionBgMode,theme.useBuiltInCollectionArt ? 'linear-gradient(180deg,rgba(255,255,255,.24),rgba(255,255,255,0))' : 'none');
     applyImageSurface(root,'card',theme.cardBgImage,theme.cardBgMode);
     applyImageSurface(root,'well',theme.wellBgImage,theme.wellBgMode,theme.useBuiltInWellArt ? 'radial-gradient(circle at 40% 25%,#fff 0,#e7ddfa 42%,#b8a1e8 100%)' : 'none');
-    const page = theme.pageBackgrounds?.[themeRarity] || {};
+    const page = isUnownedPage()
+      ? DEFAULT_MISSING_PAGE_BACKGROUNDS[missingView]
+      : (theme.pageBackgrounds?.[themeRarity] || {});
     root.style.setProperty('--theme-page-bg',page.enabled ? page.color || 'transparent' : 'transparent');
     applyImageSurface(root,'page',page.enabled ? page.image : '',page.mode || 'cover');
 
@@ -1329,7 +1415,9 @@
     applySummaryPositions();
   }
 
-  function variantBackgroundSource(variant) {
+  function variantBackgroundSource(variant,family = null) {
+    const featured = family?.id ? FEATURED_VARIANT_BACKGROUNDS[family.id] : '';
+    if (featured) return featured;
     if (!design.theme.useVariantBackgrounds) return '';
     const backgrounds = design.theme.variantBackgrounds || {};
     const idKey = normalizeVariantBackgroundKey(variant.id);
@@ -1338,8 +1426,8 @@
     return nameKey && hasOwn(backgrounds,nameKey) ? backgrounds[nameKey] || '' : '';
   }
 
-  function applyVariantBackground(element,variant) {
-    const source = variantBackgroundSource(variant);
+  function applyVariantBackground(element,variant,family = null) {
+    const source = variantBackgroundSource(variant,family);
     if (!source) return;
     applyCustomBackground(element,design.theme.wellBgColor,source,design.theme.variantBgMode || 'cover');
     element.classList.add('has-variant-background');
@@ -1374,7 +1462,121 @@
     masterLabel.hidden = !masterText;
   }
 
-  function commitCardChange(card,family,variant,current,message) {
+  function saveRecentMissingChanges() {
+    try {
+      sessionStorage.setItem(RECENT_MISSING_KEY,JSON.stringify(recentMissingChanges));
+    } catch {
+      /* Recent actions can remain available for this visit. */
+    }
+  }
+
+  function recentMissingEntryMatches(entry) {
+    const current = state[entry.familyId]?.[entry.variantId];
+    return Boolean(current)
+      && Boolean(current.collected) === Boolean(entry.after?.collected)
+      && Boolean(current.mastered) === Boolean(entry.after?.mastered);
+  }
+
+  function recordRecentMissingChange(family,variant,before,current) {
+    if (!isUnownedPage() || !before) return;
+    const mode = missingView === 'unmastered' ? 'unmastered' : 'unowned';
+    const movedOut = mode === 'unmastered'
+      ? !before.mastered && current.mastered
+      : !before.collected && current.collected;
+    if (!movedOut) return;
+    const existing = recentMissingChanges[mode] || [];
+    recentMissingChanges[mode] = [
+      {
+        id:`${family.id}:${variant.id}:${Date.now()}`,
+        familyId:family.id,
+        variantId:variant.id,
+        before:{ collected:Boolean(before.collected), mastered:Boolean(before.mastered) },
+        after:{ collected:Boolean(current.collected), mastered:Boolean(current.mastered) }
+      },
+      ...existing.filter((entry) => entry.familyId !== family.id || entry.variantId !== variant.id)
+    ].slice(0,4);
+    saveRecentMissingChanges();
+  }
+
+  function undoRecentMissingChange(mode,entryId) {
+    const entries = recentMissingChanges[mode] || [];
+    const entry = entries.find((item) => item.id === entryId);
+    if (!entry) return;
+    const family = allFamilies().find((item) => item.id === entry.familyId);
+    const variant = family && orderedVariants(family).find((item) => item.id === entry.variantId);
+    const current = variantState(entry.familyId,entry.variantId);
+    current.collected = Boolean(entry.before?.collected);
+    current.mastered = Boolean(entry.before?.mastered);
+    recentMissingChanges[mode] = entries.filter((item) => item.id !== entryId);
+    saveProgress();
+    saveRecentMissingChanges();
+    renderTabs();
+    renderCollections();
+    updateCounters();
+    showToast(`${variant ? variantView(family,variant).name : 'Sprite'} restored`);
+  }
+
+  function renderRecentMissingChanges() {
+    if (!missingRecentChangesEl || !missingRecentListEl) return;
+    if (!isUnownedPage()) {
+      missingRecentChangesEl.hidden = true;
+      missingRecentListEl.replaceChildren();
+      return;
+    }
+    const mode = missingView === 'unmastered' ? 'unmastered' : 'unowned';
+    const previousEntries = recentMissingChanges[mode] || [];
+    const entries = previousEntries.filter(recentMissingEntryMatches);
+    if (entries.length !== previousEntries.length) {
+      recentMissingChanges[mode] = entries;
+      saveRecentMissingChanges();
+    }
+    missingRecentChangesEl.hidden = !entries.length;
+    missingRecentDescriptionEl.textContent = mode === 'unmastered'
+      ? 'Sprites just marked Mastered'
+      : 'Sprites just added to your collection';
+    missingRecentListEl.replaceChildren();
+    entries.forEach((entry) => {
+      const family = allFamilies().find((item) => item.id === entry.familyId);
+      const variant = family && orderedVariants(family).find((item) => item.id === entry.variantId);
+      if (!family || !variant) return;
+      const familyInfo = familyView(family);
+      const view = variantView(family,variant);
+      const row = document.createElement('div');
+      row.className = 'missing-recent-item';
+      const thumb = document.createElement('div');
+      thumb.className = 'missing-recent-thumb';
+      const imageSource = displayImageSource(view.image);
+      if (imageSource) {
+        const image = document.createElement('img');
+        image.src = imageSource;
+        image.alt = '';
+        image.width = 52;
+        image.height = 52;
+        image.loading = 'lazy';
+        thumb.appendChild(image);
+      } else {
+        thumb.textContent = (familyInfo.name || 'S').slice(0,1).toUpperCase();
+      }
+      const copy = document.createElement('div');
+      copy.className = 'missing-recent-copy';
+      const name = document.createElement('strong');
+      name.textContent = `${familyInfo.name || 'Sprite'} · ${view.name || 'Variant'}`;
+      const action = document.createElement('span');
+      action.textContent = mode === 'unmastered' ? 'Marked Mastered' : 'Added to collection';
+      copy.append(name,action);
+      const undo = document.createElement('button');
+      undo.type = 'button';
+      undo.className = 'missing-recent-undo';
+      undo.textContent = 'Undo';
+      undo.setAttribute('aria-label',`Undo change to ${familyInfo.name || 'Sprite'} ${view.name || 'variant'}`);
+      undo.addEventListener('click',() => undoRecentMissingChange(mode,entry.id));
+      row.append(thumb,copy,undo);
+      missingRecentListEl.appendChild(row);
+    });
+  }
+
+  function commitCardChange(card,family,variant,current,message,before = null) {
+    recordRecentMissingChange(family,variant,before,current);
     updateCard(card,current,family,variant);
     saveProgress();
     if (isUnownedPage()) renderCollections();
@@ -1415,7 +1617,7 @@
 
     const imageWrap = document.createElement('div');
     imageWrap.className = 'image-wrap';
-    applyVariantBackground(imageWrap,variant);
+    applyVariantBackground(imageWrap,variant,family);
     const imageButton = document.createElement('button');
     imageButton.type = 'button';
     imageButton.className = 'image-button';
@@ -1600,9 +1802,10 @@
     card.append(crown,seasonBadge,imageWrap,editorTools,percentageEditor,variantLine,listLabel,collect,masterLabel);
 
     const toggleCollected = () => {
+      const before = { collected:Boolean(current.collected), mastered:Boolean(current.mastered) };
       current.collected = !current.collected;
       if (!current.collected) current.mastered = false;
-      commitCardChange(card,family,variant,current,current.collected ? 'Added to collection' : 'Removed from collection');
+      commitCardChange(card,family,variant,current,current.collected ? 'Added to collection' : 'Removed from collection',before);
     };
     imageButton.addEventListener('click',() => {
       if (spriteEditMode) return fileInput.click();
@@ -1610,9 +1813,10 @@
     });
     collect.addEventListener('click',toggleCollected);
     crown.addEventListener('click',() => {
+      const before = { collected:Boolean(current.collected), mastered:Boolean(current.mastered) };
       current.mastered = !current.mastered;
       if (current.mastered) current.collected = true;
-      commitCardChange(card,family,variant,current,current.mastered ? 'Mastered' : 'Mastery removed');
+      commitCardChange(card,family,variant,current,current.mastered ? 'Mastered' : 'Mastery removed',before);
     });
     moveLeft.addEventListener('click',() => moveSpriteCard(family,variant.id,-1));
     moveRight.addEventListener('click',() => moveSpriteCard(family,variant.id,1));
@@ -1753,13 +1957,17 @@
   function handleTabKeys(event) {
     if (!['ArrowLeft','ArrowRight','Home','End'].includes(event.key)) return;
     event.preventDefault();
-    const currentIndex = pageTabs.indexOf(activeRarity);
+    const tabButtons = Array.from(tabsEl.querySelectorAll('[role="tab"]'));
+    const currentIndex = tabButtons.indexOf(event.currentTarget);
+    if (currentIndex < 0 || !tabButtons.length) return;
     let nextIndex = currentIndex;
-    if (event.key === 'ArrowLeft') nextIndex = (currentIndex - 1 + pageTabs.length) % pageTabs.length;
-    if (event.key === 'ArrowRight') nextIndex = (currentIndex + 1) % pageTabs.length;
+    if (event.key === 'ArrowLeft') nextIndex = (currentIndex - 1 + tabButtons.length) % tabButtons.length;
+    if (event.key === 'ArrowRight') nextIndex = (currentIndex + 1) % tabButtons.length;
     if (event.key === 'Home') nextIndex = 0;
-    if (event.key === 'End') nextIndex = pageTabs.length - 1;
-    switchRarity(pageTabs[nextIndex],{ historyMode:'push', focusTab:true, announce:true });
+    if (event.key === 'End') nextIndex = tabButtons.length - 1;
+    const targetId = tabButtons[nextIndex].id;
+    tabButtons[nextIndex].click();
+    requestAnimationFrame(() => document.getElementById(targetId)?.focus());
   }
 
   function renderTabs() {
@@ -1768,25 +1976,24 @@
     const unmastered = unmasteredCount();
     pageTabs.forEach((rarity) => {
       if (rarity === UNOWNED_PAGE) {
-        const select = document.createElement('select');
-        const placeholder = document.createElement('option');
-        const unownedOption = document.createElement('option');
-        const unmasteredOption = document.createElement('option');
-        select.id = 'tab-unowned';
-        select.className = 'tab missing-filter-select';
-        select.setAttribute('aria-label',`Missing Sprite view: ${missing} unowned and ${unmastered} unmastered`);
-        select.setAttribute('aria-selected',String(isUnownedPage()));
-        placeholder.value = '';
-        placeholder.textContent = 'Missing Sprites';
-        placeholder.disabled = true;
-        unownedOption.value = 'unowned';
-        unownedOption.textContent = `Unowned (${missing})`;
-        unmasteredOption.value = 'unmastered';
-        unmasteredOption.textContent = `Unmastered (${unmastered})`;
-        select.append(placeholder,unownedOption,unmasteredOption);
-        select.value = isUnownedPage() ? missingView : '';
-        select.addEventListener('change',() => setMissingView(select.value,{ historyMode:'push', announce:true }));
-        tabsEl.appendChild(select);
+        const addMissingTab = (view,label,count) => {
+          const button = document.createElement('button');
+          const selected = isUnownedPage() && missingView === view;
+          button.type = 'button';
+          button.id = `tab-${view}`;
+          button.className = 'tab missing-filter-tab';
+          button.setAttribute('role','tab');
+          button.setAttribute('aria-controls','checklistPage');
+          button.setAttribute('aria-selected',String(selected));
+          button.setAttribute('aria-label',`${count} ${label.toLowerCase()} Sprites`);
+          button.tabIndex = selected ? 0 : -1;
+          button.textContent = `${label} (${count})`;
+          button.addEventListener('click',() => setMissingView(view,{ historyMode:'push', announce:true }));
+          button.addEventListener('keydown',handleTabKeys);
+          tabsEl.appendChild(button);
+        };
+        addMissingTab('unowned','Unowned',missing);
+        addMissingTab('unmastered','Unmastered',unmastered);
         return;
       }
       const stats = rarity === UNOWNED_PAGE ? null : rarityStats(rarity);
@@ -1813,6 +2020,7 @@
 
   function renderCollections() {
     collectionsEl.replaceChildren();
+    renderRecentMissingChanges();
     const page = design.pages[activeRarity] || DEFAULT_PAGES[activeRarity];
     renderOptionalText(pageEyebrowEl,isUnownedPage() ? '' : page.eyebrow);
     renderOptionalText(
@@ -1974,11 +2182,15 @@
       const stats = rarityStats(rarity);
       tab.querySelector('small').textContent = `${stats.collected}/${stats.total}`;
     });
-    const missingSelect = document.getElementById('tab-unowned');
-    if (missingSelect) {
-      missingSelect.querySelector('option[value="unowned"]').textContent = `Unowned (${missing})`;
-      missingSelect.querySelector('option[value="unmastered"]').textContent = `Unmastered (${unmastered})`;
-      missingSelect.setAttribute('aria-label',`Missing Sprite view: ${missing} unowned and ${unmastered} unmastered`);
+    const unownedTab = document.getElementById('tab-unowned');
+    const unmasteredTab = document.getElementById('tab-unmastered');
+    if (unownedTab) {
+      unownedTab.textContent = `Unowned (${missing})`;
+      unownedTab.setAttribute('aria-label',`${missing} unowned Sprites`);
+    }
+    if (unmasteredTab) {
+      unmasteredTab.textContent = `Unmastered (${unmastered})`;
+      unmasteredTab.setAttribute('aria-label',`${unmastered} unmastered Sprites`);
     }
   }
 
@@ -2007,7 +2219,9 @@
     const hash = options.hash || `#${rarity.toLowerCase()}`;
     if (options.historyMode === 'push' && location.hash !== hash) history.pushState({ rarity },'',hash);
     else if (location.hash !== hash) history.replaceState({ rarity },'',hash);
-    const activeTab = document.getElementById(`tab-${rarity.toLowerCase()}`);
+    const activeTab = document.getElementById(
+      rarity === UNOWNED_PAGE ? `tab-${missingView}` : `tab-${rarity.toLowerCase()}`
+    );
     activeTab?.scrollIntoView({ block:'nearest', inline:'center' });
     if (options.focusTab) activeTab?.focus();
     if (options.announce && changed) showToast(`${rarity} page`);
@@ -2430,7 +2644,7 @@
           rarity,
           rarityPercentage:view.rarityPercentage || '',
           image:displayImageSource(view.image),
-          background:displayImageSource(variantBackgroundSource(variant)),
+          background:displayImageSource(variantBackgroundSource(variant,family)),
           previousSeason:isPreviousSeasonSprite(family,variant),
           collected:current.collected === true || current.mastered === true,
           mastered:current.mastered === true
@@ -2934,6 +3148,8 @@
 
   function resetProgress() {
     state = {};
+    recentMissingChanges = { unowned:[], unmastered:[] };
+    try { sessionStorage.removeItem(RECENT_MISSING_KEY); } catch { /* Nothing else to clear. */ }
     saveProgress();
     resetDialog.close();
     renderAll();
@@ -3109,6 +3325,6 @@
   const activeHash = isUnownedPage() ? `#${missingView}` : `#${activeRarity.toLowerCase()}`;
   if (location.hash !== activeHash) history.replaceState({ rarity:activeRarity },'',activeHash);
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./service-worker.js?v=86',{ updateViaCache:'none' }).then((registration) => registration.update()).catch(() => {});
+    navigator.serviceWorker.register('./service-worker.js?v=94',{ updateViaCache:'none' }).then((registration) => registration.update()).catch(() => {});
   }
 })();
