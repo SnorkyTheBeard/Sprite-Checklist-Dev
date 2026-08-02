@@ -417,6 +417,7 @@
   let recentMissingChanges = loadRecentMissingChanges();
   let activeRarity = rarityFromHash() || defaultRarity;
   let toastTimer = 0;
+  let appViewTransitionTimer = 0;
   let pendingRestore = null;
   let showcaseObjectUrl = '';
   let showcaseFile = null;
@@ -500,6 +501,7 @@
   }
 
   function currentSpriteViewMode() {
+    if (appView === APP_VIEW_VAULT) return 'card';
     return spriteViewModes[activeRarity] === 'list' ? 'list' : 'card';
   }
 
@@ -542,6 +544,16 @@
     if (appMenuDialog.open) appMenuDialog.close();
   }
 
+  function playAppViewTransition() {
+    window.clearTimeout(appViewTransitionTimer);
+    document.body.classList.remove('app-view-entering');
+    void document.body.offsetWidth;
+    document.body.classList.add('app-view-entering');
+    appViewTransitionTimer = window.setTimeout(() => {
+      document.body.classList.remove('app-view-entering');
+    },320);
+  }
+
   function applyAppView() {
     const vaultOpen = appView === APP_VIEW_VAULT;
     document.body.classList.toggle('vault-view',vaultOpen);
@@ -567,13 +579,15 @@
       spriteEditMode = false;
       document.body.classList.remove('sprite-edit-mode');
     }
-    closeAppMenu();
+    /* Render the destination while the menu still covers the page, then reveal it. */
     renderAll();
     const viewHash = appView === APP_VIEW_VAULT
       ? '#vault'
       : (isUnownedPage() ? `#${missingView}` : `#${activeRarity.toLowerCase()}`);
     if (location.hash !== viewHash) history.replaceState({ appView, rarity:activeRarity },'',viewHash);
     if (changed) window.scrollTo({ top:0, behavior:'auto' });
+    closeAppMenu();
+    if (changed) playAppViewTransition();
     if (announce && changed) showToast(appView === APP_VIEW_VAULT ? 'Sprite Vault' : 'Current Tracker');
   }
 
@@ -3436,6 +3450,6 @@
     : (isUnownedPage() ? `#${missingView}` : `#${activeRarity.toLowerCase()}`);
   if (location.hash !== activeHash) history.replaceState({ rarity:activeRarity },'',activeHash);
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./service-worker.js?v=103',{ updateViaCache:'none' }).then((registration) => registration.update()).catch(() => {});
+    navigator.serviceWorker.register('./service-worker.js?v=104',{ updateViaCache:'none' }).then((registration) => registration.update()).catch(() => {});
   }
 })();
