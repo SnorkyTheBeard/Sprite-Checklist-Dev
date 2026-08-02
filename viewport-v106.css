@@ -1,0 +1,48 @@
+/* Sprite Tracker v106: prevent whole-page sideways movement on mobile. */
+
+html,
+body {
+  width:100%;
+  max-width:100%;
+  overflow-x:hidden !important;
+  overscroll-behavior-x:none;
+}
+
+@supports (overflow:clip) {
+  html,
+  body {
+    overflow-x:clip !important;
+  }
+}
+
+body:not(.vault-view) .app-shell,
+body:not(.vault-view) #mainContent,
+body:not(.vault-view) .page-head,
+body:not(.vault-view) .page-head-actions,
+body:not(.vault-view) .collection,
+body:not(.vault-view) .collection-head,
+body:not(.vault-view) .collection-meta {
+  min-width:0;
+  max-width:100%;
+}
+
+body:not(.vault-view) #checklistPage {
+  min-width:0;
+  max-width:none;
+}
+
+body:not(.vault-view) .hero {
+  max-width:100vw;
+}
+
+/* These remain the only intentional horizontal swipe areas. */
+body:not(.vault-view) .rarity-tabs,
+body:not(.vault-view) .variant-row {
+  overflow-x:auto !important;
+  overscroll-behavior-x:contain;
+  -webkit-overflow-scrolling:touch;
+}
+
+body:not(.vault-view) .rarity-tabs {
+  max-width:100vw;
+}
