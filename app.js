@@ -31,7 +31,6 @@
   const MISSING_VIEW_KEY = `galaxy_sprite_tracker_missing_view_v1_${STORAGE_SCOPE}`;
   const RECENT_MISSING_KEY = `galaxy_sprite_tracker_recent_missing_v1_${STORAGE_SCOPE}`;
   const SEASON_VIEW_KEY = `galaxy_sprite_tracker_season_view_v1_${STORAGE_SCOPE}`;
-  const APP_VIEW_KEY = `galaxy_sprite_tracker_app_view_v1_${STORAGE_SCOPE}`;
   const SPRITE_CARD_EDITS_KEY = `galaxy_sprite_tracker_sprite_cards_v1_${STORAGE_SCOPE}`;
   const PRE_RESTORE_PROGRESS_KEY = `galaxy_sprite_tracker_progress_before_restore_v1_${STORAGE_SCOPE}`;
   const LEGACY_PROGRESS_KEY = 'galaxy_sprite_tracker_progress_v1';
@@ -100,21 +99,8 @@
   }
 
   function loadAppView() {
-    if (decodeURIComponent(location.hash.slice(1)).toLowerCase() === APP_VIEW_VAULT) return APP_VIEW_VAULT;
-    for (const storageName of ['localStorage','sessionStorage']) {
-      try {
-        const storage = window[storageName];
-        if (storage.getItem(APP_VIEW_KEY) === APP_VIEW_VAULT && SEASON_FEATURE_VISIBLE) return APP_VIEW_VAULT;
-        if (storage.getItem(APP_VIEW_KEY) === APP_VIEW_TRACKER) return APP_VIEW_TRACKER;
-      } catch { /* Try the other browser storage area. */ }
-    }
-    return APP_VIEW_TRACKER;
-  }
-
-  function saveAppView() {
-    for (const storageName of ['localStorage','sessionStorage']) {
-      try { window[storageName].setItem(APP_VIEW_KEY,appView); } catch { /* The other storage area may still work. */ }
-    }
+    const hashView = decodeURIComponent(location.hash.slice(1)).toLowerCase();
+    return hashView === APP_VIEW_VAULT && SEASON_FEATURE_VISIBLE ? APP_VIEW_VAULT : APP_VIEW_TRACKER;
   }
 
   function loadRecentMissingChanges() {
@@ -576,7 +562,6 @@
     const changed = appView !== next;
     if (next === APP_VIEW_VAULT && season !== null) vaultSeasonView = sanitizeSeasonView(season);
     appView = next;
-    saveAppView();
     seasonView = appView === APP_VIEW_VAULT ? vaultSeasonView : CURRENT_SEASON_ID;
     if (appView === APP_VIEW_VAULT && spriteEditMode) {
       spriteEditMode = false;
@@ -1529,16 +1514,20 @@
     const imageButton = card.querySelector('.image-button');
     const collectButton = card.querySelector('.collect-button');
     const crownButton = card.querySelector('.crown-button');
-    imageButton.setAttribute('aria-label',spriteEditMode ? `Upload image for ${variantName} ${groupName}` : collectedAction);
-    if (spriteEditMode) imageButton.removeAttribute('aria-pressed');
+    const vaultDisplay = appView === APP_VIEW_VAULT;
+    card.setAttribute('aria-label',`${variantName} ${groupName}${current.mastered ? ', mastered' : ''}`);
+    imageButton.disabled = vaultDisplay;
+    imageButton.tabIndex = vaultDisplay ? -1 : 0;
+    imageButton.setAttribute('aria-label',vaultDisplay ? `${variantName} ${groupName} display case` : (spriteEditMode ? `Upload image for ${variantName} ${groupName}` : collectedAction));
+    if (spriteEditMode || vaultDisplay) imageButton.removeAttribute('aria-pressed');
     else imageButton.setAttribute('aria-pressed',String(Boolean(current.collected)));
     collectButton.setAttribute('aria-label',collectedAction);
     collectButton.setAttribute('aria-pressed',String(Boolean(current.collected)));
     crownButton.setAttribute('aria-label',masteredAction);
     crownButton.setAttribute('aria-pressed',String(Boolean(current.mastered)));
-    crownButton.disabled = appView === APP_VIEW_VAULT;
-    crownButton.tabIndex = appView === APP_VIEW_VAULT ? -1 : 0;
-    if (appView === APP_VIEW_VAULT) crownButton.setAttribute('aria-hidden','true');
+    crownButton.disabled = vaultDisplay;
+    crownButton.tabIndex = vaultDisplay ? -1 : 0;
+    if (vaultDisplay) crownButton.setAttribute('aria-hidden','true');
     else crownButton.removeAttribute('aria-hidden');
     collectButton.querySelector('.collect-label').textContent = design.header.collectedLabel || 'In Collection';
     const masterText = current.mastered ? (design.header.masteredLabel || 'Mastered') : design.header.masterPrompt;
@@ -1702,7 +1691,7 @@
 
     const imageWrap = document.createElement('div');
     imageWrap.className = 'image-wrap';
-    applyVariantBackground(imageWrap,variant,family);
+    if (appView !== APP_VIEW_VAULT) applyVariantBackground(imageWrap,variant,family);
     const imageButton = document.createElement('button');
     imageButton.type = 'button';
     imageButton.className = 'image-button';
@@ -3447,6 +3436,6 @@
     : (isUnownedPage() ? `#${missingView}` : `#${activeRarity.toLowerCase()}`);
   if (location.hash !== activeHash) history.replaceState({ rarity:activeRarity },'',activeHash);
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./service-worker.js?v=102',{ updateViaCache:'none' }).then((registration) => registration.update()).catch(() => {});
+    navigator.serviceWorker.register('./service-worker.js?v=103',{ updateViaCache:'none' }).then((registration) => registration.update()).catch(() => {});
   }
 })();

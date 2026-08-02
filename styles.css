@@ -546,6 +546,178 @@ footer {
   }
 }
 
+/* v103: a real background layer replaces the unreliable fixed pseudo-element. */
+.page-backdrop {
+  position:fixed;
+  inset:0;
+  z-index:0;
+  pointer-events:none;
+  background-color:var(--theme-page-bg);
+  background-image:
+    radial-gradient(ellipse at 14% 4%,var(--rarity-haze),transparent 38%),
+    radial-gradient(ellipse at 88% 36%,var(--rarity-sheen),transparent 42%),
+    linear-gradient(180deg,rgba(3,5,15,.12),rgba(3,5,15,.36)),
+    var(--theme-page-image);
+  background-position:center;
+  background-size:cover;
+  background-repeat:no-repeat;
+}
+
+body.vault-view .page-backdrop {
+  background-color:#05070b;
+  background-image:
+    linear-gradient(180deg,rgba(2,5,10,.08),rgba(2,5,10,.34)),
+    url("assets/page-backgrounds/page-bg-sprite-vault-v100.webp");
+  background-position:center top;
+  background-size:cover;
+  background-repeat:no-repeat;
+}
+
+body::after,
+body.vault-view::after {
+  content:none !important;
+  display:none !important;
+}
+
+/* Vault-only museum cases. Tracker cards and controls are unchanged. */
+body.vault-view .collection .card,
+body.vault-view .collection .card.collected,
+body.vault-view .collection .card.mastered {
+  position:relative;
+  aspect-ratio:.78;
+  display:grid;
+  min-height:0;
+  padding:10px;
+  place-items:stretch;
+  overflow:hidden;
+  border:1px solid rgba(218,235,247,.62) !important;
+  border-radius:20px !important;
+  background:
+    linear-gradient(118deg,rgba(255,255,255,.21) 0 6%,transparent 15% 72%,rgba(255,255,255,.07) 82%,transparent 91%),
+    linear-gradient(180deg,rgba(198,222,239,.13),rgba(27,46,61,.08) 58%,rgba(2,7,12,.42)) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.42),
+    inset 0 0 0 3px rgba(149,185,210,.08),
+    inset 0 -28px 38px rgba(0,0,0,.24),
+    0 13px 30px rgba(0,0,0,.46),
+    0 0 0 3px rgba(4,9,15,.5) !important;
+  -webkit-backdrop-filter:blur(11px) saturate(112%);
+  backdrop-filter:blur(11px) saturate(112%);
+}
+
+body.vault-view .collection .card::before {
+  content:"";
+  position:absolute;
+  inset:7px;
+  z-index:7;
+  border:1px solid rgba(232,244,252,.18);
+  border-radius:14px;
+  background:linear-gradient(112deg,rgba(255,255,255,.1),transparent 22% 78%,rgba(255,255,255,.04));
+  pointer-events:none;
+}
+
+body.vault-view .collection .card::after {
+  content:"";
+  position:absolute;
+  right:9%;
+  bottom:7px;
+  left:9%;
+  z-index:8;
+  height:8px;
+  border:1px solid rgba(209,229,243,.28);
+  border-radius:999px;
+  background:linear-gradient(180deg,rgba(220,238,249,.25),rgba(5,12,19,.62));
+  box-shadow:0 4px 10px rgba(0,0,0,.38),inset 0 1px 0 rgba(255,255,255,.28);
+  pointer-events:none;
+}
+
+body.vault-view .card .image-wrap,
+body.vault-view .card .image-wrap.has-variant-background {
+  width:100%;
+  height:100%;
+  aspect-ratio:auto;
+  overflow:visible;
+  border:0 !important;
+  border-radius:14px;
+  background-color:transparent !important;
+  background-image:
+    radial-gradient(ellipse at 50% 91%,rgba(192,222,240,.13),transparent 45%),
+    linear-gradient(180deg,rgba(255,255,255,.025),rgba(0,0,0,.1)) !important;
+  box-shadow:none !important;
+}
+
+body.vault-view .card .image-button {
+  cursor:default;
+  pointer-events:none;
+}
+
+body.vault-view .card .image-wrap img,
+body.vault-view .card .image-wrap.has-variant-background img {
+  width:91%;
+  height:91%;
+  object-fit:contain;
+  filter:drop-shadow(0 10px 8px rgba(0,0,0,.5));
+  transform:none;
+}
+
+body.vault-view .card .sprite-season-badge,
+body.vault-view .card .sprite-card-tools,
+body.vault-view .card .sprite-percentage-editor,
+body.vault-view .card .sprite-variant-line,
+body.vault-view .card .sprite-list-label,
+body.vault-view .card .collect-button,
+body.vault-view .card .master-label,
+body.vault-view .card .check-badge,
+body.vault-view .card .sprite-image-edit-hint,
+body.vault-view .card .image-fallback {
+  display:none !important;
+}
+
+body.vault-view .card .crown-button {
+  top:10px;
+  left:10px;
+  z-index:12;
+  width:51px;
+  height:51px;
+  padding:8px;
+  visibility:hidden;
+  border:2px solid #fff0a7;
+  border-radius:50%;
+  background:
+    radial-gradient(circle at 29% 22%,rgba(255,255,255,.95) 0 4%,transparent 5%),
+    conic-gradient(from 30deg,#8b5709,#f8d96c,#b77913,#fff0a0,#8b5709);
+  box-shadow:
+    inset 0 1px 1px rgba(255,255,255,.78),
+    inset 0 -3px 5px rgba(91,53,4,.52),
+    0 4px 8px rgba(0,0,0,.5),
+    0 0 10px rgba(255,204,68,.22);
+  filter:none;
+  transform:rotate(-7deg);
+}
+
+body.vault-view .card.mastered .crown-button {
+  visibility:visible;
+}
+
+body.vault-view .card .crown-button svg,
+body.vault-view .card.mastered .crown-button svg {
+  width:100%;
+  height:100%;
+  fill:#fff0a0;
+  stroke:#704309;
+  stroke-width:4.2;
+  filter:drop-shadow(0 1px 0 rgba(255,255,255,.5)) drop-shadow(0 2px 2px rgba(75,40,1,.44));
+  transform:none;
+}
+
+@supports not ((-webkit-backdrop-filter:blur(1px)) or (backdrop-filter:blur(1px))) {
+  body.vault-view .collection .card,
+  body.vault-view .collection .card.collected,
+  body.vault-view .collection .card.mastered {
+    background:linear-gradient(180deg,rgba(35,52,65,.96),rgba(5,12,19,.98)) !important;
+  }
+}
+
 /* v96: flat full-screen navigation matching the mobile menu reference. */
 .app-menu-button {
   position:absolute;
@@ -3239,5 +3411,180 @@ body[data-missing-view="unmastered"] #activePageTitle {
 
   .missing-recent-heading span {
     text-align:left;
+  }
+}
+
+/* v103 final overrides: keep the real Edge-safe backdrop and Vault cases above all legacy rules. */
+.page-backdrop {
+  position:fixed !important;
+  inset:0 !important;
+  z-index:0 !important;
+  display:block !important;
+  pointer-events:none;
+  background-color:var(--theme-page-bg);
+  background-image:
+    radial-gradient(ellipse at 14% 4%,var(--rarity-haze),transparent 38%),
+    radial-gradient(ellipse at 88% 36%,var(--rarity-sheen),transparent 42%),
+    linear-gradient(180deg,rgba(3,5,15,.12),rgba(3,5,15,.36)),
+    var(--theme-page-image);
+  background-position:center;
+  background-size:cover;
+  background-repeat:no-repeat;
+  transform:none !important;
+  -webkit-transform:none !important;
+}
+
+body.vault-view .page-backdrop {
+  background-color:#05070b;
+  background-image:
+    linear-gradient(180deg,rgba(2,5,10,.08),rgba(2,5,10,.34)),
+    url("assets/page-backgrounds/page-bg-sprite-vault-v100.webp");
+  background-position:center top;
+  background-size:cover;
+  background-repeat:no-repeat;
+}
+
+body::after,
+body.vault-view::after {
+  content:none !important;
+  display:none !important;
+  background:none !important;
+}
+
+body.vault-view .collection .card,
+body.vault-view .collection .card.collected,
+body.vault-view .collection .card.mastered {
+  position:relative;
+  aspect-ratio:.78;
+  display:grid;
+  min-height:0;
+  padding:10px;
+  place-items:stretch;
+  overflow:hidden;
+  border:1px solid rgba(218,235,247,.62) !important;
+  border-radius:20px !important;
+  background:
+    linear-gradient(118deg,rgba(255,255,255,.21) 0 6%,transparent 15% 72%,rgba(255,255,255,.07) 82%,transparent 91%),
+    linear-gradient(180deg,rgba(198,222,239,.13),rgba(27,46,61,.08) 58%,rgba(2,7,12,.42)) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.42),
+    inset 0 0 0 3px rgba(149,185,210,.08),
+    inset 0 -28px 38px rgba(0,0,0,.24),
+    0 13px 30px rgba(0,0,0,.46),
+    0 0 0 3px rgba(4,9,15,.5) !important;
+  -webkit-backdrop-filter:blur(11px) saturate(112%);
+  backdrop-filter:blur(11px) saturate(112%);
+}
+
+body.vault-view .collection .card::before {
+  content:"";
+  position:absolute;
+  inset:7px;
+  z-index:7;
+  border:1px solid rgba(232,244,252,.18);
+  border-radius:14px;
+  background:linear-gradient(112deg,rgba(255,255,255,.1),transparent 22% 78%,rgba(255,255,255,.04));
+  pointer-events:none;
+}
+
+body.vault-view .collection .card::after {
+  content:"";
+  position:absolute;
+  right:9%;
+  bottom:7px;
+  left:9%;
+  z-index:8;
+  height:8px;
+  border:1px solid rgba(209,229,243,.28);
+  border-radius:999px;
+  background:linear-gradient(180deg,rgba(220,238,249,.25),rgba(5,12,19,.62));
+  box-shadow:0 4px 10px rgba(0,0,0,.38),inset 0 1px 0 rgba(255,255,255,.28);
+  pointer-events:none;
+}
+
+body.vault-view .card .image-wrap,
+body.vault-view .card .image-wrap.has-variant-background {
+  width:100%;
+  height:100%;
+  aspect-ratio:auto;
+  overflow:visible;
+  border:0 !important;
+  border-radius:14px;
+  background-color:transparent !important;
+  background-image:
+    radial-gradient(ellipse at 50% 91%,rgba(192,222,240,.13),transparent 45%),
+    linear-gradient(180deg,rgba(255,255,255,.025),rgba(0,0,0,.1)) !important;
+  box-shadow:none !important;
+}
+
+body.vault-view .card .image-button {
+  cursor:default;
+  pointer-events:none;
+}
+
+body.vault-view .card .image-wrap img,
+body.vault-view .card .image-wrap.has-variant-background img {
+  width:91%;
+  height:91%;
+  object-fit:contain;
+  filter:drop-shadow(0 10px 8px rgba(0,0,0,.5));
+  transform:none;
+}
+
+body.vault-view .card .sprite-season-badge,
+body.vault-view .card .sprite-card-tools,
+body.vault-view .card .sprite-percentage-editor,
+body.vault-view .card .sprite-variant-line,
+body.vault-view .card .sprite-list-label,
+body.vault-view .card .collect-button,
+body.vault-view .card .master-label,
+body.vault-view .card .check-badge,
+body.vault-view .card .sprite-image-edit-hint,
+body.vault-view .card .image-fallback {
+  display:none !important;
+}
+
+body.vault-view .card .crown-button {
+  top:10px;
+  left:10px;
+  z-index:12;
+  width:51px;
+  height:51px;
+  padding:8px;
+  visibility:hidden;
+  border:2px solid #fff0a7;
+  border-radius:50%;
+  background:
+    radial-gradient(circle at 29% 22%,rgba(255,255,255,.95) 0 4%,transparent 5%),
+    conic-gradient(from 30deg,#8b5709,#f8d96c,#b77913,#fff0a0,#8b5709);
+  box-shadow:
+    inset 0 1px 1px rgba(255,255,255,.78),
+    inset 0 -3px 5px rgba(91,53,4,.52),
+    0 4px 8px rgba(0,0,0,.5),
+    0 0 10px rgba(255,204,68,.22);
+  filter:none;
+  transform:rotate(-7deg);
+}
+
+body.vault-view .card.mastered .crown-button {
+  visibility:visible;
+}
+
+body.vault-view .card .crown-button svg,
+body.vault-view .card.mastered .crown-button svg {
+  width:100%;
+  height:100%;
+  fill:#fff0a0;
+  stroke:#704309;
+  stroke-width:4.2;
+  filter:drop-shadow(0 1px 0 rgba(255,255,255,.5)) drop-shadow(0 2px 2px rgba(75,40,1,.44));
+  transform:none;
+}
+
+@supports not ((-webkit-backdrop-filter:blur(1px)) or (backdrop-filter:blur(1px))) {
+  body.vault-view .collection .card,
+  body.vault-view .collection .card.collected,
+  body.vault-view .collection .card.mastered {
+    background:linear-gradient(180deg,rgba(35,52,65,.96),rgba(5,12,19,.98)) !important;
   }
 }
