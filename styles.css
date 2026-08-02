@@ -830,7 +830,7 @@ body.vault-view::after {
   background-color:#05070b;
   background-image:
     linear-gradient(180deg,rgba(2,5,10,.08),rgba(2,5,10,.34)),
-    url("assets/page-backgrounds/page-bg-sprite-vault-v98.webp");
+    url("assets/page-backgrounds/page-bg-sprite-vault-v100.webp");
   background-position:center top;
   background-size:cover;
   background-repeat:no-repeat;
