@@ -1694,6 +1694,52 @@ body.sprite-list-view .page-swipe-hint {
   }
 }
 
+/* v102: stable iOS Edge/Safari background layers and calm modal opening. */
+body {
+  isolation:isolate;
+}
+
+html.app-menu-open,
+html.backup-dialog-open,
+html.showcase-dialog-open,
+body.app-menu-open,
+body.backup-dialog-open,
+body.showcase-dialog-open {
+  overflow:hidden !important;
+  overscroll-behavior:none;
+}
+
+body.app-menu-open,
+body.backup-dialog-open {
+  position:static !important;
+  inset:auto !important;
+  width:auto !important;
+}
+
+.reset-dialog::backdrop,
+.app-menu-dialog::backdrop {
+  -webkit-backdrop-filter:none !important;
+  backdrop-filter:none !important;
+}
+
+#showcaseDialogTitle:focus {
+  outline:none;
+}
+
+@media (max-width:760px) {
+  body::after,
+  body.vault-view::after {
+    transform:none !important;
+    -webkit-transform:none !important;
+  }
+
+  .rarity-tabs {
+    justify-content:flex-start !important;
+    padding-left:12px !important;
+    scroll-padding-left:12px !important;
+  }
+}
+
 /* v95: app navigation shell with a dedicated Season Vault page. */
 .app-menu-button {
   position:fixed;

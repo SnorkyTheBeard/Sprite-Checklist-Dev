@@ -534,19 +534,15 @@
     showToast(`${activeRarity}: ${currentSpriteViewMode() === 'list' ? 'list' : 'card'} view`);
   }
 
-  let appMenuScrollY = 0;
-
   function lockPageForAppMenu() {
-    appMenuScrollY = window.scrollY;
-    document.body.style.top = `-${appMenuScrollY}px`;
+    document.documentElement.classList.add('app-menu-open');
     document.body.classList.add('app-menu-open');
   }
 
   function unlockPageForAppMenu() {
     if (!document.body.classList.contains('app-menu-open')) return;
+    document.documentElement.classList.remove('app-menu-open');
     document.body.classList.remove('app-menu-open');
-    document.body.style.top = '';
-    window.scrollTo(0,appMenuScrollY);
   }
 
   function openAppMenu() {
@@ -2602,19 +2598,15 @@
     undoRestoreBtn.hidden = !safeStorageGet(PRE_RESTORE_PROGRESS_KEY);
   }
 
-  let backupDialogScrollY = 0;
-
   function lockPageForBackupDialog() {
-    backupDialogScrollY = window.scrollY;
-    document.body.style.top = `-${backupDialogScrollY}px`;
+    document.documentElement.classList.add('backup-dialog-open');
     document.body.classList.add('backup-dialog-open');
   }
 
   function unlockPageForBackupDialog() {
     if (!document.body.classList.contains('backup-dialog-open')) return;
+    document.documentElement.classList.remove('backup-dialog-open');
     document.body.classList.remove('backup-dialog-open');
-    document.body.style.top = '';
-    window.scrollTo(0,backupDialogScrollY);
   }
 
   function openBackupDialog() {
@@ -2784,7 +2776,13 @@
     showcaseStatusMessage.textContent = '';
     showcaseStatusMessage.dataset.state = '';
     updateShowcaseMatchCount();
+    document.documentElement.classList.add('showcase-dialog-open');
+    document.body.classList.add('showcase-dialog-open');
     showcaseDialog.showModal();
+    requestAnimationFrame(() => {
+      showcaseStatusSelect.blur();
+      document.getElementById('showcaseDialogTitle').focus({ preventScroll:true });
+    });
   }
 
   function roundedPath(context,x,y,width,height,radius) {
@@ -3305,7 +3303,11 @@
   });
   document.getElementById('closeShowcaseBtn').addEventListener('click',() => showcaseDialog.close());
   shareShowcaseBtn.addEventListener('click',shareShowcaseImage);
-  showcaseDialog.addEventListener('close',clearShowcaseFile);
+  showcaseDialog.addEventListener('close',() => {
+    clearShowcaseFile();
+    document.documentElement.classList.remove('showcase-dialog-open');
+    document.body.classList.remove('showcase-dialog-open');
+  });
   backupBtn.addEventListener('click',openBackupDialog);
   document.getElementById('backupRestoreForm').addEventListener('submit',(event) => event.preventDefault());
   document.getElementById('downloadBackupBtn').addEventListener('click',downloadProgressBackup);
@@ -3445,6 +3447,6 @@
     : (isUnownedPage() ? `#${missingView}` : `#${activeRarity.toLowerCase()}`);
   if (location.hash !== activeHash) history.replaceState({ rarity:activeRarity },'',activeHash);
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./service-worker.js?v=101',{ updateViaCache:'none' }).then((registration) => registration.update()).catch(() => {});
+    navigator.serviceWorker.register('./service-worker.js?v=102',{ updateViaCache:'none' }).then((registration) => registration.update()).catch(() => {});
   }
 })();

@@ -152,7 +152,7 @@
       }
     })();
   </script>
-<link rel="stylesheet" href="styles.css?v=101">
+<link rel="stylesheet" href="styles.css?v=102">
 </head>
 <body>
   <a class="skip-link" href="#mainContent">Skip to checklist</a>
@@ -367,9 +367,9 @@
     </form>
   </dialog>
 
-  <dialog class="reset-dialog showcase-dialog" id="showcaseDialog">
+  <dialog class="reset-dialog showcase-dialog" id="showcaseDialog" aria-labelledby="showcaseDialogTitle">
     <form id="showcaseForm">
-      <h2>Create collection image</h2>
+      <h2 id="showcaseDialogTitle" tabindex="-1" autofocus>Create collection image</h2>
       <p>Choose which Sprites to include. This only reads your checklist—it does not change your progress.</p>
       <div class="showcase-filters">
         <label>
@@ -452,6 +452,6 @@
   <noscript>This checklist needs JavaScript enabled to save progress.</noscript>
 
   <script src="data.js?v=82"></script>
-  <script src="app.js?v=101"></script>
+  <script src="app.js?v=102"></script>
 </body>
 </html>
