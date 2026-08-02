@@ -31,6 +31,7 @@
   const MISSING_VIEW_KEY = `galaxy_sprite_tracker_missing_view_v1_${STORAGE_SCOPE}`;
   const RECENT_MISSING_KEY = `galaxy_sprite_tracker_recent_missing_v1_${STORAGE_SCOPE}`;
   const SEASON_VIEW_KEY = `galaxy_sprite_tracker_season_view_v1_${STORAGE_SCOPE}`;
+  const APP_VIEW_KEY = `galaxy_sprite_tracker_app_view_v1_${STORAGE_SCOPE}`;
   const SPRITE_CARD_EDITS_KEY = `galaxy_sprite_tracker_sprite_cards_v1_${STORAGE_SCOPE}`;
   const PRE_RESTORE_PROGRESS_KEY = `galaxy_sprite_tracker_progress_before_restore_v1_${STORAGE_SCOPE}`;
   const LEGACY_PROGRESS_KEY = 'galaxy_sprite_tracker_progress_v1';
@@ -95,6 +96,24 @@
       return localStorage.getItem(MISSING_VIEW_KEY) === 'unmastered' ? 'unmastered' : 'unowned';
     } catch {
       return 'unowned';
+    }
+  }
+
+  function loadAppView() {
+    if (decodeURIComponent(location.hash.slice(1)).toLowerCase() === APP_VIEW_VAULT) return APP_VIEW_VAULT;
+    for (const storageName of ['localStorage','sessionStorage']) {
+      try {
+        const storage = window[storageName];
+        if (storage.getItem(APP_VIEW_KEY) === APP_VIEW_VAULT && SEASON_FEATURE_VISIBLE) return APP_VIEW_VAULT;
+        if (storage.getItem(APP_VIEW_KEY) === APP_VIEW_TRACKER) return APP_VIEW_TRACKER;
+      } catch { /* Try the other browser storage area. */ }
+    }
+    return APP_VIEW_TRACKER;
+  }
+
+  function saveAppView() {
+    for (const storageName of ['localStorage','sessionStorage']) {
+      try { window[storageName].setItem(APP_VIEW_KEY,appView); } catch { /* The other storage area may still work. */ }
     }
   }
 
@@ -405,8 +424,8 @@
   let spriteCardEdits = loadSpriteCardEdits();
   let spriteViewModes = loadViewModes();
   let vaultSeasonView = loadSeasonView();
-  let appView = APP_VIEW_TRACKER;
-  let seasonView = CURRENT_SEASON_ID;
+  let appView = loadAppView();
+  let seasonView = appView === APP_VIEW_VAULT ? vaultSeasonView : CURRENT_SEASON_ID;
   let spriteEditMode = false;
   let missingView = loadMissingView();
   let recentMissingChanges = loadRecentMissingChanges();
@@ -561,6 +580,7 @@
     const changed = appView !== next;
     if (next === APP_VIEW_VAULT && season !== null) vaultSeasonView = sanitizeSeasonView(season);
     appView = next;
+    saveAppView();
     seasonView = appView === APP_VIEW_VAULT ? vaultSeasonView : CURRENT_SEASON_ID;
     if (appView === APP_VIEW_VAULT && spriteEditMode) {
       spriteEditMode = false;
@@ -568,6 +588,10 @@
     }
     closeAppMenu();
     renderAll();
+    const viewHash = appView === APP_VIEW_VAULT
+      ? '#vault'
+      : (isUnownedPage() ? `#${missingView}` : `#${activeRarity.toLowerCase()}`);
+    if (location.hash !== viewHash) history.replaceState({ appView, rarity:activeRarity },'',viewHash);
     if (changed) window.scrollTo({ top:0, behavior:'auto' });
     if (announce && changed) showToast(appView === APP_VIEW_VAULT ? 'Sprite Vault' : 'Current Tracker');
   }
@@ -3404,6 +3428,11 @@
   document.getElementById('cancelAddSpriteGroupBtn').addEventListener('click',() => addSpriteGroupDialog.close());
   window.addEventListener('hashchange',() => {
     const hashView = decodeURIComponent(location.hash.slice(1)).toLowerCase();
+    if (hashView === APP_VIEW_VAULT) {
+      setAppView(APP_VIEW_VAULT,{ announce:false });
+      return;
+    }
+    if (appView !== APP_VIEW_TRACKER) setAppView(APP_VIEW_TRACKER,{ announce:false });
     if (hashView === 'unowned' || hashView === 'unmastered') missingView = hashView;
     switchRarity(rarityFromHash() || defaultRarity);
   });
@@ -3411,9 +3440,11 @@
   document.getElementById('confirmResetBtn').addEventListener('click',resetProgress);
 
   renderAll();
-  const activeHash = isUnownedPage() ? `#${missingView}` : `#${activeRarity.toLowerCase()}`;
+  const activeHash = appView === APP_VIEW_VAULT
+    ? '#vault'
+    : (isUnownedPage() ? `#${missingView}` : `#${activeRarity.toLowerCase()}`);
   if (location.hash !== activeHash) history.replaceState({ rarity:activeRarity },'',activeHash);
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./service-worker.js?v=100',{ updateViaCache:'none' }).then((registration) => registration.update()).catch(() => {});
+    navigator.serviceWorker.register('./service-worker.js?v=101',{ updateViaCache:'none' }).then((registration) => registration.update()).catch(() => {});
   }
 })();

@@ -1655,6 +1655,45 @@ body.sprite-list-view .page-swipe-hint {
   }
 }
 
+/* v101: consistent mobile rendering in Edge/WebKit and readable gradient fallbacks. */
+@media (max-width:760px) {
+  html,
+  body {
+    width:100%;
+    max-width:100%;
+  }
+
+  body {
+    background-attachment:scroll;
+  }
+
+  .app-shell {
+    width:100%;
+    max-width:1080px;
+  }
+
+  .hero {
+    width:100vw;
+    max-width:100vw;
+  }
+
+  body::after,
+  body.vault-view::after {
+    transform:translateZ(0);
+    -webkit-transform:translateZ(0);
+  }
+}
+
+@supports not ((-webkit-background-clip:text) or (background-clip:text)) {
+  #headerTitle,
+  .season-vault-page-head > span,
+  .season-vault-page-head h2 {
+    color:#f5f7fb !important;
+    background:none !important;
+    -webkit-text-fill-color:currentColor !important;
+  }
+}
+
 /* v95: app navigation shell with a dedicated Season Vault page. */
 .app-menu-button {
   position:fixed;
