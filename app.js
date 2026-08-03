@@ -3450,6 +3450,15 @@
     : (isUnownedPage() ? `#${missingView}` : `#${activeRarity.toLowerCase()}`);
   if (location.hash !== activeHash) history.replaceState({ rarity:activeRarity },'',activeHash);
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./service-worker.js?v=106',{ updateViaCache:'none' }).then((registration) => registration.update()).catch(() => {});
+    navigator.serviceWorker.register('./service-worker.js?v=107',{ updateViaCache:'none' }).then((registration) => registration.update()).catch(() => {});
+  }
+  const signalAppRendered = () => window.dispatchEvent(new Event('sprite-app-rendered'));
+  if (document.fonts?.ready) {
+    Promise.race([
+      document.fonts.ready,
+      new Promise((resolve) => window.setTimeout(resolve,450))
+    ]).then(signalAppRendered,signalAppRendered);
+  } else {
+    signalAppRendered();
   }
 })();

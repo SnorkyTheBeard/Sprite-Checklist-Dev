@@ -1,8 +1,125 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="app-booting">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <style>
+    /* Standalone launch guard: never show the live checklist in iOS's temporary narrow viewport. */
+    html.app-booting,
+    html.app-booting body {
+      background:#03070d !important;
+    }
+    html.app-booting body {
+      overflow:hidden !important;
+    }
+    html.app-booting .app-shell,
+    html.app-booting .page-backdrop {
+      visibility:hidden !important;
+      opacity:0 !important;
+    }
+    .app-launch-screen {
+      position:fixed;
+      inset:0;
+      z-index:9999;
+      display:none;
+      place-items:center;
+      padding:env(safe-area-inset-top) 20px env(safe-area-inset-bottom);
+      overflow:hidden;
+      background:
+        radial-gradient(circle at 50% 42%,rgba(104,27,43,.42),transparent 34%),
+        linear-gradient(180deg,#080a10,#03070d 68%,#020305);
+      opacity:1;
+      transition:opacity .16s ease,visibility .16s ease;
+    }
+    html.app-launch-gated .app-launch-screen {
+      display:grid;
+    }
+    html.app-launch-gated.app-ready .app-launch-screen {
+      visibility:hidden;
+      opacity:0;
+      pointer-events:none;
+    }
+    .app-launch-mark {
+      display:grid;
+      gap:10px;
+      place-items:center;
+      color:#eef4f8;
+      font:800 14px/1 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+      letter-spacing:.08em;
+      text-transform:uppercase;
+    }
+    .app-launch-mark img {
+      width:76px;
+      height:76px;
+      border:1px solid rgba(255,255,255,.2);
+      border-radius:18px;
+      box-shadow:0 10px 28px rgba(0,0,0,.45),0 0 20px rgba(129,32,50,.28);
+    }
+    html.app-launch-gated.app-ready .app-shell,
+    html.app-launch-gated.app-ready .page-backdrop {
+      animation:app-launch-reveal .18s ease-out both;
+    }
+    @keyframes app-launch-reveal {
+      from { opacity:.78; }
+      to { opacity:1; }
+    }
+    @media (prefers-reduced-motion:reduce) {
+      .app-launch-screen { transition:none; }
+      html.app-launch-gated.app-ready .app-shell,
+      html.app-launch-gated.app-ready .page-backdrop { animation:none; }
+    }
+  </style>
+  <script>
+    (() => {
+      const root = document.documentElement;
+      const standalone = window.matchMedia?.('(display-mode: standalone)').matches || navigator.standalone === true;
+      if (!standalone) {
+        root.classList.remove('app-booting');
+        root.classList.add('app-ready');
+        return;
+      }
+
+      root.classList.add('app-launch-gated');
+      let rendered = false;
+      let renderedAt = 0;
+      let started = false;
+      let revealed = false;
+      let lastWidth = 0;
+      let stableFrames = 0;
+      const startedAt = performance.now();
+
+      const reveal = () => {
+        if (revealed) return;
+        revealed = true;
+        root.classList.remove('app-booting');
+        root.classList.add('app-ready');
+      };
+
+      const waitForStableViewport = () => {
+        if (revealed) return;
+        const width = Math.round(window.visualViewport?.width || window.innerWidth || 0);
+        if (width >= 280 && Math.abs(width - lastWidth) <= 1) stableFrames += 1;
+        else stableFrames = 0;
+        lastWidth = width;
+        if ((rendered && stableFrames >= 3 && performance.now() - renderedAt >= 140) || performance.now() - startedAt > 1400) reveal();
+        else requestAnimationFrame(waitForStableViewport);
+      };
+
+      const start = () => {
+        if (started) return;
+        started = true;
+        requestAnimationFrame(waitForStableViewport);
+      };
+
+      window.addEventListener('sprite-app-rendered',() => {
+        rendered = true;
+        renderedAt = performance.now();
+        start();
+      },{ once:true });
+      window.addEventListener('DOMContentLoaded',start,{ once:true });
+      window.setTimeout(reveal,1600);
+    })();
+  </script>
   <meta name="theme-color" content="#681b2b">
   <meta name="description" content="Track collected and mastered Fortnite Sprites by rarity and variant.">
   <meta name="application-name" content="My Sprite Tracker">
@@ -152,11 +269,17 @@
       }
     })();
   </script>
-<link rel="stylesheet" href="styles.css?v=106">
-<link rel="stylesheet" href="vault-v105.css?v=106">
-<link rel="stylesheet" href="viewport-v106.css?v=106">
+<link rel="stylesheet" href="styles.css?v=107">
+<link rel="stylesheet" href="vault-v105.css?v=107">
+<link rel="stylesheet" href="viewport-v106.css?v=107">
 </head>
 <body>
+  <div class="app-launch-screen" aria-hidden="true">
+    <div class="app-launch-mark">
+      <img src="icons/app-icon-192-v101.png" alt="" width="76" height="76">
+      <span>Sprite Dev</span>
+    </div>
+  </div>
   <a class="skip-link" href="#mainContent">Skip to checklist</a>
   <div class="page-backdrop" aria-hidden="true"></div>
 
@@ -455,6 +578,6 @@
   <noscript>This checklist needs JavaScript enabled to save progress.</noscript>
 
   <script src="data.js?v=82"></script>
-  <script src="app.js?v=106"></script>
+  <script src="app.js?v=107"></script>
 </body>
 </html>
