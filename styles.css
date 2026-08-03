@@ -3583,7 +3583,7 @@ body[data-missing-view="unmastered"] #activePageTitle {
   }
 }
 
-/* v103 final overrides: keep the real Edge-safe backdrop and Vault cases above all legacy rules. */
+/* v108: display every supplied rarity-page artwork in full without cropping or stretching. */
 .page-backdrop {
   position:fixed !important;
   inset:0 !important;
@@ -3592,13 +3592,11 @@ body[data-missing-view="unmastered"] #activePageTitle {
   pointer-events:none;
   background-color:var(--theme-page-bg);
   background-image:
-    radial-gradient(ellipse at 14% 4%,var(--rarity-haze),transparent 38%),
-    radial-gradient(ellipse at 88% 36%,var(--rarity-sheen),transparent 42%),
-    linear-gradient(180deg,rgba(3,5,15,.12),rgba(3,5,15,.36)),
+    linear-gradient(180deg,rgba(3,5,15,.1),rgba(3,5,15,.28)),
     var(--theme-page-image);
-  background-position:center;
-  background-size:cover;
-  background-repeat:no-repeat;
+  background-position:center,center;
+  background-size:100% 100%,var(--theme-page-size,contain);
+  background-repeat:no-repeat,var(--theme-page-repeat,no-repeat);
   transform:none !important;
   -webkit-transform:none !important;
 }

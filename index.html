@@ -153,8 +153,8 @@
   <link rel="preload" as="image" type="image/webp" href="assets/variant-backgrounds/variant-well-gummy.webp">
   <link rel="preload" as="image" type="image/webp" href="assets/variant-backgrounds/variant-well-galaxy.webp">
   <link rel="preload" as="image" type="image/webp" href="assets/variant-backgrounds/variant-well-john-wick.webp?v=92">
-  <link rel="preload" as="image" type="image/webp" href="assets/page-backgrounds/page-bg-unowned.webp?v=93">
-  <link rel="preload" as="image" type="image/webp" href="assets/page-backgrounds/page-bg-unmastered.webp?v=93">
+  <link rel="preload" as="image" type="image/webp" href="assets/page-backgrounds/page-bg-unowned-v108.webp">
+  <link rel="preload" as="image" type="image/webp" href="assets/page-backgrounds/page-bg-unmastered-v108.webp">
   <script src="published-design.js?v=67" fetchpriority="high"></script>
   <script src="art-config.js?v=67"></script>
   <script>
@@ -166,6 +166,14 @@
       const rarities = ['Rare','Epic','Legendary','Mythic'];
       const hashName = location.hash.slice(1).toLowerCase();
       const rarity = rarities.find((name) => name.toLowerCase() === hashName) || 'Rare';
+      const pageArtwork = {
+        rare:{ image:'assets/page-backgrounds/page-bg-rare-v108.webp', color:'#b65f58' },
+        epic:{ image:'assets/page-backgrounds/page-bg-epic-v108.webp', color:'#68445f' },
+        legendary:{ image:'assets/page-backgrounds/page-bg-legendary-v108.webp', color:'#633651' },
+        mythic:{ image:'assets/page-backgrounds/page-bg-mythic-v108.webp', color:'#8b451b' },
+        unowned:{ image:'assets/page-backgrounds/page-bg-unowned-v108.webp', color:'#2d3b25' },
+        unmastered:{ image:'assets/page-backgrounds/page-bg-unmastered-v108.webp', color:'#526d80' }
+      };
       const root = document.documentElement;
       const own = (object,key) => Object.prototype.hasOwnProperty.call(object || {},key);
       const source = (value) => String(value || '').replace(/["\n\r]/g,'');
@@ -249,15 +257,10 @@
           if (pageConfig.color) pageColor = pageConfig.color;
         }
       }
-      if (hashName === 'unowned') {
-        pageImage = 'assets/page-backgrounds/page-bg-unowned.webp?v=93';
-        pageColor = '#06101f';
-        pageFit = 'cover';
-      } else if (hashName === 'unmastered') {
-        pageImage = 'assets/page-backgrounds/page-bg-unmastered.webp?v=93';
-        pageColor = '#100a18';
-        pageFit = 'cover';
-      }
+      const selectedArtwork = pageArtwork[hashName] || pageArtwork[rarity.toLowerCase()];
+      pageImage = selectedArtwork.image;
+      pageColor = selectedArtwork.color;
+      pageFit = 'contain';
       set('--theme-page-bg',pageColor);
       setImage('page',pageImage,pageFit);
       if (pageImage) {
@@ -269,7 +272,7 @@
       }
     })();
   </script>
-<link rel="stylesheet" href="styles.css?v=107">
+<link rel="stylesheet" href="styles.css?v=108">
 <link rel="stylesheet" href="vault-v105.css?v=107">
 <link rel="stylesheet" href="viewport-v106.css?v=107">
 </head>
@@ -578,6 +581,6 @@
   <noscript>This checklist needs JavaScript enabled to save progress.</noscript>
 
   <script src="data.js?v=82"></script>
-  <script src="app.js?v=107"></script>
+  <script src="app.js?v=108"></script>
 </body>
 </html>

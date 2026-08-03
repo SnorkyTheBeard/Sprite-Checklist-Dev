@@ -183,16 +183,25 @@
     'custom-john-wick':'assets/variant-backgrounds/variant-well-john-wick.webp?v=92'
   });
 
+  const PAGE_BACKGROUND_ARTWORK = Object.freeze({
+    Rare:{ enabled:true, color:'#b65f58', image:'assets/page-backgrounds/page-bg-rare-v108.webp', mode:'contain' },
+    Epic:{ enabled:true, color:'#68445f', image:'assets/page-backgrounds/page-bg-epic-v108.webp', mode:'contain' },
+    Legendary:{ enabled:true, color:'#633651', image:'assets/page-backgrounds/page-bg-legendary-v108.webp', mode:'contain' },
+    Mythic:{ enabled:true, color:'#8b451b', image:'assets/page-backgrounds/page-bg-mythic-v108.webp', mode:'contain' },
+    unowned:{ enabled:true, color:'#2d3b25', image:'assets/page-backgrounds/page-bg-unowned-v108.webp', mode:'contain' },
+    unmastered:{ enabled:true, color:'#526d80', image:'assets/page-backgrounds/page-bg-unmastered-v108.webp', mode:'contain' }
+  });
+
   const DEFAULT_PAGE_BACKGROUNDS = {
-    Rare:{ enabled:true, color:'#031328', image:'assets/page-backgrounds/page-bg-rare.webp', mode:'cover' },
-    Epic:{ enabled:true, color:'#12071d', image:'assets/page-backgrounds/page-bg-epic.webp', mode:'cover' },
-    Legendary:{ enabled:true, color:'#1a0d05', image:'assets/page-backgrounds/page-bg-legendary.webp', mode:'cover' },
-    Mythic:{ enabled:true, color:'#100c08', image:'assets/page-backgrounds/page-bg-mythic.webp', mode:'cover' }
+    Rare:{ ...PAGE_BACKGROUND_ARTWORK.Rare },
+    Epic:{ ...PAGE_BACKGROUND_ARTWORK.Epic },
+    Legendary:{ ...PAGE_BACKGROUND_ARTWORK.Legendary },
+    Mythic:{ ...PAGE_BACKGROUND_ARTWORK.Mythic }
   };
 
   const DEFAULT_MISSING_PAGE_BACKGROUNDS = {
-    unowned:{ enabled:true, color:'#06101f', image:'assets/page-backgrounds/page-bg-unowned.webp?v=93', mode:'cover' },
-    unmastered:{ enabled:true, color:'#100a18', image:'assets/page-backgrounds/page-bg-unmastered.webp?v=93', mode:'cover' }
+    unowned:{ ...PAGE_BACKGROUND_ARTWORK.unowned },
+    unmastered:{ ...PAGE_BACKGROUND_ARTWORK.unmastered }
   };
 
   const DEFAULT_THEME = {
@@ -1442,8 +1451,8 @@
     applyImageSurface(root,'card',theme.cardBgImage,theme.cardBgMode);
     applyImageSurface(root,'well',theme.wellBgImage,theme.wellBgMode,theme.useBuiltInWellArt ? 'radial-gradient(circle at 40% 25%,#fff 0,#e7ddfa 42%,#b8a1e8 100%)' : 'none');
     const page = isUnownedPage()
-      ? DEFAULT_MISSING_PAGE_BACKGROUNDS[missingView]
-      : (theme.pageBackgrounds?.[themeRarity] || {});
+      ? PAGE_BACKGROUND_ARTWORK[missingView]
+      : PAGE_BACKGROUND_ARTWORK[themeRarity];
     root.style.setProperty('--theme-page-bg',page.enabled ? page.color || 'transparent' : 'transparent');
     applyImageSurface(root,'page',page.enabled ? page.image : '',page.mode || 'cover');
 
@@ -3450,7 +3459,7 @@
     : (isUnownedPage() ? `#${missingView}` : `#${activeRarity.toLowerCase()}`);
   if (location.hash !== activeHash) history.replaceState({ rarity:activeRarity },'',activeHash);
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./service-worker.js?v=107',{ updateViaCache:'none' }).then((registration) => registration.update()).catch(() => {});
+    navigator.serviceWorker.register('./service-worker.js?v=108',{ updateViaCache:'none' }).then((registration) => registration.update()).catch(() => {});
   }
   const signalAppRendered = () => window.dispatchEvent(new Event('sprite-app-rendered'));
   if (document.fonts?.ready) {
