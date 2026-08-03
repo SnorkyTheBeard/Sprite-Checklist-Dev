@@ -3583,20 +3583,29 @@ body[data-missing-view="unmastered"] #activePageTitle {
   }
 }
 
-/* v108: display every supplied rarity-page artwork in full without cropping or stretching. */
-.page-backdrop {
-  position:fixed !important;
-  inset:0 !important;
-  z-index:0 !important;
-  display:block !important;
-  pointer-events:none;
+/* v109: the parchment belongs to the tracker page and travels with its scroll. */
+body:not(.vault-view) {
   background-color:var(--theme-page-bg);
   background-image:
-    linear-gradient(180deg,rgba(3,5,15,.1),rgba(3,5,15,.28)),
+    linear-gradient(180deg,rgba(3,5,15,.08),rgba(3,5,15,.2)),
     var(--theme-page-image);
-  background-position:center,center;
-  background-size:100% 100%,var(--theme-page-size,contain);
-  background-repeat:no-repeat,var(--theme-page-repeat,no-repeat);
+  background-position:center top,center top;
+  background-size:100% 100%,100% 100%;
+  background-repeat:no-repeat,no-repeat;
+  background-attachment:scroll !important;
+}
+
+body:not(.vault-view) .page-backdrop {
+  display:none !important;
+}
+
+body:not(.vault-view) #checklistPage {
+  background-color:transparent !important;
+  background-image:none !important;
+}
+
+.page-backdrop {
+  pointer-events:none;
   transform:none !important;
   -webkit-transform:none !important;
 }
