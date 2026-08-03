@@ -249,6 +249,20 @@
           if (pageConfig.color) pageColor = pageConfig.color;
         }
       }
+      const portraitScene = window.matchMedia?.('(max-width:760px) and (orientation:portrait)').matches;
+      if (hashName !== 'vault' && rarity === 'Rare') {
+        pageImage = portraitScene
+          ? 'assets/page-backgrounds/page-bg-rare-lifty-lodge-mobile-v113.webp'
+          : 'assets/page-backgrounds/page-bg-rare-lifty-lodge-v113.webp';
+        pageColor = '#0752c7';
+        pageFit = 'cover';
+      } else if (hashName !== 'vault' && rarity === 'Epic') {
+        pageImage = portraitScene
+          ? 'assets/page-backgrounds/page-bg-epic-wonkeeland-mobile-v113.webp'
+          : 'assets/page-backgrounds/page-bg-epic-wonkeeland-v113.webp';
+        pageColor = '#43128d';
+        pageFit = 'cover';
+      }
       if (hashName === 'unowned') {
         pageImage = 'assets/page-backgrounds/page-bg-unowned.webp?v=93';
         pageColor = '#06101f';
@@ -272,6 +286,7 @@
 <link rel="stylesheet" href="styles.css?v=110">
 <link rel="stylesheet" href="vault-v105.css?v=112">
 <link rel="stylesheet" href="viewport-v106.css?v=107">
+<link rel="stylesheet" href="scene-v113.css?v=113">
 </head>
 <body>
   <div class="app-launch-screen" aria-hidden="true">
@@ -578,6 +593,6 @@
   <noscript>This checklist needs JavaScript enabled to save progress.</noscript>
 
   <script src="data.js?v=82"></script>
-  <script src="app.js?v=112"></script>
+  <script src="app.js?v=113"></script>
 </body>
 </html>

@@ -1,0 +1,145 @@
+/* V113: cozy animated location scenes for the Current Tracker only. */
+
+body:not(.vault-view)[data-page="rare"] .page-backdrop,
+body:not(.vault-view)[data-page="epic"] .page-backdrop {
+  overflow:hidden;
+  isolation:isolate;
+}
+
+body:not(.vault-view)[data-page="rare"] .page-backdrop {
+  background-color:#0752c7 !important;
+  background-image:
+    linear-gradient(180deg,rgba(0,13,50,.14) 0%,rgba(0,12,48,.24) 52%,rgba(1,8,31,.48) 100%),
+    url("assets/page-backgrounds/page-bg-rare-lifty-lodge-v113.webp") !important;
+  background-position:center center !important;
+  background-size:cover !important;
+  background-repeat:no-repeat !important;
+}
+
+body:not(.vault-view)[data-page="epic"] .page-backdrop {
+  background-color:#43128d !important;
+  background-image:
+    linear-gradient(180deg,rgba(24,2,65,.16) 0%,rgba(31,3,69,.25) 52%,rgba(13,2,38,.5) 100%),
+    url("assets/page-backgrounds/page-bg-epic-wonkeeland-v113.webp") !important;
+  background-position:center center !important;
+  background-size:cover !important;
+  background-repeat:no-repeat !important;
+}
+
+/* Rare: light snowfall over the blue-hour lodge scene. */
+body:not(.vault-view)[data-page="rare"] .page-backdrop::before {
+  content:"";
+  position:absolute;
+  inset:-18% -8%;
+  z-index:1;
+  pointer-events:none;
+  opacity:.56;
+  background-image:
+    radial-gradient(circle,rgba(255,255,255,.92) 0 1px,transparent 1.8px),
+    radial-gradient(circle,rgba(211,244,255,.78) 0 1.35px,transparent 2.15px),
+    radial-gradient(circle,rgba(255,255,255,.56) 0 .8px,transparent 1.55px);
+  background-position:0 -240px,42px -390px,106px -170px;
+  background-size:91px 113px,157px 181px,223px 251px;
+  animation:rare-lodge-snow-v113 21s linear infinite;
+  will-change:background-position;
+}
+
+/* Rare: a slow aurora/lantern breath keeps the scene alive without moving the art. */
+body:not(.vault-view)[data-page="rare"] .page-backdrop::after {
+  content:"";
+  position:absolute;
+  inset:-4%;
+  z-index:2;
+  pointer-events:none;
+  opacity:.32;
+  background:
+    radial-gradient(ellipse at 24% 11%,rgba(78,232,255,.34),transparent 34%),
+    radial-gradient(ellipse at 80% 79%,rgba(255,189,83,.18),transparent 22%);
+  mix-blend-mode:screen;
+  animation:rare-lodge-glow-v113 8s ease-in-out infinite alternate;
+  will-change:opacity,transform;
+}
+
+/* Epic: layered stars gently twinkle above Wonkeeland. */
+body:not(.vault-view)[data-page="epic"] .page-backdrop::before {
+  content:"";
+  position:absolute;
+  inset:-6%;
+  z-index:1;
+  pointer-events:none;
+  opacity:.38;
+  background-image:
+    radial-gradient(circle,rgba(255,255,255,.96) 0 1px,rgba(242,196,255,.36) 1.8px,transparent 3.4px),
+    radial-gradient(circle,rgba(115,231,255,.82) 0 .9px,transparent 2.4px),
+    radial-gradient(circle,rgba(255,204,119,.72) 0 1px,transparent 2.6px);
+  background-position:18px 24px,86px 113px,149px 57px;
+  background-size:173px 191px,241px 263px,307px 331px;
+  animation:epic-park-twinkle-v113 6.5s ease-in-out infinite alternate;
+  will-change:opacity,transform;
+}
+
+/* Epic: carnival bulbs and lamps softly pulse near the lower scene. */
+body:not(.vault-view)[data-page="epic"] .page-backdrop::after {
+  content:"";
+  position:absolute;
+  inset:0;
+  z-index:2;
+  pointer-events:none;
+  opacity:.28;
+  background:
+    radial-gradient(ellipse at 21% 78%,rgba(255,106,223,.3),transparent 28%),
+    radial-gradient(ellipse at 74% 84%,rgba(255,196,99,.22),transparent 25%),
+    radial-gradient(ellipse at 50% 30%,rgba(105,223,255,.14),transparent 38%);
+  mix-blend-mode:screen;
+  animation:epic-park-glow-v113 7.5s ease-in-out infinite alternate;
+  will-change:opacity;
+}
+
+@keyframes rare-lodge-snow-v113 {
+  from { background-position:0 -240px,42px -390px,106px -170px; }
+  to { background-position:58px 920px,-32px 760px,154px 650px; }
+}
+
+@keyframes rare-lodge-glow-v113 {
+  from { opacity:.22; transform:scale(1); }
+  to { opacity:.4; transform:scale(1.025); }
+}
+
+@keyframes epic-park-twinkle-v113 {
+  from { opacity:.24; transform:translate3d(0,0,0) scale(1); }
+  to { opacity:.5; transform:translate3d(0,-.7%,0) scale(1.015); }
+}
+
+@keyframes epic-park-glow-v113 {
+  from { opacity:.2; }
+  to { opacity:.38; }
+}
+
+@media (max-width:760px) and (orientation:portrait) {
+  body:not(.vault-view)[data-page="rare"] .page-backdrop {
+    background-image:
+      linear-gradient(180deg,rgba(0,13,50,.12) 0%,rgba(0,12,48,.22) 48%,rgba(1,8,31,.46) 100%),
+      url("assets/page-backgrounds/page-bg-rare-lifty-lodge-mobile-v113.webp") !important;
+    background-position:center center !important;
+  }
+
+  body:not(.vault-view)[data-page="epic"] .page-backdrop {
+    background-image:
+      linear-gradient(180deg,rgba(24,2,65,.14) 0%,rgba(31,3,69,.23) 48%,rgba(13,2,38,.48) 100%),
+      url("assets/page-backgrounds/page-bg-epic-wonkeeland-mobile-v113.webp") !important;
+    background-position:center center !important;
+  }
+
+  body:not(.vault-view)[data-page="rare"] .page-backdrop::before {
+    opacity:.48;
+  }
+}
+
+@media (prefers-reduced-motion:reduce) {
+  body:not(.vault-view)[data-page="rare"] .page-backdrop::before,
+  body:not(.vault-view)[data-page="rare"] .page-backdrop::after,
+  body:not(.vault-view)[data-page="epic"] .page-backdrop::before,
+  body:not(.vault-view)[data-page="epic"] .page-backdrop::after {
+    animation:none !important;
+  }
+}

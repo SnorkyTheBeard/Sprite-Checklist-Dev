@@ -184,8 +184,8 @@
   });
 
   const DEFAULT_PAGE_BACKGROUNDS = {
-    Rare:{ enabled:true, color:'#031328', image:'assets/page-backgrounds/page-bg-rare.webp', mode:'cover' },
-    Epic:{ enabled:true, color:'#12071d', image:'assets/page-backgrounds/page-bg-epic.webp', mode:'cover' },
+    Rare:{ enabled:true, color:'#0752c7', image:'assets/page-backgrounds/page-bg-rare-lifty-lodge-v113.webp', mode:'cover' },
+    Epic:{ enabled:true, color:'#43128d', image:'assets/page-backgrounds/page-bg-epic-wonkeeland-v113.webp', mode:'cover' },
     Legendary:{ enabled:true, color:'#1a0d05', image:'assets/page-backgrounds/page-bg-legendary.webp', mode:'cover' },
     Mythic:{ enabled:true, color:'#100c08', image:'assets/page-backgrounds/page-bg-mythic.webp', mode:'cover' }
   };
@@ -3450,7 +3450,7 @@
     : (isUnownedPage() ? `#${missingView}` : `#${activeRarity.toLowerCase()}`);
   if (location.hash !== activeHash) history.replaceState({ rarity:activeRarity },'',activeHash);
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./service-worker.js?v=112',{ updateViaCache:'none' }).then((registration) => registration.update()).catch(() => {});
+    navigator.serviceWorker.register('./service-worker.js?v=113',{ updateViaCache:'none' }).then((registration) => registration.update()).catch(() => {});
   }
   const signalAppRendered = () => window.dispatchEvent(new Event('sprite-app-rendered'));
   if (document.fonts?.ready) {
