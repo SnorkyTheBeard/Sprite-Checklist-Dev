@@ -1,14 +1,14 @@
-const CACHE = 'galaxy-sprite-checklist-v109';
+const CACHE = 'galaxy-sprite-checklist-v110';
 const CORE = [
   './',
   './index.html',
-  './styles.css?v=109',
+  './styles.css?v=110',
   './vault-v105.css?v=107',
   './viewport-v106.css?v=107',
   './published-design.js',
   './art-config.js?v=67',
   './data.js?v=82',
-  './app.js?v=109',
+  './app.js?v=110',
   './manifest.webmanifest?v=101',
   './fonts/Burbank Big Condensed Black.otf',
   './fonts/Fredoka-Regular.woff2',
@@ -33,12 +33,12 @@ const CORE = [
   './assets/variant-backgrounds/variant-well-holofoil.webp',
   './assets/variant-backgrounds/variant-well-john-wick.webp?v=92',
   './published-assets/sprite-custom-john-wick-base.webp',
-  './assets/page-backgrounds/page-bg-rare-v108.webp',
-  './assets/page-backgrounds/page-bg-epic-v108.webp',
-  './assets/page-backgrounds/page-bg-legendary-v108.webp',
-  './assets/page-backgrounds/page-bg-mythic-v108.webp',
-  './assets/page-backgrounds/page-bg-unowned-v108.webp',
-  './assets/page-backgrounds/page-bg-unmastered-v108.webp',
+  './assets/page-backgrounds/page-bg-rare.webp',
+  './assets/page-backgrounds/page-bg-epic.webp',
+  './assets/page-backgrounds/page-bg-legendary.webp',
+  './assets/page-backgrounds/page-bg-mythic.webp',
+  './assets/page-backgrounds/page-bg-unowned.webp?v=93',
+  './assets/page-backgrounds/page-bg-unmastered.webp?v=93',
   './assets/page-backgrounds/page-bg-sprite-vault-v100.webp',
   './assets/header/main-header.webp?v=3'
 ];

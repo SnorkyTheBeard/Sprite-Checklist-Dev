@@ -3583,29 +3583,22 @@ body[data-missing-view="unmastered"] #activePageTitle {
   }
 }
 
-/* v109: the parchment belongs to the tracker page and travels with its scroll. */
-body:not(.vault-view) {
+/* v103 final overrides: keep the real Edge-safe backdrop and Vault cases above all legacy rules. */
+.page-backdrop {
+  position:fixed !important;
+  inset:0 !important;
+  z-index:0 !important;
+  display:block !important;
+  pointer-events:none;
   background-color:var(--theme-page-bg);
   background-image:
-    linear-gradient(180deg,rgba(3,5,15,.08),rgba(3,5,15,.2)),
+    radial-gradient(ellipse at 14% 4%,var(--rarity-haze),transparent 38%),
+    radial-gradient(ellipse at 88% 36%,var(--rarity-sheen),transparent 42%),
+    linear-gradient(180deg,rgba(3,5,15,.12),rgba(3,5,15,.36)),
     var(--theme-page-image);
-  background-position:center top,center top;
-  background-size:100% 100%,100% 100%;
-  background-repeat:no-repeat,no-repeat;
-  background-attachment:scroll !important;
-}
-
-body:not(.vault-view) .page-backdrop {
-  display:none !important;
-}
-
-body:not(.vault-view) #checklistPage {
-  background-color:transparent !important;
-  background-image:none !important;
-}
-
-.page-backdrop {
-  pointer-events:none;
+  background-position:center;
+  background-size:cover;
+  background-repeat:no-repeat;
   transform:none !important;
   -webkit-transform:none !important;
 }
