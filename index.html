@@ -283,7 +283,7 @@
       }
     })();
   </script>
-<link rel="stylesheet" href="styles.css?v=118">
+<link rel="stylesheet" href="styles.css?v=119">
 <link rel="stylesheet" href="vault-v105.css?v=112">
 <link rel="stylesheet" href="viewport-v106.css?v=107">
 <link rel="stylesheet" href="scene-v113.css?v=114">
@@ -476,7 +476,7 @@
       <section class="journal-location-chart" aria-labelledby="journalLocationChartTitle">
         <div class="journal-section-heading">
           <div>
-            <h3 id="journalLocationChartTitle">Where you find your Sprites</h3>
+            <h3 id="journalLocationChartTitle">Locations of Luck</h3>
           </div>
         </div>
         <div class="journal-map-layout">
@@ -501,16 +501,19 @@
             <span>Newest first</span>
             <h3 id="journalHistoryTitle">Activity</h3>
           </div>
-          <label class="journal-filter-label" for="journalActionFilter">
-            <span class="visually-hidden">Filter journal activity</span>
-            <select id="journalActionFilter">
-              <option value="all">All activity</option>
-              <option value="collected">Collected</option>
-              <option value="mastered">Mastered</option>
-              <option value="removed">Removed</option>
-              <option value="details">Details edited</option>
-            </select>
-          </label>
+          <div class="journal-history-controls">
+            <label class="journal-filter-label" for="journalActionFilter">
+              <span class="visually-hidden">Filter journal activity</span>
+              <select id="journalActionFilter">
+                <option value="all">All activity</option>
+                <option value="collected">Collected</option>
+                <option value="mastered">Mastered</option>
+                <option value="removed">Removed</option>
+                <option value="details">Details edited</option>
+              </select>
+            </label>
+            <button class="journal-clear-activity" id="clearJournalActivityBtn" type="button">Clear Activity</button>
+          </div>
         </div>
         <div class="journal-entry-list" id="journalEntryList" aria-live="polite"></div>
         <div class="journal-empty-state" id="journalEmptyState">
@@ -827,10 +830,21 @@
     </form>
   </dialog>
 
+  <dialog class="reset-dialog collection-count-reset-dialog" id="collectionCountResetDialog" aria-labelledby="collectionCountResetTitle">
+    <form id="collectionCountResetForm">
+      <h2 id="collectionCountResetTitle" tabindex="-1">Reset Times Collected?</h2>
+      <p id="collectionCountResetMessage">This will reset this Sprite's lifetime collection count to 0.</p>
+      <div class="dialog-actions">
+        <button id="cancelCollectionCountResetBtn" type="button">Cancel</button>
+        <button class="danger-btn" type="submit">Reset to 0</button>
+      </div>
+    </form>
+  </dialog>
+
   <div class="status-toast" id="statusToast" role="status" aria-live="polite"></div>
   <noscript>This checklist needs JavaScript enabled to save progress.</noscript>
 
   <script src="data.js?v=82"></script>
-  <script src="app.js?v=118"></script>
+  <script src="app.js?v=119"></script>
 </body>
 </html>

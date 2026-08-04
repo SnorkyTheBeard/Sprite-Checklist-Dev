@@ -1093,7 +1093,9 @@ body.hunt-checkout-open,
 html.dust-purchase-open,
 body.dust-purchase-open,
 html.dust-balance-open,
-body.dust-balance-open { overflow:hidden !important; overscroll-behavior:none; }
+body.dust-balance-open,
+html.collection-count-reset-open,
+body.collection-count-reset-open { overflow:hidden !important; overscroll-behavior:none; }
 .hunt-checkout-items { display:grid; gap:8px; margin:16px 0; }
 .hunt-checkout-item { display:grid; grid-template-columns:minmax(0,1fr) auto auto 34px; align-items:center; gap:9px; padding:11px; border:1px solid rgba(255,255,255,.15); border-left:4px solid #48aaff; border-radius:13px; background:rgba(255,255,255,.055); }
 .hunt-checkout-item[data-rarity="Epic"] { border-left-color:#b65eff; }
@@ -1274,9 +1276,9 @@ body.app-view-entering .sprite-dust-page:not([hidden]) { animation:app-view-cont
 
 .journal-map-zone-top {
   top:5%;
-  left:16%;
-  width:68%;
-  height:47%;
+  left:11%;
+  width:78%;
+  height:40%;
   color:#58c8ff;
 }
 
@@ -1583,12 +1585,37 @@ body.journal-view .app-shell {
 
 .journal-filter-label select {
   min-height:42px;
-  padding:0 40px 0 15px;
+  padding:8px 40px 8px 15px;
   border:1px solid rgba(174,224,255,.26);
   border-radius:999px;
   color:#eef9ff;
   background:#111c2d;
-  font:800 13px/1 var(--font-body,system-ui,sans-serif);
+  font:800 13px/1.35 var(--font-body,system-ui,sans-serif);
+}
+
+.journal-history-controls {
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  justify-content:flex-end;
+  gap:8px;
+}
+
+.journal-clear-activity {
+  min-height:42px;
+  padding:8px 15px;
+  color:#ffdfe4;
+  border:1px solid rgba(255,120,143,.42);
+  border-radius:999px;
+  background:linear-gradient(180deg,rgba(95,25,39,.88),rgba(48,14,24,.94));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.12);
+  font:900 13px/1.25 var(--font-button,var(--font-body,system-ui,sans-serif));
+  cursor:pointer;
+}
+
+.journal-clear-activity:disabled {
+  opacity:.4;
+  cursor:not-allowed;
 }
 
 .journal-entry-list {
@@ -1787,7 +1814,8 @@ body.app-view-entering .collection-journal-page:not([hidden]) {
   .journal-history-heading { align-items:start; }
   .journal-location-row { grid-template-columns:98px minmax(80px,1fr) 22px; gap:8px; font-size:12px; }
   .journal-section-heading { gap:10px; }
-  .journal-filter-label select { max-width:130px; }
+  .journal-history-controls { width:100%; justify-content:flex-start; }
+  .journal-filter-label select { max-width:none; }
 }
 
 @media (prefers-reduced-motion:reduce) {
@@ -4784,6 +4812,61 @@ body.hunt-mode-active:not(.vault-view) .card .hunt-add-cart-button span {
 body.hunt-mode-active:not(.vault-view) .card .hunt-add-cart-button:active {
   transform:scale(.94);
   background:rgba(28,129,76,.72) !important;
+}
+
+/* v119: Journal controls and Current Tracker viewport safety. */
+.collection-count-emblem {
+  appearance:none;
+  -webkit-appearance:none;
+  padding:0;
+  pointer-events:auto;
+  cursor:pointer;
+}
+
+.collection-count-emblem:disabled {
+  cursor:default;
+}
+
+.collection-count-emblem:focus-visible {
+  outline:3px solid rgba(255,255,255,.92);
+  outline-offset:3px;
+}
+
+body.tracker-view .app-shell,
+body.tracker-view #mainContent,
+body.tracker-view #checklistPage,
+body.tracker-view .collections,
+body.tracker-view .collection,
+body.tracker-view .variant-row {
+  min-width:0 !important;
+  max-width:100% !important;
+}
+
+body.tracker-view .app-shell,
+body.tracker-view #mainContent,
+body.tracker-view #checklistPage {
+  overflow-x:hidden !important;
+}
+
+body.tracker-view #checklistPage {
+  width:100% !important;
+  margin-inline:0 !important;
+  margin-left:0 !important;
+  margin-right:0 !important;
+  padding-inline:clamp(8px,3vw,18px) !important;
+}
+
+body.tracker-view .variant-row {
+  overflow-x:auto !important;
+  overscroll-behavior-inline:contain;
+}
+
+@supports (overflow:clip) {
+  body.tracker-view .app-shell,
+  body.tracker-view #mainContent,
+  body.tracker-view #checklistPage {
+    overflow-x:clip !important;
+  }
 }
 
 /* v103 final overrides: keep the real Edge-safe backdrop and Vault cases above all legacy rules. */

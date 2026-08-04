@@ -533,6 +533,7 @@
   let journalWriteQueue = Promise.resolve();
   let journalInitialization = null;
   let pendingLocationDetails = null;
+  let pendingCollectionCountReset = null;
   let huntMode = loadHuntMode();
   let huntTimerInterval = 0;
   let huntCart = loadStoredArray(HUNT_CART_KEY,normalizeHuntCart);
@@ -570,6 +571,7 @@
   const journalZoneBottomCount = document.getElementById('journalZoneBottomCount');
   const journalZoneBossCount = document.getElementById('journalZoneBossCount');
   const journalActionFilter = document.getElementById('journalActionFilter');
+  const clearJournalActivityBtn = document.getElementById('clearJournalActivityBtn');
   const journalEntryList = document.getElementById('journalEntryList');
   const journalEmptyState = document.getElementById('journalEmptyState');
   const locationFoundDialog = document.getElementById('locationFoundDialog');
@@ -614,6 +616,10 @@
   const dustBalanceTitle = document.getElementById('dustBalanceTitle');
   const dustBalanceAmount = document.getElementById('dustBalanceAmount');
   const dustBalanceStatus = document.getElementById('dustBalanceStatus');
+  const collectionCountResetDialog = document.getElementById('collectionCountResetDialog');
+  const collectionCountResetForm = document.getElementById('collectionCountResetForm');
+  const collectionCountResetTitle = document.getElementById('collectionCountResetTitle');
+  const collectionCountResetMessage = document.getElementById('collectionCountResetMessage');
   const floatingHomeBtn = document.getElementById('floatingHomeBtn');
   const spriteSearchForm = document.getElementById('spriteSearchForm');
   const spriteSearchInput = document.getElementById('spriteSearchInput');
@@ -723,6 +729,7 @@
       const imageButton = card.querySelector('.image-button');
       const collectButton = card.querySelector('.collect-button');
       const crownButton = card.querySelector('.crown-button');
+      const collectionCountButton = card.querySelector('.collection-count-emblem');
       if (imageButton) {
         imageButton.disabled = huntOnly || vaultOnly;
         imageButton.tabIndex = huntOnly || vaultOnly ? -1 : 0;
@@ -734,6 +741,11 @@
       if (crownButton) {
         crownButton.disabled = huntOnly || vaultOnly;
         crownButton.tabIndex = huntOnly || vaultOnly ? -1 : 0;
+      }
+      if (collectionCountButton) {
+        const canReset = !huntOnly && !vaultOnly && Number(collectionCountButton.textContent) > 0;
+        collectionCountButton.disabled = !canReset;
+        collectionCountButton.tabIndex = canReset ? 0 : -1;
       }
     });
     updateHuntTimer();
@@ -1053,6 +1065,7 @@
     const dustOpen = appView === APP_VIEW_DUST;
     const featureOpen = journalOpen || huntsOpen || dustOpen;
     document.body.classList.toggle('vault-view',vaultOpen);
+    document.body.classList.toggle('tracker-view',!vaultOpen && !featureOpen);
     document.body.classList.toggle('journal-view',journalOpen);
     document.body.classList.toggle('hunt-history-view',huntsOpen);
     document.body.classList.toggle('dust-account-view',dustOpen);
@@ -1493,13 +1506,17 @@
 
   function snapshotVariantState(current) {
     const mastered = current?.mastered === true;
+    const rawCollectionCount = Number(current?.collectionCount);
+    const collectionCount = Number.isFinite(rawCollectionCount) && rawCollectionCount >= 0
+      ? Math.min(1000000,Math.round(rawCollectionCount))
+      : (current?.collected ? 1 : 0);
     return {
       collected:current?.collected === true || mastered,
       mastered,
       collectedAt:validIsoDate(current?.collectedAt),
       masteredAt:validIsoDate(current?.masteredAt),
       locationFound:cleanLocation(current?.locationFound),
-      collectionCount:Math.max(0,Math.min(1000000,Math.round(Number(current?.collectionCount) || (current?.collected ? 1 : 0))))
+      collectionCount
     };
   }
 
@@ -1652,6 +1669,15 @@
     return scheduleJournalSave();
   }
 
+  async function clearJournalActivity() {
+    const storedEntries = journalReady ? journalEntries : pendingJournalEntries;
+    if (!storedEntries.length) return;
+    if (!window.confirm('Clear all Collection Journal activity? This will not change your collection, mastery, locations, Hunt History, or Sprite Dust.')) return;
+    pendingJournalEntries = [];
+    journalActionFilter.value = 'all';
+    await replaceJournalEntries([]);
+  }
+
   function recordJournalEntry(type,family,variant,before,current,{ timestamp = null } = {}) {
     const familyInfo = familyView(family);
     const variantInfo = variantView(family,variant);
@@ -1756,6 +1782,7 @@
       : 'Add a location when you collect a Sprite.';
     journalLocationsLogged.textContent = String(locationStats.logged);
     journalEntryCount.textContent = String(visibleEntries.length);
+    clearJournalActivityBtn.disabled = !journalReady || !(journalEntries.length || pendingJournalEntries.length);
     journalZoneTopCount.textContent = String(locationStats.counts.get('Top of Map') || 0);
     journalZoneBottomCount.textContent = String(locationStats.counts.get('Bottom of Map') || 0);
     journalZoneBossCount.textContent = String(locationStats.counts.get('Boss Fight') || 0);
@@ -2808,7 +2835,37 @@
     masterLabel.textContent = masterText || '';
     masterLabel.hidden = !masterText;
     collectionCountEmblem.textContent = String(Math.max(0,Number(current.collectionCount) || 0));
-    collectionCountEmblem.setAttribute('aria-label',`${Math.max(0,Number(current.collectionCount) || 0)} lifetime collections`);
+    const collectionCount = Math.max(0,Number(current.collectionCount) || 0);
+    const canResetCollectionCount = !vaultDisplay && !huntDisplay && collectionCount > 0;
+    collectionCountEmblem.disabled = !canResetCollectionCount;
+    collectionCountEmblem.tabIndex = canResetCollectionCount ? 0 : -1;
+    collectionCountEmblem.setAttribute('aria-label',canResetCollectionCount
+      ? `${collectionCount} lifetime collections. Reset count for ${variantName} ${groupName}`
+      : `${collectionCount} lifetime collections`);
+    collectionCountEmblem.title = canResetCollectionCount ? 'Reset times collected' : '';
+  }
+
+  function openCollectionCountReset(card,current,family,variant) {
+    const collectionCount = Math.max(0,Number(current.collectionCount) || 0);
+    if (!collectionCount || huntMode.active || appView === APP_VIEW_VAULT) return;
+    const familyName = familyView(family).name || 'Sprite';
+    const variantName = variantView(family,variant).name || 'Variant';
+    pendingCollectionCountReset = { card,current,family,variant };
+    collectionCountResetMessage.textContent = `Reset ${variantName} ${familyName} from ${collectionCount} times collected to 0? This will not remove it from your collection or change mastery.`;
+    document.documentElement.classList.add('collection-count-reset-open');
+    document.body.classList.add('collection-count-reset-open');
+    collectionCountResetDialog.showModal();
+    requestAnimationFrame(() => collectionCountResetTitle.focus());
+  }
+
+  function resetCollectionCount(event) {
+    event.preventDefault();
+    if (!pendingCollectionCountReset) return collectionCountResetDialog.close();
+    const { card,current,family,variant } = pendingCollectionCountReset;
+    current.collectionCount = 0;
+    saveProgress();
+    updateCard(card,current,family,variant);
+    collectionCountResetDialog.close();
   }
 
   function saveRecentMissingChanges() {
@@ -2970,7 +3027,8 @@
     crown.type = 'button';
     crown.className = 'crown-button';
     crown.innerHTML = crownSvg();
-    const collectionCountEmblem = document.createElement('span');
+    const collectionCountEmblem = document.createElement('button');
+    collectionCountEmblem.type = 'button';
     collectionCountEmblem.className = 'collection-count-emblem';
     const seasonBadge = document.createElement('span');
     seasonBadge.className = 'sprite-season-badge';
@@ -3252,6 +3310,7 @@
     });
     collect.addEventListener('click',toggleCollected);
     huntCartButton.addEventListener('click',() => addSpriteToHuntCart(family,variant));
+    collectionCountEmblem.addEventListener('click',() => openCollectionCountReset(card,current,family,variant));
     crown.addEventListener('click',() => {
       if (huntMode.active) return;
       const before = snapshotVariantState(current);
@@ -4722,6 +4781,7 @@
     button.addEventListener('click',() => setAppView(button.dataset.appView));
   });
   journalActionFilter.addEventListener('change',renderJournal);
+  clearJournalActivityBtn.addEventListener('click',clearJournalActivity);
   huntModeBtn.addEventListener('click',toggleHuntMode);
   huntModeBtn.addEventListener('pointerup',() => requestAnimationFrame(() => huntModeBtn.blur()));
   huntCheckoutBtn.addEventListener('click',openHuntCheckout);
@@ -4751,6 +4811,13 @@
   dustBalanceDialog.addEventListener('close',() => {
     document.documentElement.classList.remove('dust-balance-open');
     document.body.classList.remove('dust-balance-open');
+  });
+  collectionCountResetForm.addEventListener('submit',resetCollectionCount);
+  document.getElementById('cancelCollectionCountResetBtn').addEventListener('click',() => collectionCountResetDialog.close());
+  collectionCountResetDialog.addEventListener('close',() => {
+    pendingCollectionCountReset = null;
+    document.documentElement.classList.remove('collection-count-reset-open');
+    document.body.classList.remove('collection-count-reset-open');
   });
   dustPurchaseForm.addEventListener('submit',recordDustPurchase);
   document.getElementById('cancelDustPurchaseBtn').addEventListener('click',() => dustPurchaseDialog.close());
@@ -4947,7 +5014,7 @@
                 : (isUnownedPage() ? `#${missingView}` : `#${activeRarity.toLowerCase()}`))));
   if (location.hash !== activeHash) history.replaceState({ rarity:activeRarity },'',activeHash);
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./service-worker.js?v=118',{ updateViaCache:'none' }).then((registration) => registration.update()).catch(() => {});
+    navigator.serviceWorker.register('./service-worker.js?v=119',{ updateViaCache:'none' }).then((registration) => registration.update()).catch(() => {});
   }
   const signalAppRendered = () => window.dispatchEvent(new Event('sprite-app-rendered'));
   if (document.fonts?.ready) {
