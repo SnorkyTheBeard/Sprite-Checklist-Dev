@@ -34,6 +34,7 @@
   const SEASON_VIEW_KEY = `galaxy_sprite_tracker_season_view_v1_${STORAGE_SCOPE}`;
   const SPRITE_CARD_EDITS_KEY = `galaxy_sprite_tracker_sprite_cards_v1_${STORAGE_SCOPE}`;
   const PRE_RESTORE_PROGRESS_KEY = `galaxy_sprite_tracker_progress_before_restore_v1_${STORAGE_SCOPE}`;
+  const HUNT_MODE_KEY = `galaxy_sprite_tracker_hunt_mode_v1_${STORAGE_SCOPE}`;
   const JOURNAL_FALLBACK_KEY = `galaxy_sprite_tracker_collection_journal_v1_${STORAGE_SCOPE}`;
   const JOURNAL_DB_NAME = `galaxy-sprite-tracker-journal-${STORAGE_SCOPE}`;
   const JOURNAL_DB_STORE = 'entries';
@@ -108,6 +109,19 @@
     if (hashView === APP_VIEW_VAULT && SEASON_FEATURE_VISIBLE) return APP_VIEW_VAULT;
     if (hashView === APP_VIEW_JOURNAL) return APP_VIEW_JOURNAL;
     return APP_VIEW_TRACKER;
+  }
+
+  function loadHuntMode() {
+    const saved = readJson(HUNT_MODE_KEY) || {};
+    const startedAt = validIsoDate(saved.startedAt);
+    const lastDurationMs = Number.isFinite(Number(saved.lastDurationMs))
+      ? Math.max(0,Math.min(Number(saved.lastDurationMs),7 * 24 * 60 * 60 * 1000))
+      : 0;
+    return {
+      active:saved.active === true && Boolean(startedAt),
+      startedAt,
+      lastDurationMs
+    };
   }
 
   function loadRecentMissingChanges() {
@@ -435,6 +449,8 @@
   let journalWriteQueue = Promise.resolve();
   let journalInitialization = null;
   let pendingLocationDetails = null;
+  let huntMode = loadHuntMode();
+  let huntTimerInterval = 0;
 
   const tabsEl = document.getElementById('rarityTabs');
   const collectionsEl = document.getElementById('collections');
@@ -460,8 +476,10 @@
   const journalTopLocationCount = document.getElementById('journalTopLocationCount');
   const journalLocationsLogged = document.getElementById('journalLocationsLogged');
   const journalEntryCount = document.getElementById('journalEntryCount');
-  const journalLocationBars = document.getElementById('journalLocationBars');
   const journalLocationEmpty = document.getElementById('journalLocationEmpty');
+  const journalZoneTopCount = document.getElementById('journalZoneTopCount');
+  const journalZoneBottomCount = document.getElementById('journalZoneBottomCount');
+  const journalZoneBossCount = document.getElementById('journalZoneBossCount');
   const journalActionFilter = document.getElementById('journalActionFilter');
   const journalEntryList = document.getElementById('journalEntryList');
   const journalEmptyState = document.getElementById('journalEmptyState');
@@ -473,6 +491,8 @@
   const locationCollectedAt = document.getElementById('locationCollectedAt');
   const locationMasteredAt = document.getElementById('locationMasteredAt');
   const locationMasteredAtLabel = document.getElementById('locationMasteredAtLabel');
+  const huntModeBtn = document.getElementById('huntModeBtn');
+  const huntTimer = document.getElementById('huntTimer');
   const spriteSearchForm = document.getElementById('spriteSearchForm');
   const spriteSearchInput = document.getElementById('spriteSearchInput');
   const spriteSearchResults = document.getElementById('spriteSearchResults');
@@ -529,6 +549,57 @@
       showToast('Progress could not be saved in this browser.');
       return false;
     }
+  }
+
+  function saveHuntMode() {
+    try { localStorage.setItem(HUNT_MODE_KEY,JSON.stringify(huntMode)); } catch { /* Hunt Mode can continue for this visit. */ }
+  }
+
+  function huntElapsedMs() {
+    if (!huntMode.active || !huntMode.startedAt) return huntMode.lastDurationMs || 0;
+    return Math.max(0,Date.now() - Date.parse(huntMode.startedAt));
+  }
+
+  function formatHuntDuration(milliseconds) {
+    const totalSeconds = Math.max(0,Math.floor(milliseconds / 1000));
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    const two = (value) => String(value).padStart(2,'0');
+    return hours ? `${two(hours)}:${two(minutes)}:${two(seconds)}` : `${two(minutes)}:${two(seconds)}`;
+  }
+
+  function updateHuntTimer() {
+    const elapsed = huntElapsedMs();
+    huntTimer.textContent = formatHuntDuration(elapsed);
+    huntTimer.hidden = !huntMode.active && !huntMode.lastDurationMs;
+  }
+
+  function applyHuntMode() {
+    window.clearInterval(huntTimerInterval);
+    huntTimerInterval = 0;
+    huntModeBtn.classList.toggle('is-active',huntMode.active);
+    huntModeBtn.setAttribute('aria-pressed',String(huntMode.active));
+    huntModeBtn.setAttribute('aria-label',huntMode.active ? 'End Hunt' : 'Start Hunt');
+    huntModeBtn.title = huntMode.active ? 'End Hunt' : 'Start Hunt';
+    updateHuntTimer();
+    if (huntMode.active) huntTimerInterval = window.setInterval(updateHuntTimer,1000);
+  }
+
+  function toggleHuntMode() {
+    if (huntMode.active) {
+      huntMode.lastDurationMs = huntElapsedMs();
+      huntMode.active = false;
+      huntMode.startedAt = '';
+      saveHuntMode();
+      applyHuntMode();
+      showToast(`Hunt ended · ${formatHuntDuration(huntMode.lastDurationMs)}`);
+      return;
+    }
+    huntMode = { active:true, startedAt:new Date().toISOString(), lastDurationMs:0 };
+    saveHuntMode();
+    applyHuntMode();
+    showToast('Hunt started · locations will be offered when Sprites are collected');
   }
 
   function currentSpriteViewMode() {
@@ -970,6 +1041,23 @@
     return typeof value === 'string' ? value.trim().slice(0,80) : '';
   }
 
+  const TOP_MAP_LOCATIONS = new Set([
+    'Top of Map','Lifty Lodge','Latte Landing','Wonkee Land','Wonkeeland',
+    'Battlewoods','The Battlewoods','Frosted Flats','Golden Grove','Shaken Sanctuary'
+  ]);
+  const BOTTOM_MAP_LOCATIONS = new Set([
+    'Bottom of Map','Cluster Coast','Sunken Shores','Heatwave Harbor',
+    'Sinister Strip','Calamari Canyon','Chopped Shop'
+  ]);
+
+  function locationZone(value) {
+    const location = cleanLocation(value);
+    if (location === 'Boss Fight') return 'Boss Fight';
+    if (TOP_MAP_LOCATIONS.has(location)) return 'Top of Map';
+    if (BOTTOM_MAP_LOCATIONS.has(location)) return 'Bottom of Map';
+    return '';
+  }
+
   function snapshotVariantState(current) {
     const mastered = current?.mastered === true;
     return {
@@ -1209,14 +1297,14 @@
     let logged = 0;
     Object.values(state || {}).forEach((variants) => {
       Object.values(variants || {}).forEach((current) => {
-        const location = cleanLocation(current?.locationFound);
-        if (!current?.collected || !location || location === 'Not sure') return;
+        const location = locationZone(current?.locationFound);
+        if (!current?.collected || !location) return;
         logged += 1;
         counts.set(location,(counts.get(location) || 0) + 1);
       });
     });
     const ranked = [...counts.entries()].sort((left,right) => right[1] - left[1] || left[0].localeCompare(right[0]));
-    return { logged,ranked };
+    return { logged,ranked,counts };
   }
 
   function renderJournal() {
@@ -1232,24 +1320,10 @@
       : 'Add a location when you collect a Sprite.';
     journalLocationsLogged.textContent = String(locationStats.logged);
     journalEntryCount.textContent = String(visibleEntries.length);
-    journalLocationBars.replaceChildren();
+    journalZoneTopCount.textContent = String(locationStats.counts.get('Top of Map') || 0);
+    journalZoneBottomCount.textContent = String(locationStats.counts.get('Bottom of Map') || 0);
+    journalZoneBossCount.textContent = String(locationStats.counts.get('Boss Fight') || 0);
     journalLocationEmpty.hidden = Boolean(locationStats.ranked.length);
-    const maxLocationCount = locationStats.ranked[0]?.[1] || 1;
-    locationStats.ranked.slice(0,6).forEach(([location,count]) => {
-      const row = document.createElement('div');
-      row.className = 'journal-location-row';
-      const label = document.createElement('span');
-      label.textContent = location;
-      const track = document.createElement('span');
-      track.className = 'journal-location-track';
-      const fill = document.createElement('i');
-      fill.style.width = `${Math.max(8,count / maxLocationCount * 100)}%`;
-      track.appendChild(fill);
-      const number = document.createElement('strong');
-      number.textContent = String(count);
-      row.append(label,track,number);
-      journalLocationBars.appendChild(row);
-    });
 
     const filter = journalActionFilter?.value || 'all';
     const filtered = visibleEntries.filter((entry) => journalFilterMatches(entry,filter)).slice(0,150);
@@ -1298,7 +1372,7 @@
       time.dateTime = entry.timestamp;
       time.textContent = formatJournalDate(entry.timestamp);
       copy.append(name,action,time);
-      const location = cleanLocation(entry.after?.locationFound);
+      const location = locationZone(entry.after?.locationFound) || cleanLocation(entry.after?.locationFound);
       if (location) {
         const place = document.createElement('span');
         place.className = 'journal-entry-location';
@@ -1372,14 +1446,17 @@
     const name = `${familyView(family).name || 'Sprite'} · ${variantView(family,variant).name || 'Variant'}`;
     locationFoundTitle.textContent = newlyCollected ? 'Where did you find it?' : 'Edit collection details';
     locationFoundSpriteName.textContent = name;
-    const knownLocation = [...locationFoundSelect.options].some((option) => option.value === current.locationFound);
-    locationFoundSelect.value = knownLocation ? (current.locationFound || '') : 'Other landmark';
+    locationFoundSelect.value = locationZone(current.locationFound) || '';
     locationCollectedAt.value = isoToLocalDateTime(current.collectedAt || new Date().toISOString());
     locationMasteredAt.value = isoToLocalDateTime(current.masteredAt || '');
     locationMasteredAtLabel.hidden = !current.mastered;
     document.documentElement.classList.add('journal-dialog-open');
     document.body.classList.add('journal-dialog-open');
     if (!locationFoundDialog.open) locationFoundDialog.showModal();
+    requestAnimationFrame(() => {
+      try { locationFoundTitle.focus({ preventScroll:true }); }
+      catch { locationFoundTitle.focus(); }
+    });
   }
 
   function closeLocationDetails() {
@@ -2411,7 +2488,7 @@
       }
       const type = current.collected ? 'collected' : 'uncollected';
       const journalEntry = commitCardChange(card,family,variant,current,current.collected ? 'Added to collection' : 'Removed from collection',before,type);
-      if (current.collected) openLocationDetails(family,variant,journalEntry?.id,{ newlyCollected:true });
+      if (current.collected && huntMode.active) openLocationDetails(family,variant,journalEntry?.id,{ newlyCollected:true });
     };
     imageButton.addEventListener('click',() => {
       if (spriteEditMode) return fileInput.click();
@@ -2431,7 +2508,10 @@
       }
       const type = current.mastered ? 'mastered' : 'unmastered';
       const journalEntry = commitCardChange(card,family,variant,current,current.mastered ? 'Mastered' : 'Mastery removed',before,type);
-      if (!before.collected && current.collected) openLocationDetails(family,variant,journalEntry?.id,{ newlyCollected:true });
+      if (!before.collected && current.collected && huntMode.active) openLocationDetails(family,variant,journalEntry?.id,{ newlyCollected:true });
+    });
+    [imageButton,collect,crown].forEach((button) => {
+      button.addEventListener('pointerup',() => requestAnimationFrame(() => button.blur()));
     });
     moveLeft.addEventListener('click',() => moveSpriteCard(family,variant.id,-1));
     moveRight.addEventListener('click',() => moveSpriteCard(family,variant.id,1));
@@ -2821,6 +2901,7 @@
     updateCounters();
     updatePublishButton();
     renderJournal();
+    applyHuntMode();
   }
 
   function switchRarity(rarity,options = {}) {
@@ -3825,6 +3906,11 @@
     button.addEventListener('click',() => setAppView(button.dataset.appView));
   });
   journalActionFilter.addEventListener('change',renderJournal);
+  huntModeBtn.addEventListener('click',toggleHuntMode);
+  huntModeBtn.addEventListener('pointerup',() => requestAnimationFrame(() => huntModeBtn.blur()));
+  document.addEventListener('visibilitychange',() => {
+    if (!document.hidden && huntMode.active) updateHuntTimer();
+  });
   locationFoundForm.addEventListener('submit',saveLocationDetails);
   document.getElementById('skipLocationFoundBtn').addEventListener('click',closeLocationDetails);
   locationFoundDialog.addEventListener('close',() => {
@@ -3996,7 +4082,7 @@
         : (isUnownedPage() ? `#${missingView}` : `#${activeRarity.toLowerCase()}`));
   if (location.hash !== activeHash) history.replaceState({ rarity:activeRarity },'',activeHash);
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./service-worker.js?v=115',{ updateViaCache:'none' }).then((registration) => registration.update()).catch(() => {});
+    navigator.serviceWorker.register('./service-worker.js?v=116',{ updateViaCache:'none' }).then((registration) => registration.update()).catch(() => {});
   }
   const signalAppRendered = () => window.dispatchEvent(new Event('sprite-app-rendered'));
   if (document.fonts?.ready) {

@@ -283,7 +283,7 @@
       }
     })();
   </script>
-<link rel="stylesheet" href="styles.css?v=110">
+<link rel="stylesheet" href="styles.css?v=116">
 <link rel="stylesheet" href="vault-v105.css?v=112">
 <link rel="stylesheet" href="viewport-v106.css?v=107">
 <link rel="stylesheet" href="scene-v113.css?v=114">
@@ -372,6 +372,16 @@
     </section>
 
     <section class="tracker-tools tracker-primary-view" aria-label="Collection tools">
+      <div class="hunt-mode-control">
+        <button id="huntModeBtn" type="button" aria-label="Start Hunt" aria-pressed="false" title="Start Hunt">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <circle cx="12" cy="12" r="7"></circle>
+            <circle cx="12" cy="12" r="2.5"></circle>
+            <path d="M12 2v4M12 18v4M2 12h4M18 12h4"></path>
+          </svg>
+        </button>
+        <span id="huntTimer" aria-live="polite" hidden>00:00</span>
+      </div>
       <button id="showcaseBtn" type="button" aria-label="Create collection image" title="Create collection image">
         <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
           <path d="M4 7.5h3.2L8.8 5h6.4l1.6 2.5H20v11.5H4z"></path>
@@ -422,7 +432,6 @@
 
     <section class="collection-journal-page" id="collectionJournalPage" aria-labelledby="collectionJournalTitle" hidden>
       <header class="collection-journal-head">
-        <p>Personal collection history</p>
         <h2 id="collectionJournalTitle">Collection Journal</h2>
         <span>Your dates and locations stay in this browser and in your downloaded backups.</span>
       </header>
@@ -434,26 +443,35 @@
           <small id="journalTopLocationCount">Add a location when you collect a Sprite.</small>
         </article>
         <article class="journal-insight-card">
-          <span>Locations logged</span>
+          <span>Locations visited</span>
           <strong id="journalLocationsLogged">0</strong>
-          <small>currently collected Sprites</small>
         </article>
         <article class="journal-insight-card">
           <span>Journal entries</span>
           <strong id="journalEntryCount">0</strong>
-          <small>progress changes recorded</small>
         </article>
       </section>
 
       <section class="journal-location-chart" aria-labelledby="journalLocationChartTitle">
         <div class="journal-section-heading">
           <div>
-            <span>Collection map</span>
             <h3 id="journalLocationChartTitle">Where you find your Sprites</h3>
           </div>
         </div>
-        <div class="journal-location-bars" id="journalLocationBars"></div>
-        <p class="journal-empty-copy" id="journalLocationEmpty">Your most-used locations will appear here.</p>
+        <div class="journal-map-layout">
+          <figure class="journal-map-figure">
+            <img src="assets/journal/chapter-7-season-3-map.webp?v=116" alt="Current Fortnite Chapter 7 Season 3 island map" width="776" height="436">
+            <span class="journal-map-zone journal-map-zone-top" aria-hidden="true"></span>
+            <span class="journal-map-zone journal-map-zone-bottom" aria-hidden="true"></span>
+            <span class="journal-map-zone journal-map-zone-boss" aria-hidden="true"></span>
+          </figure>
+          <div class="journal-map-legend" aria-label="Map collection totals">
+            <div data-journal-zone="Top of Map"><i aria-hidden="true"></i><span>Top of Map</span><strong id="journalZoneTopCount">0</strong></div>
+            <div data-journal-zone="Bottom of Map"><i aria-hidden="true"></i><span>Bottom of Map</span><strong id="journalZoneBottomCount">0</strong></div>
+            <div data-journal-zone="Boss Fight"><i aria-hidden="true"></i><span>Boss Fight</span><strong id="journalZoneBossCount">0</strong></div>
+          </div>
+        </div>
+        <p class="journal-empty-copy" id="journalLocationEmpty">Start Hunt Mode to begin tracking where Sprites are found.</p>
       </section>
 
       <section class="journal-history" aria-labelledby="journalHistoryTitle">
@@ -661,28 +679,16 @@
 
   <dialog class="reset-dialog location-found-dialog" id="locationFoundDialog" aria-labelledby="locationFoundTitle">
     <form id="locationFoundForm">
-      <h2 id="locationFoundTitle">Where did you find it?</h2>
+      <h2 id="locationFoundTitle" tabindex="-1">Where did you find it?</h2>
       <p id="locationFoundSpriteName">Add optional details to this journal entry.</p>
       <div class="location-found-fields">
         <label for="locationFoundSelect">
           <span>Location found</span>
           <select id="locationFoundSelect">
             <option value="">Not added</option>
-            <option value="Lifty Lodge">Lifty Lodge</option>
-            <option value="Battlewoods">Battlewoods</option>
-            <option value="Latte Landing">Latte Landing</option>
-            <option value="Wonkeeland">Wonkeeland</option>
-            <option value="Frosted Flats">Frosted Flats</option>
-            <option value="Sinister Strip">Sinister Strip</option>
-            <option value="Golden Grove">Golden Grove</option>
-            <option value="Shaken Sanctuary">Shaken Sanctuary</option>
-            <option value="Cluster Coast">Cluster Coast</option>
-            <option value="Sunken Shores">Sunken Shores</option>
-            <option value="Heatwave Harbor">Heatwave Harbor</option>
-            <option value="Calamari Canyon">Calamari Canyon</option>
-            <option value="Chopped Shop">Chopped Shop</option>
-            <option value="Other landmark">Other landmark</option>
-            <option value="Not sure">Not sure</option>
+            <option value="Top of Map">Top of Map (Lifty Lodge, Latte Landing, Wonkee Land, etc.)</option>
+            <option value="Bottom of Map">Bottom of Map (Cluster Coast, Sunken Shores, Heatwave Harbor, etc.)</option>
+            <option value="Boss Fight">Boss Fight (Wolfe, Voidblade, Skeletor)</option>
           </select>
         </label>
         <label for="locationCollectedAt">
@@ -706,6 +712,6 @@
   <noscript>This checklist needs JavaScript enabled to save progress.</noscript>
 
   <script src="data.js?v=82"></script>
-  <script src="app.js?v=115"></script>
+  <script src="app.js?v=116"></script>
 </body>
 </html>
