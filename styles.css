@@ -4919,6 +4919,11 @@ body.tracker-view .variant-row {
   font-size:12px;
 }
 
+/* v122: the glowing crown is the only visible Mastered indicator on Tracker cards. */
+body.tracker-view .card.mastered .master-label {
+  display:none !important;
+}
+
 /* v103 final overrides: keep the real Edge-safe backdrop and Vault cases above all legacy rules. */
 .page-backdrop {
   position:fixed !important;

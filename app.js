@@ -2891,7 +2891,7 @@
     if (vaultDisplay) crownButton.setAttribute('aria-hidden','true');
     else crownButton.removeAttribute('aria-hidden');
     collectButton.querySelector('.collect-label').textContent = design.header.collectedLabel || 'In Collection';
-    const masterText = current.mastered ? (design.header.masteredLabel || 'Mastered') : design.header.masterPrompt;
+    const masterText = current.mastered ? '' : design.header.masterPrompt;
     const masterLabel = card.querySelector('.master-label');
     masterLabel.textContent = masterText || '';
     masterLabel.hidden = !masterText;
@@ -5077,7 +5077,7 @@
                 : (isUnownedPage() ? `#${missingView}` : `#${activeRarity.toLowerCase()}`))));
   if (location.hash !== activeHash) history.replaceState({ rarity:activeRarity },'',activeHash);
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./service-worker.js?v=121',{ updateViaCache:'none' }).then((registration) => registration.update()).catch(() => {});
+    navigator.serviceWorker.register('./service-worker.js?v=122',{ updateViaCache:'none' }).then((registration) => registration.update()).catch(() => {});
   }
   const signalAppRendered = () => window.dispatchEvent(new Event('sprite-app-rendered'));
   if (document.fonts?.ready) {
