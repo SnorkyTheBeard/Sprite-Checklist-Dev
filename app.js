@@ -51,11 +51,23 @@
   const MAX_HUNT_HISTORY = 300;
   const MAX_DUST_RECEIPTS = 1000;
   const DUST_PURCHASE_ITEMS = Object.freeze([
-    'Portable Extractors',
-    'Weapon Rarity Upgrades',
-    'XP Bundles',
-    'Lost Sprite Recoveries'
-  ]);
+    { category:'Base Sprite Re-Summon', name:'Rare Base Sprite Re-Summon', cost:1800 },
+    { category:'Base Sprite Re-Summon', name:'Epic Base Sprite Re-Summon', cost:2700 },
+    { category:'Base Sprite Re-Summon', name:'Legendary Base Sprite Re-Summon', cost:4500 },
+    { category:'Base Sprite Re-Summon', name:'Mythic Base Sprite Re-Summon', cost:6750 },
+    { category:'Variant Sprite Re-Summon', name:'Rare Variant Sprite Re-Summon', cost:2700 },
+    { category:'Variant Sprite Re-Summon', name:'Epic Variant Sprite Re-Summon', cost:4000 },
+    { category:'Variant Sprite Re-Summon', name:'Legendary Variant Sprite Re-Summon', cost:6750 },
+    { category:'Variant Sprite Re-Summon', name:'Mythic Variant Sprite Re-Summon', cost:10000 },
+    { category:'Sprite Service Station', name:'Locate Sprites', cost:100 },
+    { category:'Sprite Service Station', name:'20,000 XP (Once per day)', cost:1000 },
+    { category:'Sprite Service Station', name:'Portable Extractor (Once per day)', cost:2000 },
+    { category:'Sprite Service Station', name:'Common to Uncommon Upgrade', cost:250 },
+    { category:'Sprite Service Station', name:'Uncommon to Rare Upgrade', cost:500 },
+    { category:'Sprite Service Station', name:'Rare to Epic Upgrade', cost:1000 },
+    { category:'Sprite Service Station', name:'Epic to Legendary Upgrade', cost:2000 }
+  ].map((item) => Object.freeze(item)));
+  const MIN_DUST_PURCHASE_COST = Math.min(...DUST_PURCHASE_ITEMS.map((item) => item.cost));
   const SEASON_VIEWS = [...seasonCatalog.map((season) => season.id),SEASON_VIEW_ALL];
   const CARD_REORDER_MIME = 'application/x-sprite-card';
   const GITHUB_TOKEN_SESSION_KEY = `galaxy_sprite_tracker_github_token_${STORAGE_SCOPE}`;
@@ -614,7 +626,6 @@
   const dustPurchaseDialog = document.getElementById('dustPurchaseDialog');
   const dustPurchaseForm = document.getElementById('dustPurchaseForm');
   const dustPurchaseTitle = document.getElementById('dustPurchaseTitle');
-  const dustPurchaseAmount = document.getElementById('dustPurchaseAmount');
   const dustPurchaseItem = document.getElementById('dustPurchaseItem');
   const dustPurchaseStatus = document.getElementById('dustPurchaseStatus');
   const dustBalanceDialog = document.getElementById('dustBalanceDialog');
@@ -1952,7 +1963,7 @@
     spriteDustAccountBalance.textContent = formatDust(balance);
     dustReceiptList.replaceChildren();
     dustReceiptEmpty.hidden = Boolean(dustLedger.length);
-    document.getElementById('recordDustPurchaseBtn').disabled = balance < 1;
+    document.getElementById('recordDustPurchaseBtn').disabled = balance < MIN_DUST_PURCHASE_COST;
 
     dustLedger.forEach((receipt) => {
       const row = document.createElement('article');
@@ -1980,11 +1991,13 @@
 
   function openDustPurchaseDialog() {
     const balance = Math.max(0,dustBalanceValue());
-    if (!balance) return showToast('There is no Sprite Dust available to spend.');
+    if (balance < MIN_DUST_PURCHASE_COST) return showToast(`At least ${formatDust(MIN_DUST_PURCHASE_COST)} Sprite Dust is needed to record a purchase.`);
     dustPurchaseForm.reset();
-    dustPurchaseAmount.max = String(balance);
-    dustPurchaseStatus.textContent = `Available: ${formatDust(balance)} Dust`;
-    dustPurchaseStatus.dataset.state = '';
+    [...dustPurchaseItem.options].forEach((option) => {
+      const purchase = dustPurchaseByName(option.value);
+      option.disabled = Boolean(purchase && purchase.cost > balance);
+    });
+    updateDustPurchaseStatus();
     document.documentElement.classList.add('dust-purchase-open');
     document.body.classList.add('dust-purchase-open');
     if (!dustPurchaseDialog.open) dustPurchaseDialog.showModal();
@@ -1992,6 +2005,45 @@
       try { dustPurchaseTitle.focus({ preventScroll:true }); }
       catch { dustPurchaseTitle.focus(); }
     });
+  }
+
+  function populateDustPurchaseMenu() {
+    let placeholder = dustPurchaseItem.querySelector('option[value=""]');
+    if (!placeholder) {
+      placeholder = document.createElement('option');
+      placeholder.value = '';
+      placeholder.textContent = 'Choose an item and price';
+    }
+    dustPurchaseItem.replaceChildren(placeholder);
+    const groups = new Map();
+    DUST_PURCHASE_ITEMS.forEach((purchase) => {
+      let group = groups.get(purchase.category);
+      if (!group) {
+        group = document.createElement('optgroup');
+        group.label = purchase.category;
+        groups.set(purchase.category,group);
+        dustPurchaseItem.appendChild(group);
+      }
+      const option = document.createElement('option');
+      option.value = purchase.name;
+      option.textContent = `${purchase.name} — ${formatDust(purchase.cost)} Dust`;
+      group.appendChild(option);
+    });
+  }
+
+  function dustPurchaseByName(name) {
+    return DUST_PURCHASE_ITEMS.find((purchase) => purchase.name === name) || null;
+  }
+
+  function updateDustPurchaseStatus() {
+    const balance = Math.max(0,dustBalanceValue());
+    const purchase = dustPurchaseByName(dustPurchaseItem.value);
+    dustPurchaseStatus.dataset.state = purchase && purchase.cost > balance ? 'error' : '';
+    dustPurchaseStatus.textContent = !purchase
+      ? `Available: ${formatDust(balance)} Dust`
+      : (purchase.cost > balance
+          ? `${formatDust(purchase.cost)} Dust required · ${formatDust(balance)} available`
+          : `Price: ${formatDust(purchase.cost)} Dust · Balance after purchase: ${formatDust(balance - purchase.cost)} Dust`);
   }
 
   function openDustBalanceDialog() {
@@ -2037,29 +2089,23 @@
 
   function recordDustPurchase(event) {
     event.preventDefault();
-    const amount = Math.round(Number(dustPurchaseAmount.value));
-    const note = dustPurchaseItem.value;
+    const purchase = dustPurchaseByName(dustPurchaseItem.value);
     const balance = Math.max(0,dustBalanceValue());
-    if (!Number.isFinite(amount) || amount < 1) {
-      dustPurchaseStatus.dataset.state = 'error';
-      dustPurchaseStatus.textContent = 'Enter a whole Sprite Dust amount greater than 0.';
-      return;
-    }
-    if (amount > balance) {
-      dustPurchaseStatus.dataset.state = 'error';
-      dustPurchaseStatus.textContent = `That is more than the available ${formatDust(balance)} Dust.`;
-      return;
-    }
-    if (!DUST_PURCHASE_ITEMS.includes(note)) {
+    if (!purchase) {
       dustPurchaseStatus.dataset.state = 'error';
       dustPurchaseStatus.textContent = 'Choose what you purchased.';
+      return;
+    }
+    if (purchase.cost > balance) {
+      dustPurchaseStatus.dataset.state = 'error';
+      dustPurchaseStatus.textContent = `That is more than the available ${formatDust(balance)} Dust.`;
       return;
     }
     dustLedger.unshift({
       id:`purchase-${Date.now()}-${Math.random().toString(36).slice(2)}`,
       type:'purchase',
-      amount,
-      note,
+      amount:purchase.cost,
+      note:purchase.name,
       createdAt:new Date().toISOString(),
       huntId:''
     });
@@ -2067,7 +2113,7 @@
     saveDustLedger();
     dustPurchaseDialog.close();
     renderDustAccount();
-    showToast(`${formatDust(amount)} Sprite Dust purchase recorded`);
+    showToast(`${purchase.name} purchase recorded`);
   }
 
   function undoJournalEntry(entryId) {
@@ -5016,6 +5062,8 @@
   document.getElementById('resetBtn').addEventListener('click',() => resetDialog.showModal());
   document.getElementById('confirmResetBtn').addEventListener('click',resetProgress);
 
+  populateDustPurchaseMenu();
+  dustPurchaseItem.addEventListener('change',updateDustPurchaseStatus);
   journalInitialization = initializeJournal();
   renderAll();
   const activeHash = appView === APP_VIEW_VAULT
@@ -5029,7 +5077,7 @@
                 : (isUnownedPage() ? `#${missingView}` : `#${activeRarity.toLowerCase()}`))));
   if (location.hash !== activeHash) history.replaceState({ rarity:activeRarity },'',activeHash);
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./service-worker.js?v=120',{ updateViaCache:'none' }).then((registration) => registration.update()).catch(() => {});
+    navigator.serviceWorker.register('./service-worker.js?v=121',{ updateViaCache:'none' }).then((registration) => registration.update()).catch(() => {});
   }
   const signalAppRendered = () => window.dispatchEvent(new Event('sprite-app-rendered'));
   if (document.fonts?.ready) {

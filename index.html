@@ -283,7 +283,7 @@
       }
     })();
   </script>
-<link rel="stylesheet" href="styles.css?v=120">
+<link rel="stylesheet" href="styles.css?v=121">
 <link rel="stylesheet" href="vault-v105.css?v=112">
 <link rel="stylesheet" href="viewport-v106.css?v=107">
 <link rel="stylesheet" href="scene-v113.css?v=114">
@@ -806,15 +806,9 @@
   <dialog class="reset-dialog dust-purchase-dialog" id="dustPurchaseDialog" aria-labelledby="dustPurchaseTitle">
     <form id="dustPurchaseForm">
       <h2 id="dustPurchaseTitle" tabindex="-1">Record Sprite Dust Purchase</h2>
-      <label class="add-sprite-label" for="dustPurchaseAmount">Dust spent</label>
-      <input id="dustPurchaseAmount" type="number" min="1" step="1" inputmode="numeric" required placeholder="100">
       <label class="add-sprite-label" for="dustPurchaseItem">What did you buy?</label>
-      <select id="dustPurchaseItem" required>
-        <option value="">Choose an item</option>
-        <option value="Portable Extractors">Portable Extractors</option>
-        <option value="Weapon Rarity Upgrades">Weapon Rarity Upgrades</option>
-        <option value="XP Bundles">XP Bundles</option>
-        <option value="Lost Sprite Recoveries">Lost Sprite Recoveries</option>
+      <select id="dustPurchaseItem" aria-describedby="dustPurchaseStatus" required>
+        <option value="">Choose an item and price</option>
       </select>
       <p id="dustPurchaseStatus" role="status" aria-live="polite"></p>
       <div class="dialog-actions">
@@ -853,6 +847,6 @@
   <noscript>This checklist needs JavaScript enabled to save progress.</noscript>
 
   <script src="data.js?v=82"></script>
-  <script src="app.js?v=120"></script>
+  <script src="app.js?v=121"></script>
 </body>
 </html>
