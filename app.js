@@ -562,6 +562,7 @@
   const collectionsEl = document.getElementById('collections');
   const pageTitleEl = document.getElementById('activePageTitle');
   const pageEyebrowEl = document.getElementById('pageEyebrow');
+  const extractionDustDescriptionEl = document.getElementById('extractionDustDescription');
   const pageDescriptionEl = document.getElementById('pageDescription');
   const missingRecentChangesEl = document.getElementById('missingRecentChanges');
   const missingRecentListEl = document.getElementById('missingRecentList');
@@ -2357,30 +2358,38 @@
     }));
   }
 
-  function saveSpriteDustLevels(family,variant,fields) {
-    const levels = {};
-    let invalid = false;
-    [1,2,3,4,5].forEach((level) => {
-      const raw = String(fields[level]?.value || '').trim();
-      if (!raw) return;
-      if (!/^\d{1,7}$/.test(raw) || Number(raw) > 1000000) invalid = true;
-      else levels[String(level)] = Math.round(Number(raw));
+  function rarityDustRewards(rarity) {
+    const rewardCounts = Object.fromEntries([1,2,3,4,5].map((level) => [String(level),new Map()]));
+    allFamilies().filter((family) => familyRarity(family) === rarity).forEach((family) => {
+      familyVariants(family).forEach((variant) => {
+        const levels = variantView(family,variant).dustLevels;
+        [1,2,3,4,5].forEach((level) => {
+          const amount = Number(levels[String(level)]);
+          if (!Number.isFinite(amount) || amount < 0) return;
+          const counts = rewardCounts[String(level)];
+          counts.set(amount,(counts.get(amount) || 0) + 1);
+        });
+      });
     });
-    if (invalid) {
-      showToast('Enter whole Sprite Dust amounts from 0 to 1,000,000.');
-      return false;
-    }
-    const previousEdits = cloneJson(spriteCardEdits);
-    familyCardEdits(family.id).dustLevels[variant.id] = levels;
-    if (!saveCardEditOrRestore(previousEdits)) return false;
-    renderCollections();
-    updateCounters();
-    showToast(Object.keys(levels).length ? `${variantView(family,variant).name}: Dust values saved` : 'Sprite Dust values removed');
-    return true;
+    return Object.fromEntries([1,2,3,4,5].flatMap((level) => {
+      const ranked = [...rewardCounts[String(level)].entries()].sort((a,b) => b[1] - a[1] || a[0] - b[0]);
+      return ranked.length ? [[String(level),ranked[0][0]]] : [];
+    }));
   }
 
   function spriteDustAtLevel(family,variant,level = 1) {
-    return Number(variantView(family,variant).dustLevels[String(Math.max(1,Math.min(5,Number(level) || 1)))]) || 0;
+    const normalizedLevel = String(Math.max(1,Math.min(5,Number(level) || 1)));
+    return Number(rarityDustRewards(familyRarity(family))[normalizedLevel]) || 0;
+  }
+
+  function rarityDustDescription(rarity) {
+    const rewards = rarityDustRewards(rarity);
+    const entries = [1,2,3,4,5].flatMap((level) => hasOwn(rewards,String(level))
+      ? [`L${level} ${formatDust(rewards[String(level)])}`]
+      : []);
+    return entries.length
+      ? `Extraction Sprite Dust — ${entries.join(' · ')}`
+      : 'Extraction Sprite Dust rewards increase with Sprite level.';
   }
 
   function formatDust(value) {
@@ -3242,66 +3251,8 @@
     percentageInput.setAttribute('aria-label',`Rarity percentage for ${view.name || 'sprite'} ${familyInfo.name || ''}`.trim());
     percentageEditor.append(percentageEditorLabel,percentageInput);
 
-    const dustEditor = document.createElement('div');
-    dustEditor.className = 'sprite-dust-editor';
-    const dustEditorTitle = document.createElement('strong');
-    dustEditorTitle.textContent = 'Dust by level';
-    const dustEditorFields = {};
-    const dustEditorGrid = document.createElement('div');
-    [1,2,3,4,5].forEach((level) => {
-      const label = document.createElement('label');
-      const caption = document.createElement('span');
-      const input = document.createElement('input');
-      caption.textContent = `L${level}`;
-      input.type = 'number';
-      input.min = '0';
-      input.max = '1000000';
-      input.step = '1';
-      input.inputMode = 'numeric';
-      input.placeholder = '0';
-      input.value = hasOwn(view.dustLevels,String(level)) ? String(view.dustLevels[String(level)]) : '';
-      input.setAttribute('aria-label',`Level ${level} Sprite Dust for ${view.name || 'sprite'} ${familyInfo.name || ''}`.trim());
-      dustEditorFields[level] = input;
-      label.append(caption,input);
-      dustEditorGrid.appendChild(label);
-    });
-    const saveDustButton = document.createElement('button');
-    saveDustButton.type = 'button';
-    saveDustButton.textContent = 'Save dust';
-    dustEditor.append(dustEditorTitle,dustEditorGrid,saveDustButton);
-
-    const makeDustDetails = (className) => {
-      const details = document.createElement('details');
-      details.className = className;
-      details.hidden = !Object.keys(view.dustLevels).length && !spriteEditMode;
-      const summary = document.createElement('summary');
-      const levelOne = Number(view.dustLevels['1']) || 0;
-      summary.textContent = levelOne ? `${formatDust(levelOne)} Dust` : 'Dust —';
-      summary.setAttribute('aria-label',`Show Sprite Dust by level for ${view.name || 'sprite'} ${familyInfo.name || ''}`.trim());
-      const menu = document.createElement('span');
-      menu.className = 'sprite-dust-level-menu';
-      [1,2,3,4,5].forEach((level) => {
-        const row = document.createElement('span');
-        const label = document.createElement('span');
-        const amount = document.createElement('strong');
-        label.textContent = `Level ${level}`;
-        amount.textContent = hasOwn(view.dustLevels,String(level)) ? `${formatDust(view.dustLevels[String(level)])} Dust` : 'Not set';
-        row.append(label,amount);
-        menu.appendChild(row);
-      });
-      details.append(summary,menu);
-      details.addEventListener('toggle',() => {
-        if (!details.open) return;
-        document.querySelectorAll('details.sprite-dust-details[open],details.sprite-list-dust-details[open]').forEach((item) => {
-          if (item !== details) item.open = false;
-        });
-      });
-      return details;
-    };
-
     const variantLine = document.createElement('div');
     variantLine.className = 'sprite-variant-line';
-    const dustDetails = makeDustDetails('sprite-dust-details');
     const rarityPercentage = document.createElement('span');
     rarityPercentage.className = 'sprite-rarity-percentage';
     rarityPercentage.textContent = view.rarityPercentage || '';
@@ -3309,7 +3260,7 @@
     const title = document.createElement('h4');
     title.textContent = view.name || '';
     title.hidden = !view.name;
-    variantLine.append(dustDetails,rarityPercentage,title);
+    variantLine.append(rarityPercentage,title);
 
     const listLabel = document.createElement('div');
     listLabel.className = 'sprite-list-label';
@@ -3317,7 +3268,6 @@
     listGroupName.textContent = familyInfo.name || family.name || 'Sprite';
     const listVariantLine = document.createElement('div');
     listVariantLine.className = 'sprite-list-variant-line';
-    const listDustDetails = makeDustDetails('sprite-list-dust-details');
     const listRarityPercentage = document.createElement('span');
     listRarityPercentage.className = 'sprite-list-rarity-percentage';
     listRarityPercentage.textContent = view.rarityPercentage || '';
@@ -3325,7 +3275,7 @@
     const listVariantName = document.createElement('span');
     listVariantName.className = 'sprite-list-variant-name';
     listVariantName.textContent = view.name || 'Unnamed';
-    listVariantLine.append(listDustDetails,listRarityPercentage,listVariantName);
+    listVariantLine.append(listRarityPercentage,listVariantName);
     listLabel.append(listGroupName,listVariantLine);
 
     const collect = document.createElement('button');
@@ -3346,7 +3296,7 @@
 
     const masterLabel = document.createElement('div');
     masterLabel.className = 'master-label';
-    card.append(crown,collectionCountEmblem,seasonBadge,imageWrap,editorTools,percentageEditor,dustEditor,variantLine,listLabel,collect,huntCartButton,masterLabel);
+    card.append(crown,collectionCountEmblem,seasonBadge,imageWrap,editorTools,percentageEditor,variantLine,listLabel,collect,huntCartButton,masterLabel);
 
     const toggleCollected = () => {
       if (huntMode.active) return;
@@ -3404,8 +3354,6 @@
         percentageInput.blur();
       }
     });
-    saveDustButton.addEventListener('click',() => saveSpriteDustLevels(family,variant,dustEditorFields));
-
     const acceptImage = async (file) => {
       imageWrap.classList.add('drop-saving');
       uploadHint.textContent = 'Saving image…';
@@ -3600,6 +3548,7 @@
       pageTitleEl,
       isUnownedPage() ? (missingView === 'unmastered' ? 'Unmastered Sprites' : 'Unowned Sprites') : page.title
     );
+    renderOptionalText(extractionDustDescriptionEl,isUnownedPage() ? '' : rarityDustDescription(activeRarity));
     renderOptionalText(pageDescriptionEl,isUnownedPage() ? '' : page.description);
     document.getElementById('checklistPage').setAttribute('aria-labelledby','activePageTitle');
     let eagerImagesRemaining = 2;
@@ -5077,7 +5026,7 @@
                 : (isUnownedPage() ? `#${missingView}` : `#${activeRarity.toLowerCase()}`))));
   if (location.hash !== activeHash) history.replaceState({ rarity:activeRarity },'',activeHash);
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./service-worker.js?v=122',{ updateViaCache:'none' }).then((registration) => registration.update()).catch(() => {});
+    navigator.serviceWorker.register('./service-worker.js?v=123',{ updateViaCache:'none' }).then((registration) => registration.update()).catch(() => {});
   }
   const signalAppRendered = () => window.dispatchEvent(new Event('sprite-app-rendered'));
   if (document.fonts?.ready) {
