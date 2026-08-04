@@ -50,6 +50,12 @@
   const MAX_BACKUP_BYTES = 2 * 1024 * 1024;
   const MAX_HUNT_HISTORY = 300;
   const MAX_DUST_RECEIPTS = 1000;
+  const DUST_PURCHASE_ITEMS = Object.freeze([
+    'Portable Extractors',
+    'Weapon Rarity Upgrades',
+    'XP Bundles',
+    'Lost Sprite Recoveries'
+  ]);
   const SEASON_VIEWS = [...seasonCatalog.map((season) => season.id),SEASON_VIEW_ALL];
   const CARD_REORDER_MIME = 'application/x-sprite-card';
   const GITHUB_TOKEN_SESSION_KEY = `galaxy_sprite_tracker_github_token_${STORAGE_SCOPE}`;
@@ -609,7 +615,7 @@
   const dustPurchaseForm = document.getElementById('dustPurchaseForm');
   const dustPurchaseTitle = document.getElementById('dustPurchaseTitle');
   const dustPurchaseAmount = document.getElementById('dustPurchaseAmount');
-  const dustPurchaseNote = document.getElementById('dustPurchaseNote');
+  const dustPurchaseItem = document.getElementById('dustPurchaseItem');
   const dustPurchaseStatus = document.getElementById('dustPurchaseStatus');
   const dustBalanceDialog = document.getElementById('dustBalanceDialog');
   const dustBalanceForm = document.getElementById('dustBalanceForm');
@@ -1959,7 +1965,8 @@
       const time = document.createElement('time');
       const amount = document.createElement('strong');
       icon.className = 'dust-receipt-icon';
-      icon.textContent = adjustment ? '↕' : (receipt.type === 'deposit' ? '↓' : '↑');
+      icon.innerHTML = dustBottleSvg();
+      icon.setAttribute('aria-hidden','true');
       title.textContent = receipt.note;
       time.dateTime = receipt.createdAt;
       time.textContent = formatJournalDate(receipt.createdAt);
@@ -2031,7 +2038,7 @@
   function recordDustPurchase(event) {
     event.preventDefault();
     const amount = Math.round(Number(dustPurchaseAmount.value));
-    const note = dustPurchaseNote.value.trim();
+    const note = dustPurchaseItem.value;
     const balance = Math.max(0,dustBalanceValue());
     if (!Number.isFinite(amount) || amount < 1) {
       dustPurchaseStatus.dataset.state = 'error';
@@ -2043,7 +2050,11 @@
       dustPurchaseStatus.textContent = `That is more than the available ${formatDust(balance)} Dust.`;
       return;
     }
-    if (!note) return;
+    if (!DUST_PURCHASE_ITEMS.includes(note)) {
+      dustPurchaseStatus.dataset.state = 'error';
+      dustPurchaseStatus.textContent = 'Choose what you purchased.';
+      return;
+    }
     dustLedger.unshift({
       id:`purchase-${Date.now()}-${Math.random().toString(36).slice(2)}`,
       type:'purchase',
@@ -2328,6 +2339,10 @@
 
   function formatDust(value) {
     return Math.max(0,Math.round(Number(value) || 0)).toLocaleString();
+  }
+
+  function dustBottleSvg() {
+    return '<svg class="dust-bottle-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="9.4" y="2.2" width="5.2" height="3.3" rx=".8"></rect><path d="M10.2 5.5v2L6.9 10.4a3.2 3.2 0 0 0-1.1 2.4v5.1A3.1 3.1 0 0 0 8.9 21h6.2a3.1 3.1 0 0 0 3.1-3.1v-5.1a3.2 3.2 0 0 0-1.1-2.4l-3.3-2.9v-2"></path><path d="M6.1 13.5h11.8M10.2 15.1v3M8.7 16.6h3M14.8 14.9v2.2M13.7 16h2.2"></path></svg>';
   }
 
   function spriteCardEditsFingerprint() {
@@ -5014,7 +5029,7 @@
                 : (isUnownedPage() ? `#${missingView}` : `#${activeRarity.toLowerCase()}`))));
   if (location.hash !== activeHash) history.replaceState({ rarity:activeRarity },'',activeHash);
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./service-worker.js?v=119',{ updateViaCache:'none' }).then((registration) => registration.update()).catch(() => {});
+    navigator.serviceWorker.register('./service-worker.js?v=120',{ updateViaCache:'none' }).then((registration) => registration.update()).catch(() => {});
   }
   const signalAppRendered = () => window.dispatchEvent(new Event('sprite-app-rendered'));
   if (document.fonts?.ready) {

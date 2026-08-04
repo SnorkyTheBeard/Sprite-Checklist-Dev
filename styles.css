@@ -1079,8 +1079,9 @@ body.dust-account-view .page-backdrop {
 .dust-receipts { margin-top:18px; padding:18px; border:1px solid rgba(255,255,255,.16); border-radius:22px; background:rgba(6,10,20,.65); }
 .dust-receipt-list { display:grid; gap:8px; }
 .dust-receipt { display:grid; grid-template-columns:38px minmax(0,1fr) auto; align-items:center; gap:11px; padding:12px; border:1px solid rgba(255,255,255,.1); border-radius:14px; background:rgba(255,255,255,.045); }
-.dust-receipt-icon { width:36px; height:36px; display:grid; place-items:center; border-radius:50%; background:rgba(53,224,122,.14); color:#6dffa9; font-size:22px; }
-.dust-receipt-purchase .dust-receipt-icon { background:rgba(255,102,124,.13); color:#ff8ea0; }
+.dust-receipt-icon { width:36px; height:36px; display:grid; place-items:center; border-radius:50%; background:rgba(53,224,122,.14); color:#fff; }
+.dust-receipt-purchase .dust-receipt-icon { background:rgba(255,102,124,.13); color:#fff; }
+.dust-receipt-icon .dust-bottle-icon { width:24px; height:24px; fill:none; stroke:currentColor; stroke-width:1.7; stroke-linecap:round; stroke-linejoin:round; filter:drop-shadow(0 0 4px rgba(114,221,255,.34)); }
 .dust-receipt > div { min-width:0; }
 .dust-receipt > div strong { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:13px; }
 .dust-receipt time { display:block; margin-top:3px; color:#91a4ba; font-size:10px; }
@@ -1112,6 +1113,7 @@ body.collection-count-reset-open { overflow:hidden !important; overscroll-behavi
 .hunt-checkout-total strong { color:#fff0a0; font-size:22px; }
 .hunt-checkout-warning { margin-top:10px !important; color:#ffd684 !important; font-size:11px; }
 .dust-purchase-dialog input,
+.dust-purchase-dialog select,
 .dust-balance-dialog input { width:100%; min-height:44px; margin:5px 0 12px; padding:9px 11px; color:#fff; border:1px solid rgba(255,255,255,.24); border-radius:11px; background:rgba(0,0,0,.25); }
 #dustPurchaseStatus[data-state="error"],
 #dustBalanceStatus[data-state="error"] { color:#ff9aaa; }
@@ -4867,6 +4869,29 @@ body.tracker-view .variant-row {
   body.tracker-view #checklistPage {
     overflow-x:clip !important;
   }
+}
+
+/* v120: Fortnite Sprite Dust bottle icon and fixed purchase menu. */
+.dust-bottle-icon {
+  fill:none !important;
+  stroke:#fff !important;
+  stroke-width:1.75 !important;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+  transform:rotate(-7deg);
+  transform-origin:center;
+}
+
+.tracker-tools .sprite-dust-balance-button .dust-bottle-icon {
+  width:25px !important;
+  height:25px !important;
+  filter:drop-shadow(0 0 5px rgba(119,219,255,.55));
+}
+
+.dust-purchase-dialog select {
+  appearance:auto;
+  color-scheme:dark;
+  font:750 14px/1.35 var(--font-body,system-ui,sans-serif);
 }
 
 /* v103 final overrides: keep the real Edge-safe backdrop and Vault cases above all legacy rules. */
