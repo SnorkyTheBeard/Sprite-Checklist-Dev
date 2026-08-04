@@ -46,7 +46,7 @@
   const MAX_JOURNAL_ENTRIES = 500;
   const LEGACY_PROGRESS_KEY = 'galaxy_sprite_tracker_progress_v1';
   const BACKUP_FORMAT = 'my-sprite-tracker-backup';
-  const BACKUP_VERSION = 3;
+  const BACKUP_VERSION = 4;
   const MAX_BACKUP_BYTES = 2 * 1024 * 1024;
   const MAX_HUNT_HISTORY = 300;
   const MAX_DUST_RECEIPTS = 1000;
@@ -186,14 +186,17 @@
     return value.slice(0,MAX_DUST_RECEIPTS).flatMap((entry) => {
       if (!entry || typeof entry !== 'object') return [];
       const createdAt = validIsoDate(entry.createdAt);
-      const type = entry.type === 'purchase' ? 'purchase' : (entry.type === 'deposit' ? 'deposit' : '');
+      const allowedTypes = new Set(['deposit','purchase','adjustment-in','adjustment-out']);
+      const type = allowedTypes.has(entry.type) ? entry.type : '';
       const amount = Math.max(0,Math.min(100000000,Math.round(Number(entry.amount) || 0)));
       if (!createdAt || !type || !amount) return [];
       return [{
         id:String(entry.id || `${Date.parse(createdAt)}-${type}`).slice(0,200),
         type,
         amount,
-        note:String(entry.note || (type === 'deposit' ? 'Hunt deposit' : 'Sprite Dust purchase')).slice(0,100),
+        note:String(entry.note || (type === 'deposit'
+          ? 'Hunt deposit'
+          : (type === 'purchase' ? 'Sprite Dust purchase' : 'Manual balance adjustment'))).slice(0,100),
         createdAt,
         huntId:String(entry.huntId || '').slice(0,200)
       }];
@@ -606,6 +609,11 @@
   const dustPurchaseAmount = document.getElementById('dustPurchaseAmount');
   const dustPurchaseNote = document.getElementById('dustPurchaseNote');
   const dustPurchaseStatus = document.getElementById('dustPurchaseStatus');
+  const dustBalanceDialog = document.getElementById('dustBalanceDialog');
+  const dustBalanceForm = document.getElementById('dustBalanceForm');
+  const dustBalanceTitle = document.getElementById('dustBalanceTitle');
+  const dustBalanceAmount = document.getElementById('dustBalanceAmount');
+  const dustBalanceStatus = document.getElementById('dustBalanceStatus');
   const floatingHomeBtn = document.getElementById('floatingHomeBtn');
   const spriteSearchForm = document.getElementById('spriteSearchForm');
   const spriteSearchInput = document.getElementById('spriteSearchInput');
@@ -709,6 +717,25 @@
     huntModeBtn.setAttribute('aria-label',huntMode.active ? 'End Hunt' : 'Start Hunt');
     huntModeBtn.title = huntMode.active ? 'End Hunt' : 'Start Hunt';
     document.body.classList.toggle('hunt-mode-active',huntMode.active);
+    document.querySelectorAll('.card').forEach((card) => {
+      const huntOnly = huntMode.active && appView !== APP_VIEW_VAULT;
+      const vaultOnly = appView === APP_VIEW_VAULT;
+      const imageButton = card.querySelector('.image-button');
+      const collectButton = card.querySelector('.collect-button');
+      const crownButton = card.querySelector('.crown-button');
+      if (imageButton) {
+        imageButton.disabled = huntOnly || vaultOnly;
+        imageButton.tabIndex = huntOnly || vaultOnly ? -1 : 0;
+      }
+      if (collectButton) {
+        collectButton.disabled = huntOnly;
+        collectButton.tabIndex = huntOnly ? -1 : 0;
+      }
+      if (crownButton) {
+        crownButton.disabled = huntOnly || vaultOnly;
+        crownButton.tabIndex = huntOnly || vaultOnly ? -1 : 0;
+      }
+    });
     updateHuntTimer();
     renderHuntCartTray();
     if (huntMode.active) huntTimerInterval = window.setInterval(updateHuntTimer,1000);
@@ -721,6 +748,13 @@
       return;
     }
     const resume = Boolean(huntCart.length && huntMode.lastDurationMs);
+    if (spriteEditMode) {
+      spriteEditMode = false;
+      document.body.classList.remove('sprite-edit-mode');
+      spriteEditorToggle.setAttribute('aria-pressed','false');
+      spriteEditorToggle.textContent = 'Edit sprites';
+      renderCollections();
+    }
     const now = Date.now();
     huntMode = {
       active:true,
@@ -1806,7 +1840,7 @@
 
   function dustBalanceValue() {
     return dustLedger.reduce((balance,receipt) => {
-      const direction = receipt.type === 'purchase' ? -1 : 1;
+      const direction = receipt.type === 'purchase' || receipt.type === 'adjustment-out' ? -1 : 1;
       return balance + (direction * receipt.amount);
     },0);
   }
@@ -1889,20 +1923,22 @@
 
     dustLedger.forEach((receipt) => {
       const row = document.createElement('article');
-      row.className = `dust-receipt dust-receipt-${receipt.type}`;
+      const debit = receipt.type === 'purchase' || receipt.type === 'adjustment-out';
+      const adjustment = receipt.type === 'adjustment-in' || receipt.type === 'adjustment-out';
+      row.className = `dust-receipt dust-receipt-${debit ? 'purchase' : 'deposit'}${adjustment ? ' dust-receipt-adjustment' : ''}`;
       const icon = document.createElement('span');
       const copy = document.createElement('div');
       const title = document.createElement('strong');
       const time = document.createElement('time');
       const amount = document.createElement('strong');
       icon.className = 'dust-receipt-icon';
-      icon.textContent = receipt.type === 'deposit' ? '↓' : '↑';
+      icon.textContent = adjustment ? '↕' : (receipt.type === 'deposit' ? '↓' : '↑');
       title.textContent = receipt.note;
       time.dateTime = receipt.createdAt;
       time.textContent = formatJournalDate(receipt.createdAt);
       copy.append(title,time);
       amount.className = 'dust-receipt-amount';
-      amount.textContent = `${receipt.type === 'deposit' ? '+' : '−'}${formatDust(receipt.amount)}`;
+      amount.textContent = `${debit ? '−' : '+'}${formatDust(receipt.amount)}`;
       row.append(icon,copy,amount);
       dustReceiptList.appendChild(row);
     });
@@ -1922,6 +1958,47 @@
       try { dustPurchaseTitle.focus({ preventScroll:true }); }
       catch { dustPurchaseTitle.focus(); }
     });
+  }
+
+  function openDustBalanceDialog() {
+    const balance = Math.max(0,dustBalanceValue());
+    dustBalanceForm.reset();
+    dustBalanceAmount.value = String(balance);
+    dustBalanceStatus.textContent = '';
+    dustBalanceStatus.dataset.state = '';
+    document.documentElement.classList.add('dust-balance-open');
+    document.body.classList.add('dust-balance-open');
+    if (!dustBalanceDialog.open) dustBalanceDialog.showModal();
+    requestAnimationFrame(() => {
+      try { dustBalanceTitle.focus({ preventScroll:true }); }
+      catch { dustBalanceTitle.focus(); }
+    });
+  }
+
+  function saveDustBalance(event) {
+    event.preventDefault();
+    const requestedBalance = Math.round(Number(dustBalanceAmount.value));
+    const currentBalance = Math.max(0,dustBalanceValue());
+    if (!Number.isFinite(requestedBalance) || requestedBalance < 0 || requestedBalance > 100000000) {
+      dustBalanceStatus.dataset.state = 'error';
+      dustBalanceStatus.textContent = 'Enter a whole Sprite Dust balance from 0 to 100,000,000.';
+      return;
+    }
+    const difference = requestedBalance - currentBalance;
+    if (difference) {
+      dustLedger.unshift({
+        id:`adjustment-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        type:difference > 0 ? 'adjustment-in' : 'adjustment-out',
+        amount:Math.abs(difference),
+        note:'Manual balance adjustment',
+        createdAt:new Date().toISOString(),
+        huntId:''
+      });
+      dustLedger = normalizeDustLedger(dustLedger);
+      saveDustLedger();
+    }
+    dustBalanceDialog.close();
+    renderDustAccount();
   }
 
   function recordDustPurchase(event) {
@@ -2706,18 +2783,23 @@
     const crownButton = card.querySelector('.crown-button');
     const collectionCountEmblem = card.querySelector('.collection-count-emblem');
     const vaultDisplay = appView === APP_VIEW_VAULT;
+    const huntDisplay = huntMode.active && !vaultDisplay;
     card.setAttribute('aria-label',`${variantName} ${groupName}${current.mastered ? ', mastered' : ''}`);
-    imageButton.disabled = vaultDisplay;
-    imageButton.tabIndex = vaultDisplay ? -1 : 0;
-    imageButton.setAttribute('aria-label',vaultDisplay ? `${variantName} ${groupName} display case` : (spriteEditMode ? `Upload image for ${variantName} ${groupName}` : collectedAction));
-    if (spriteEditMode || vaultDisplay) imageButton.removeAttribute('aria-pressed');
+    imageButton.disabled = vaultDisplay || huntDisplay;
+    imageButton.tabIndex = vaultDisplay || huntDisplay ? -1 : 0;
+    imageButton.setAttribute('aria-label',vaultDisplay
+      ? `${variantName} ${groupName} display case`
+      : (huntDisplay ? `${variantName} ${groupName} Hunt card` : (spriteEditMode ? `Upload image for ${variantName} ${groupName}` : collectedAction)));
+    if (spriteEditMode || vaultDisplay || huntDisplay) imageButton.removeAttribute('aria-pressed');
     else imageButton.setAttribute('aria-pressed',String(Boolean(current.collected)));
     collectButton.setAttribute('aria-label',collectedAction);
     collectButton.setAttribute('aria-pressed',String(Boolean(current.collected)));
+    collectButton.disabled = huntDisplay;
+    collectButton.tabIndex = huntDisplay ? -1 : 0;
     crownButton.setAttribute('aria-label',masteredAction);
     crownButton.setAttribute('aria-pressed',String(Boolean(current.mastered)));
-    crownButton.disabled = vaultDisplay;
-    crownButton.tabIndex = vaultDisplay ? -1 : 0;
+    crownButton.disabled = vaultDisplay || huntDisplay;
+    crownButton.tabIndex = vaultDisplay || huntDisplay ? -1 : 0;
     if (vaultDisplay) crownButton.setAttribute('aria-hidden','true');
     else crownButton.removeAttribute('aria-hidden');
     collectButton.querySelector('.collect-label').textContent = design.header.collectedLabel || 'In Collection';
@@ -3140,7 +3222,7 @@
     const huntCartButton = document.createElement('button');
     huntCartButton.type = 'button';
     huntCartButton.className = 'hunt-add-cart-button';
-    huntCartButton.innerHTML = '<span aria-hidden="true">＋</span> Add to Hunt Cart';
+    huntCartButton.innerHTML = '<span aria-hidden="true">+</span>';
     huntCartButton.setAttribute('aria-label',`Add ${view.name || 'sprite'} ${familyInfo.name || ''} to Hunt cart`.trim());
 
     const masterLabel = document.createElement('div');
@@ -3148,12 +3230,12 @@
     card.append(crown,collectionCountEmblem,seasonBadge,imageWrap,editorTools,percentageEditor,dustEditor,variantLine,listLabel,collect,huntCartButton,masterLabel);
 
     const toggleCollected = () => {
+      if (huntMode.active) return;
       const before = snapshotVariantState(current);
       const collectedAt = new Date().toISOString();
       current.collected = !current.collected;
       if (current.collected) {
         current.collectedAt = current.collectedAt || collectedAt;
-        current.collectionCount = Math.min(1000000,(Number(current.collectionCount) || 0) + 1);
       } else {
         current.mastered = false;
         delete current.collectedAt;
@@ -3164,12 +3246,14 @@
       commitCardChange(card,family,variant,current,current.collected ? 'Added to collection' : 'Removed from collection',before,type);
     };
     imageButton.addEventListener('click',() => {
+      if (huntMode.active) return;
       if (spriteEditMode) return fileInput.click();
       toggleCollected();
     });
     collect.addEventListener('click',toggleCollected);
     huntCartButton.addEventListener('click',() => addSpriteToHuntCart(family,variant));
     crown.addEventListener('click',() => {
+      if (huntMode.active) return;
       const before = snapshotVariantState(current);
       const changedAt = new Date().toISOString();
       current.mastered = !current.mastered;
@@ -3177,7 +3261,6 @@
         current.collected = true;
         current.collectedAt = current.collectedAt || changedAt;
         current.masteredAt = changedAt;
-        if (!before.collected) current.collectionCount = Math.min(1000000,(Number(current.collectionCount) || 0) + 1);
       } else {
         delete current.masteredAt;
       }
@@ -3868,7 +3951,7 @@
 
   function parsedBackup(value) {
     if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('That is not a Sprite Tracker backup.');
-    if (value.format !== BACKUP_FORMAT || ![1,2,BACKUP_VERSION].includes(value.version)) {
+    if (value.format !== BACKUP_FORMAT || ![1,2,3,BACKUP_VERSION].includes(value.version)) {
       throw new Error('That file is not a compatible Sprite Tracker backup.');
     }
     return {
@@ -4662,6 +4745,13 @@
     showToast('Hunt History cleared');
   });
   document.getElementById('recordDustPurchaseBtn').addEventListener('click',openDustPurchaseDialog);
+  document.getElementById('editDustBalanceBtn').addEventListener('click',openDustBalanceDialog);
+  dustBalanceForm.addEventListener('submit',saveDustBalance);
+  document.getElementById('cancelDustBalanceBtn').addEventListener('click',() => dustBalanceDialog.close());
+  dustBalanceDialog.addEventListener('close',() => {
+    document.documentElement.classList.remove('dust-balance-open');
+    document.body.classList.remove('dust-balance-open');
+  });
   dustPurchaseForm.addEventListener('submit',recordDustPurchase);
   document.getElementById('cancelDustPurchaseBtn').addEventListener('click',() => dustPurchaseDialog.close());
   dustPurchaseDialog.addEventListener('close',() => {
@@ -4857,7 +4947,7 @@
                 : (isUnownedPage() ? `#${missingView}` : `#${activeRarity.toLowerCase()}`))));
   if (location.hash !== activeHash) history.replaceState({ rarity:activeRarity },'',activeHash);
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./service-worker.js?v=117',{ updateViaCache:'none' }).then((registration) => registration.update()).catch(() => {});
+    navigator.serviceWorker.register('./service-worker.js?v=118',{ updateViaCache:'none' }).then((registration) => registration.update()).catch(() => {});
   }
   const signalAppRendered = () => window.dispatchEvent(new Event('sprite-app-rendered'));
   if (document.fonts?.ready) {

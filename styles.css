@@ -1075,6 +1075,7 @@ body.dust-account-view .page-backdrop {
 .dust-account-card > strong { color:#fff2a5; font-size:clamp(34px,8vw,58px); line-height:1; text-shadow:0 3px 0 #2b1900,0 0 16px rgba(255,202,60,.18); }
 .dust-account-card button { z-index:1; justify-self:start; min-height:40px; margin-top:10px; padding:8px 14px; color:#211400; border:1px solid #fff0af; border-radius:999px; background:linear-gradient(180deg,#ffe989,#dba826); font-weight:900; }
 .dust-account-card button:disabled { opacity:.42; }
+.dust-account-actions { z-index:1; display:flex; flex-wrap:wrap; gap:8px; }
 .dust-receipts { margin-top:18px; padding:18px; border:1px solid rgba(255,255,255,.16); border-radius:22px; background:rgba(6,10,20,.65); }
 .dust-receipt-list { display:grid; gap:8px; }
 .dust-receipt { display:grid; grid-template-columns:38px minmax(0,1fr) auto; align-items:center; gap:11px; padding:12px; border:1px solid rgba(255,255,255,.1); border-radius:14px; background:rgba(255,255,255,.045); }
@@ -1090,7 +1091,9 @@ body.dust-account-view .page-backdrop {
 html.hunt-checkout-open,
 body.hunt-checkout-open,
 html.dust-purchase-open,
-body.dust-purchase-open { overflow:hidden !important; overscroll-behavior:none; }
+body.dust-purchase-open,
+html.dust-balance-open,
+body.dust-balance-open { overflow:hidden !important; overscroll-behavior:none; }
 .hunt-checkout-items { display:grid; gap:8px; margin:16px 0; }
 .hunt-checkout-item { display:grid; grid-template-columns:minmax(0,1fr) auto auto 34px; align-items:center; gap:9px; padding:11px; border:1px solid rgba(255,255,255,.15); border-left:4px solid #48aaff; border-radius:13px; background:rgba(255,255,255,.055); }
 .hunt-checkout-item[data-rarity="Epic"] { border-left-color:#b65eff; }
@@ -1106,8 +1109,10 @@ body.dust-purchase-open { overflow:hidden !important; overscroll-behavior:none; 
 .hunt-checkout-total { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:14px; border-radius:14px; background:rgba(255,224,110,.1); }
 .hunt-checkout-total strong { color:#fff0a0; font-size:22px; }
 .hunt-checkout-warning { margin-top:10px !important; color:#ffd684 !important; font-size:11px; }
-.dust-purchase-dialog input { width:100%; min-height:44px; margin:5px 0 12px; padding:9px 11px; color:#fff; border:1px solid rgba(255,255,255,.24); border-radius:11px; background:rgba(0,0,0,.25); }
-#dustPurchaseStatus[data-state="error"] { color:#ff9aaa; }
+.dust-purchase-dialog input,
+.dust-balance-dialog input { width:100%; min-height:44px; margin:5px 0 12px; padding:9px 11px; color:#fff; border:1px solid rgba(255,255,255,.24); border-radius:11px; background:rgba(0,0,0,.25); }
+#dustPurchaseStatus[data-state="error"],
+#dustBalanceStatus[data-state="error"] { color:#ff9aaa; }
 
 body.sprite-list-view .sprite-list-dust-details { position:relative; flex:none; display:inline-block; overflow:visible; color:#fff; font-size:10px; }
 body.sprite-list-view .sprite-list-dust-details .sprite-dust-level-menu { top:calc(100% + 4px); }
@@ -4722,6 +4727,63 @@ body.sprite-list-view.hunt-mode-active .hunt-add-cart-button {
 
 @media (max-width:390px) {
   .tracker-tools .sprite-dust-balance-button { min-width:92px !important; padding-inline:10px !important; }
+}
+
+/* V118: quiet status updates, manual Dust balance, and Hunt-only card controls. */
+.status-toast {
+  display:none !important;
+}
+
+body.hunt-mode-active:not(.vault-view) .card .crown-button,
+body.hunt-mode-active:not(.vault-view) .card .collection-count-emblem,
+body.hunt-mode-active:not(.vault-view) .card .collect-button,
+body.hunt-mode-active:not(.vault-view) .card .master-label,
+body.hunt-mode-active:not(.vault-view) .card .sprite-card-tools,
+body.hunt-mode-active:not(.vault-view) .card .sprite-percentage-editor,
+body.hunt-mode-active:not(.vault-view) .card .sprite-dust-editor,
+body.hunt-mode-active:not(.vault-view) .card .sprite-dust-details,
+body.hunt-mode-active:not(.vault-view) .card .sprite-list-dust-details {
+  display:none !important;
+}
+
+body.hunt-mode-active:not(.vault-view) .card .image-button {
+  pointer-events:none !important;
+}
+
+body.hunt-mode-active:not(.vault-view) .card .hunt-add-cart-button {
+  position:absolute !important;
+  z-index:24 !important;
+  top:10px !important;
+  right:10px !important;
+  width:42px !important;
+  min-width:42px !important;
+  height:42px !important;
+  min-height:42px !important;
+  display:grid !important;
+  place-items:center !important;
+  grid-column:auto !important;
+  grid-row:auto !important;
+  margin:0 !important;
+  padding:0 !important;
+  color:#fff !important;
+  border:1px solid rgba(255,255,255,.6) !important;
+  border-radius:50% !important;
+  background:rgba(8,16,25,.56) !important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.3),0 5px 14px rgba(0,0,0,.35) !important;
+  -webkit-backdrop-filter:blur(10px) saturate(120%);
+  backdrop-filter:blur(10px) saturate(120%);
+  font:500 31px/1 Arial,sans-serif !important;
+}
+
+body.hunt-mode-active:not(.vault-view) .card .hunt-add-cart-button span {
+  display:block;
+  height:34px;
+  line-height:32px;
+}
+
+body.hunt-mode-active:not(.vault-view) .card .hunt-add-cart-button:active {
+  transform:scale(.94);
+  background:rgba(28,129,76,.72) !important;
 }
 
 /* v103 final overrides: keep the real Edge-safe backdrop and Vault cases above all legacy rules. */

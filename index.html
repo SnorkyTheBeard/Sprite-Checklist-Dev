@@ -283,7 +283,7 @@
       }
     })();
   </script>
-<link rel="stylesheet" href="styles.css?v=117">
+<link rel="stylesheet" href="styles.css?v=118">
 <link rel="stylesheet" href="vault-v105.css?v=112">
 <link rel="stylesheet" href="viewport-v106.css?v=107">
 <link rel="stylesheet" href="scene-v113.css?v=114">
@@ -549,7 +549,10 @@
       <section class="dust-account-card" aria-label="Sprite Dust balance">
         <span>Available balance</span>
         <strong><span id="spriteDustAccountBalance">0</span> Dust</strong>
-        <button id="recordDustPurchaseBtn" type="button">Record a purchase</button>
+        <div class="dust-account-actions">
+          <button id="editDustBalanceBtn" type="button">Edit balance</button>
+          <button id="recordDustPurchaseBtn" type="button">Record a purchase</button>
+        </div>
       </section>
       <section class="dust-receipts" aria-labelledby="dustReceiptsTitle">
         <div class="journal-section-heading">
@@ -810,10 +813,24 @@
     </form>
   </dialog>
 
+  <dialog class="reset-dialog dust-balance-dialog" id="dustBalanceDialog" aria-labelledby="dustBalanceTitle">
+    <form id="dustBalanceForm">
+      <h2 id="dustBalanceTitle" tabindex="-1">Edit Sprite Dust Balance</h2>
+      <p>Enter the amount of Sprite Dust you currently have. This is useful for adding the Dust you already owned before using the tracker.</p>
+      <label class="add-sprite-label" for="dustBalanceAmount">Current Sprite Dust balance</label>
+      <input id="dustBalanceAmount" type="number" min="0" max="100000000" step="1" inputmode="numeric" required placeholder="0">
+      <p id="dustBalanceStatus" role="status" aria-live="polite"></p>
+      <div class="dialog-actions">
+        <button id="cancelDustBalanceBtn" type="button">Cancel</button>
+        <button class="primary-btn" type="submit">Save balance</button>
+      </div>
+    </form>
+  </dialog>
+
   <div class="status-toast" id="statusToast" role="status" aria-live="polite"></div>
   <noscript>This checklist needs JavaScript enabled to save progress.</noscript>
 
   <script src="data.js?v=82"></script>
-  <script src="app.js?v=117"></script>
+  <script src="app.js?v=118"></script>
 </body>
 </html>
