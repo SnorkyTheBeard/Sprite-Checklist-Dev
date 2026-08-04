@@ -47,7 +47,7 @@
   const LEGACY_PROGRESS_KEY = 'galaxy_sprite_tracker_progress_v1';
   const BACKUP_FORMAT = 'my-sprite-tracker-backup';
   const BACKUP_VERSION = 4;
-  const MAX_BACKUP_BYTES = 2 * 1024 * 1024;
+  const MAX_BACKUP_BYTES = 24 * 1024 * 1024;
   const MAX_HUNT_HISTORY = 300;
   const MAX_DUST_RECEIPTS = 1000;
   const DUST_PURCHASE_ITEMS = Object.freeze([
@@ -117,6 +117,18 @@
     if (!legacy) return {};
     try { localStorage.setItem(PROGRESS_KEY,JSON.stringify(legacy)); } catch { /* Keep it in memory. */ }
     return legacy;
+  }
+
+  function removeLegacyCollectionCounts(progress) {
+    let changed = false;
+    Object.values(progress || {}).forEach((variants) => {
+      Object.values(variants || {}).forEach((current) => {
+        if (!current || typeof current !== 'object' || !hasOwn(current,'collectionCount')) return;
+        delete current.collectionCount;
+        changed = true;
+      });
+    });
+    return changed;
   }
 
   function loadMissingView() {
@@ -213,7 +225,7 @@
         type,
         amount,
         note:String(entry.note || (type === 'deposit'
-          ? 'Hunt deposit'
+          ? 'Sprite Run deposit'
           : (type === 'purchase' ? 'Sprite Dust purchase' : 'Manual balance adjustment'))).slice(0,100),
         createdAt,
         huntId:String(entry.huntId || '').slice(0,200)
@@ -530,6 +542,9 @@
     };
   }
   let state = loadProgress();
+  if (removeLegacyCollectionCounts(state)) {
+    try { localStorage.setItem(PROGRESS_KEY,JSON.stringify(state)); } catch { /* The removed badges stay gone in memory. */ }
+  }
   let spriteCardEdits = loadSpriteCardEdits();
   let spriteViewModes = loadViewModes();
   let vaultSeasonView = loadSeasonView();
@@ -551,7 +566,10 @@
   let journalWriteQueue = Promise.resolve();
   let journalInitialization = null;
   let pendingLocationDetails = null;
-  let pendingCollectionCountReset = null;
+  let journalLocationFilter = '';
+  let pendingJournalMemoryId = '';
+  let pendingJournalMemoryPhoto = '';
+  let pendingClearAction = null;
   let huntMode = loadHuntMode();
   let huntTimerInterval = 0;
   let huntCart = loadStoredArray(HUNT_CART_KEY,normalizeHuntCart);
@@ -562,7 +580,8 @@
   const collectionsEl = document.getElementById('collections');
   const pageTitleEl = document.getElementById('activePageTitle');
   const pageEyebrowEl = document.getElementById('pageEyebrow');
-  const extractionDustDescriptionEl = document.getElementById('extractionDustDescription');
+  const extractionDustDetails = document.getElementById('extractionDustDetails');
+  const extractionDustLevels = document.getElementById('extractionDustLevels');
   const pageDescriptionEl = document.getElementById('pageDescription');
   const missingRecentChangesEl = document.getElementById('missingRecentChanges');
   const missingRecentListEl = document.getElementById('missingRecentList');
@@ -589,10 +608,21 @@
   const journalZoneTopCount = document.getElementById('journalZoneTopCount');
   const journalZoneBottomCount = document.getElementById('journalZoneBottomCount');
   const journalZoneBossCount = document.getElementById('journalZoneBossCount');
+  const journalMapZones = [...document.querySelectorAll('[data-journal-map-zone]')];
   const journalActionFilter = document.getElementById('journalActionFilter');
   const clearJournalActivityBtn = document.getElementById('clearJournalActivityBtn');
   const journalEntryList = document.getElementById('journalEntryList');
   const journalEmptyState = document.getElementById('journalEmptyState');
+  const journalMemoryList = document.getElementById('journalMemoryList');
+  const journalMemoryEmpty = document.getElementById('journalMemoryEmpty');
+  const journalMemoryDialog = document.getElementById('journalMemoryDialog');
+  const journalMemoryForm = document.getElementById('journalMemoryForm');
+  const journalMemoryTitle = document.getElementById('journalMemoryTitle');
+  const journalMemorySprite = document.getElementById('journalMemorySprite');
+  const journalMemoryNote = document.getElementById('journalMemoryNote');
+  const journalMemoryPhoto = document.getElementById('journalMemoryPhoto');
+  const journalMemoryPhotoPreview = document.getElementById('journalMemoryPhotoPreview');
+  const journalMemoryStatus = document.getElementById('journalMemoryStatus');
   const locationFoundDialog = document.getElementById('locationFoundDialog');
   const locationFoundForm = document.getElementById('locationFoundForm');
   const locationFoundTitle = document.getElementById('locationFoundTitle');
@@ -634,10 +664,9 @@
   const dustBalanceTitle = document.getElementById('dustBalanceTitle');
   const dustBalanceAmount = document.getElementById('dustBalanceAmount');
   const dustBalanceStatus = document.getElementById('dustBalanceStatus');
-  const collectionCountResetDialog = document.getElementById('collectionCountResetDialog');
-  const collectionCountResetForm = document.getElementById('collectionCountResetForm');
-  const collectionCountResetTitle = document.getElementById('collectionCountResetTitle');
-  const collectionCountResetMessage = document.getElementById('collectionCountResetMessage');
+  const clearDataDialog = document.getElementById('clearDataDialog');
+  const clearDataForm = document.getElementById('clearDataForm');
+  const clearDataTitle = document.getElementById('clearDataTitle');
   const floatingHomeBtn = document.getElementById('floatingHomeBtn');
   const spriteSearchForm = document.getElementById('spriteSearchForm');
   const spriteSearchInput = document.getElementById('spriteSearchInput');
@@ -702,11 +731,11 @@
   }
 
   function saveHuntCart() {
-    try { localStorage.setItem(HUNT_CART_KEY,JSON.stringify(huntCart)); } catch { showToast('The Hunt cart could not be saved.'); }
+    try { localStorage.setItem(HUNT_CART_KEY,JSON.stringify(huntCart)); } catch { showToast('The Sprite Run cart could not be saved.'); }
   }
 
   function saveHuntHistory() {
-    try { localStorage.setItem(HUNT_HISTORY_KEY,JSON.stringify(huntHistory)); } catch { showToast('Hunt History could not be saved.'); }
+    try { localStorage.setItem(HUNT_HISTORY_KEY,JSON.stringify(huntHistory)); } catch { showToast('Sprite Run History could not be saved.'); }
   }
 
   function saveDustLedger() {
@@ -738,8 +767,8 @@
     huntTimerInterval = 0;
     huntModeBtn.classList.toggle('is-active',huntMode.active);
     huntModeBtn.setAttribute('aria-pressed',String(huntMode.active));
-    huntModeBtn.setAttribute('aria-label',huntMode.active ? 'End Hunt' : 'Start Hunt');
-    huntModeBtn.title = huntMode.active ? 'End Hunt' : 'Start Hunt';
+    huntModeBtn.setAttribute('aria-label',huntMode.active ? 'End Sprite Run' : 'Start Sprite Run');
+    huntModeBtn.title = huntMode.active ? 'End Sprite Run' : 'Start Sprite Run';
     document.body.classList.toggle('hunt-mode-active',huntMode.active);
     document.querySelectorAll('.card').forEach((card) => {
       const huntOnly = huntMode.active && appView !== APP_VIEW_VAULT;
@@ -747,7 +776,6 @@
       const imageButton = card.querySelector('.image-button');
       const collectButton = card.querySelector('.collect-button');
       const crownButton = card.querySelector('.crown-button');
-      const collectionCountButton = card.querySelector('.collection-count-emblem');
       if (imageButton) {
         imageButton.disabled = huntOnly || vaultOnly;
         imageButton.tabIndex = huntOnly || vaultOnly ? -1 : 0;
@@ -759,11 +787,6 @@
       if (crownButton) {
         crownButton.disabled = huntOnly || vaultOnly;
         crownButton.tabIndex = huntOnly || vaultOnly ? -1 : 0;
-      }
-      if (collectionCountButton) {
-        const canReset = !huntOnly && !vaultOnly && Number(collectionCountButton.textContent) > 0;
-        collectionCountButton.disabled = !canReset;
-        collectionCountButton.tabIndex = canReset ? 0 : -1;
       }
     });
     updateHuntTimer();
@@ -795,7 +818,7 @@
     saveHuntMode();
     applyHuntMode();
     if (spriteSearchInput.value.trim()) renderSpriteSearchResults();
-    showToast(resume ? 'Hunt resumed' : 'Hunt started · add Sprites to your cart');
+    showToast(resume ? 'Sprite Run resumed' : 'Sprite Run started · add Sprites to your cart');
   }
 
   function huntItemInfo(item) {
@@ -825,7 +848,7 @@
   }
 
   function addSpriteToHuntCart(family,variant) {
-    if (!huntMode.active) return showToast('Start Hunt Mode before adding Sprites to the cart.');
+    if (!huntMode.active) return showToast('Start a Sprite Run before adding Sprites to the cart.');
     huntCart.push({
       id:`${Date.now()}-${Math.random().toString(36).slice(2)}`,
       familyId:family.id,
@@ -841,7 +864,7 @@
       closeSpriteSearchResults();
       spriteSearchInput.focus({ preventScroll:true });
     }
-    showToast(`${familyView(family).name} · ${variantView(family,variant).name} added to Hunt cart`);
+    showToast(`${familyView(family).name} · ${variantView(family,variant).name} added to Sprite Run cart`);
   }
 
   function freezeHuntTimer() {
@@ -861,7 +884,7 @@
     huntMode.sessionStartedAt ||= new Date(Date.now() - elapsed).toISOString();
     saveHuntMode();
     applyHuntMode();
-    showToast('Hunt resumed');
+    showToast('Sprite Run resumed');
   }
 
   function updateHuntCartLevel(itemId,level) {
@@ -916,19 +939,19 @@
       remove.type = 'button';
       remove.className = 'hunt-checkout-remove';
       remove.textContent = '×';
-      remove.setAttribute('aria-label',`Remove ${info.familyName} ${info.variantName} from Hunt cart`);
+      remove.setAttribute('aria-label',`Remove ${info.familyName} ${info.variantName} from Sprite Run cart`);
       remove.addEventListener('click',() => removeHuntCartItem(item.id));
       row.append(copy,levelLabel,dust,remove);
       huntCheckoutItems.appendChild(row);
     });
-    huntCheckoutDuration.textContent = `Hunt time: ${formatHuntDuration(huntMode.lastDurationMs || huntElapsedMs())}`;
+    huntCheckoutDuration.textContent = `Run time: ${formatHuntDuration(huntMode.lastDurationMs || huntElapsedMs())}`;
     huntCheckoutDustTotal.textContent = formatDust(huntCartDustTotal());
     huntCheckoutWarning.hidden = !missingDust;
     completeHuntOrderBtn.disabled = !huntCart.length;
   }
 
   function openHuntCheckout() {
-    if (!huntCart.length) return showToast('Your Hunt cart is empty.');
+    if (!huntCart.length) return showToast('Your Sprite Run cart is empty.');
     freezeHuntTimer();
     renderHuntCheckout();
     document.documentElement.classList.add('hunt-checkout-open');
@@ -968,7 +991,7 @@
     saveHuntHistory();
     resetHuntSession();
     renderHuntHistory();
-    showToast(`Hunt saved · ${formatHuntDuration(hunt.durationMs)}`);
+    showToast(`Sprite Run saved · ${formatHuntDuration(hunt.durationMs)}`);
   }
 
   function completeHuntOrder(event) {
@@ -984,7 +1007,6 @@
       const before = snapshotVariantState(current);
       current.collected = true;
       current.collectedAt ||= completedAt;
-      current.collectionCount = Math.min(1000000,(Number(current.collectionCount) || 0) + 1);
       recordJournalEntry(before.collected ? 'recollected' : 'collected',info.family,info.variant,before,current,{ timestamp:completedAt });
       historyItems.push({
         familyId:item.familyId,
@@ -1005,7 +1027,7 @@
         id:`deposit-${Date.now()}-${Math.random().toString(36).slice(2)}`,
         type:'deposit',
         amount:dustEarned,
-        note:`Hunt deposit · ${historyItems.length} ${historyItems.length === 1 ? 'Sprite' : 'Sprites'}`,
+        note:`Sprite Run deposit · ${historyItems.length} ${historyItems.length === 1 ? 'Sprite' : 'Sprites'}`,
         createdAt:completedAt,
         huntId:hunt.id
       });
@@ -1137,7 +1159,7 @@
         ? 'Sprite Vault'
         : (appView === APP_VIEW_JOURNAL
             ? 'Collection Journal'
-            : (appView === APP_VIEW_HUNTS ? 'Hunt History' : (appView === APP_VIEW_DUST ? 'Sprite Dust' : 'Current Tracker')));
+            : (appView === APP_VIEW_HUNTS ? 'Sprite Run History' : (appView === APP_VIEW_DUST ? 'Sprite Dust' : 'Current Tracker')));
       showToast(label);
     }
   }
@@ -1487,11 +1509,7 @@
     state[familyId] ||= {};
     state[familyId][variantId] ||= { collected:false, mastered:false };
     const current = state[familyId][variantId];
-    if (!Number.isFinite(Number(current.collectionCount)) || Number(current.collectionCount) < 0) {
-      current.collectionCount = current.collected ? 1 : 0;
-    } else {
-      current.collectionCount = Math.min(1000000,Math.round(Number(current.collectionCount)));
-    }
+    delete current.collectionCount;
     return current;
   }
 
@@ -1524,17 +1542,12 @@
 
   function snapshotVariantState(current) {
     const mastered = current?.mastered === true;
-    const rawCollectionCount = Number(current?.collectionCount);
-    const collectionCount = Number.isFinite(rawCollectionCount) && rawCollectionCount >= 0
-      ? Math.min(1000000,Math.round(rawCollectionCount))
-      : (current?.collected ? 1 : 0);
     return {
       collected:current?.collected === true || mastered,
       mastered,
       collectedAt:validIsoDate(current?.collectedAt),
       masteredAt:validIsoDate(current?.masteredAt),
-      locationFound:cleanLocation(current?.locationFound),
-      collectionCount
+      locationFound:cleanLocation(current?.locationFound)
     };
   }
 
@@ -1548,7 +1561,7 @@
     else delete current.masteredAt;
     if (clean.locationFound) current.locationFound = clean.locationFound;
     else delete current.locationFound;
-    current.collectionCount = clean.collectionCount;
+    delete current.collectionCount;
     if (!current.collected) {
       current.mastered = false;
       delete current.collectedAt;
@@ -1624,6 +1637,12 @@
     return Date.parse(entry?.timestamp || '') || 0;
   }
 
+  function cleanMemoryPhoto(value) {
+    const photo = typeof value === 'string' ? value : '';
+    if (photo.length > 900000 || !/^data:image\/(?:png|jpe?g|webp);base64,/i.test(photo)) return '';
+    return photo;
+  }
+
   function normalizeJournalEntries(value) {
     if (!Array.isArray(value)) return [];
     return value.slice(0,MAX_JOURNAL_ENTRIES).flatMap((entry) => {
@@ -1644,6 +1663,11 @@
         seasonId:String(entry.seasonId || CURRENT_SEASON_ID).slice(0,80),
         before:snapshotVariantState(entry.before),
         after:snapshotVariantState(entry.after),
+        memory:entry.memory === true,
+        memoryNote:String(entry.memoryNote || '').trim().slice(0,400),
+        memoryPhoto:cleanMemoryPhoto(entry.memoryPhoto),
+        memorySavedAt:validIsoDate(entry.memorySavedAt),
+        activityCleared:entry.activityCleared === true,
         undone:entry.undone === true,
         undoneAt:validIsoDate(entry.undoneAt)
       }];
@@ -1687,13 +1711,25 @@
     return scheduleJournalSave();
   }
 
-  async function clearJournalActivity() {
+  function requestClearConfirmation(action) {
+    if (typeof action !== 'function') return;
+    pendingClearAction = action;
+    document.documentElement.classList.add('clear-data-open');
+    document.body.classList.add('clear-data-open');
+    if (!clearDataDialog.open) clearDataDialog.showModal();
+    requestAnimationFrame(() => clearDataTitle.focus());
+  }
+
+  function clearJournalActivity() {
     const storedEntries = journalReady ? journalEntries : pendingJournalEntries;
     if (!storedEntries.length) return;
-    if (!window.confirm('Clear all Collection Journal activity? This will not change your collection, mastery, locations, Hunt History, or Sprite Dust.')) return;
-    pendingJournalEntries = [];
-    journalActionFilter.value = 'all';
-    await replaceJournalEntries([]);
+    requestClearConfirmation(async () => {
+      const memories = storedEntries.filter((entry) => entry.memory === true).map((entry) => ({ ...entry, activityCleared:true }));
+      pendingJournalEntries = [];
+      journalActionFilter.value = 'all';
+      journalLocationFilter = '';
+      await replaceJournalEntries(memories);
+    });
   }
 
   function recordJournalEntry(type,family,variant,before,current,{ timestamp = null } = {}) {
@@ -1787,11 +1823,125 @@
     return { logged,ranked,counts };
   }
 
+  function makeJournalMemoryCard(entry) {
+    const card = document.createElement('article');
+    card.className = 'journal-memory-card';
+    card.dataset.rarity = entry.rarity;
+    if (entry.memoryPhoto) {
+      const image = document.createElement('img');
+      image.src = entry.memoryPhoto;
+      image.alt = `${entry.familyName} ${entry.variantName} memory`;
+      image.loading = 'lazy';
+      card.appendChild(image);
+    }
+    const copy = document.createElement('div');
+    const name = document.createElement('h4');
+    const action = document.createElement('strong');
+    const time = document.createElement('time');
+    name.textContent = `${entry.familyName} · ${entry.variantName}`;
+    action.textContent = journalActionText(entry.type);
+    time.dateTime = entry.memorySavedAt || entry.timestamp;
+    time.textContent = formatJournalDate(entry.memorySavedAt || entry.timestamp);
+    copy.append(name,action,time);
+    if (entry.memoryNote) {
+      const note = document.createElement('p');
+      note.textContent = entry.memoryNote;
+      copy.appendChild(note);
+    }
+    const edit = document.createElement('button');
+    edit.type = 'button';
+    edit.textContent = 'Edit Memory';
+    edit.addEventListener('click',() => openJournalMemory(entry.id));
+    card.append(copy,edit);
+    return card;
+  }
+
+  function openJournalMemory(entryId) {
+    const entry = [...pendingJournalEntries,...journalEntries].find((item) => item.id === entryId);
+    if (!entry) return;
+    pendingJournalMemoryId = entry.id;
+    pendingJournalMemoryPhoto = entry.memoryPhoto || '';
+    journalMemorySprite.textContent = `${entry.familyName} · ${entry.variantName} — ${journalActionText(entry.type)}`;
+    journalMemoryNote.value = entry.memoryNote || '';
+    journalMemoryPhoto.value = '';
+    journalMemoryStatus.textContent = '';
+    journalMemoryPhotoPreview.src = pendingJournalMemoryPhoto;
+    journalMemoryPhotoPreview.hidden = !pendingJournalMemoryPhoto;
+    document.documentElement.classList.add('journal-memory-open');
+    document.body.classList.add('journal-memory-open');
+    if (!journalMemoryDialog.open) journalMemoryDialog.showModal();
+    requestAnimationFrame(() => journalMemoryTitle.focus());
+  }
+
+  function readFileAsDataUrl(file) {
+    return new Promise((resolve,reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result || ''));
+      reader.onerror = () => reject(reader.error || new Error('That photo could not be opened.'));
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function loadedMemoryImage(source) {
+    return new Promise((resolve,reject) => {
+      const image = new Image();
+      image.onload = () => resolve(image);
+      image.onerror = () => reject(new Error('That photo could not be opened.'));
+      image.src = source;
+    });
+  }
+
+  async function prepareMemoryPhoto(file) {
+    if (!file) return pendingJournalMemoryPhoto;
+    if (!/^image\/(?:png|jpeg|webp)$/i.test(file.type || '') || file.size > 12 * 1024 * 1024) {
+      throw new Error('Choose a PNG, JPG, or WebP photo under 12 MB.');
+    }
+    const source = await readFileAsDataUrl(file);
+    const image = await loadedMemoryImage(source);
+    const maxEdge = 960;
+    const scale = Math.min(1,maxEdge / Math.max(image.naturalWidth || 1,image.naturalHeight || 1));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1,Math.round(image.naturalWidth * scale));
+    canvas.height = Math.max(1,Math.round(image.naturalHeight * scale));
+    const context = canvas.getContext('2d');
+    if (!context) throw new Error('This browser could not prepare that photo.');
+    context.drawImage(image,0,0,canvas.width,canvas.height);
+    let result = canvas.toDataURL('image/jpeg',.76);
+    if (result.length > 900000) result = canvas.toDataURL('image/jpeg',.58);
+    canvas.width = 1;
+    canvas.height = 1;
+    if (!cleanMemoryPhoto(result)) throw new Error('That photo is still too large. Try a smaller image.');
+    return result;
+  }
+
+  async function saveJournalMemory(event) {
+    event.preventDefault();
+    const entry = [...pendingJournalEntries,...journalEntries].find((item) => item.id === pendingJournalMemoryId);
+    if (!entry) return journalMemoryDialog.close();
+    const submit = journalMemoryForm.querySelector('[type="submit"]');
+    submit.disabled = true;
+    journalMemoryStatus.textContent = 'Saving memory…';
+    try {
+      entry.memoryPhoto = await prepareMemoryPhoto(journalMemoryPhoto.files?.[0]);
+      entry.memory = true;
+      entry.memoryNote = journalMemoryNote.value.trim().slice(0,400);
+      entry.memorySavedAt = new Date().toISOString();
+      if (journalReady) await scheduleJournalSave();
+      renderJournal();
+      journalMemoryDialog.close();
+    } catch (error) {
+      journalMemoryStatus.textContent = error.message || 'That memory could not be saved.';
+    } finally {
+      submit.disabled = false;
+    }
+  }
+
   function renderJournal() {
     if (!collectionJournalPage) return;
     const visibleEntries = (journalReady ? journalEntries : pendingJournalEntries)
       .filter((entry) => !entry.undone)
       .sort((a,b) => journalEntryTimestamp(b) - journalEntryTimestamp(a));
+    const activityEntries = visibleEntries.filter((entry) => entry.activityCleared !== true);
     const locationStats = journalCurrentLocationStats();
     const top = locationStats.ranked[0];
     journalTopLocation.textContent = top?.[0] || 'No locations yet';
@@ -1799,21 +1949,34 @@
       ? `${top[1]} ${top[1] === 1 ? 'Sprite was' : 'Sprites were'} collected here.`
       : 'Add a location when you collect a Sprite.';
     journalLocationsLogged.textContent = String(locationStats.logged);
-    journalEntryCount.textContent = String(visibleEntries.length);
-    clearJournalActivityBtn.disabled = !journalReady || !(journalEntries.length || pendingJournalEntries.length);
+    journalEntryCount.textContent = String(activityEntries.length);
+    clearJournalActivityBtn.disabled = !journalReady || !journalEntries.some((entry) => entry.activityCleared !== true);
     journalZoneTopCount.textContent = String(locationStats.counts.get('Top of Map') || 0);
     journalZoneBottomCount.textContent = String(locationStats.counts.get('Bottom of Map') || 0);
     journalZoneBossCount.textContent = String(locationStats.counts.get('Boss Fight') || 0);
     journalLocationEmpty.hidden = Boolean(locationStats.ranked.length);
+    journalMapZones.forEach((button) => {
+      const active = button.dataset.journalMapZone === journalLocationFilter;
+      button.classList.toggle('is-active',active);
+      button.setAttribute('aria-pressed',String(active));
+    });
 
     const filter = journalActionFilter?.value || 'all';
-    const filtered = visibleEntries.filter((entry) => journalFilterMatches(entry,filter)).slice(0,150);
+    const filtered = activityEntries.filter((entry) => {
+      if (!journalFilterMatches(entry,filter)) return false;
+      if (!journalLocationFilter) return true;
+      return locationZone(entry.after?.locationFound) === journalLocationFilter;
+    }).slice(0,150);
+    const memories = visibleEntries.filter((entry) => entry.memory === true);
+    journalMemoryList.replaceChildren();
+    journalMemoryEmpty.hidden = Boolean(memories.length);
+    memories.forEach((entry) => journalMemoryList.appendChild(makeJournalMemoryCard(entry)));
     journalEntryList.replaceChildren();
     journalEmptyState.hidden = Boolean(filtered.length);
     if (!journalReady && !filtered.length) {
       journalEmptyState.querySelector('strong').textContent = 'Opening your journal…';
       journalEmptyState.querySelector('span').textContent = 'Your saved activity will appear in a moment.';
-    } else if (!visibleEntries.length) {
+    } else if (!activityEntries.length) {
       journalEmptyState.querySelector('strong').textContent = 'Your journal is ready.';
       journalEmptyState.querySelector('span').textContent = 'Collect or master a Sprite and its time will appear here automatically.';
     } else if (!filtered.length) {
@@ -1869,6 +2032,13 @@
         edit.addEventListener('click',() => openLocationDetails(family,variant));
         actions.appendChild(edit);
       }
+      const remember = document.createElement('button');
+      remember.type = 'button';
+      remember.className = 'journal-memory-button';
+      remember.textContent = entry.memory ? 'Saved Memory' : 'Add to Journal';
+      remember.setAttribute('aria-pressed',String(entry.memory));
+      remember.addEventListener('click',() => openJournalMemory(entry.id));
+      actions.appendChild(remember);
       const undo = document.createElement('button');
       undo.type = 'button';
       undo.className = 'journal-undo-button';
@@ -1910,20 +2080,21 @@
       const title = document.createElement('h3');
       const time = document.createElement('time');
       const remove = document.createElement('button');
-      title.textContent = `Hunt ${huntHistory.length - index}`;
+      title.textContent = `Sprite Run ${huntHistory.length - index}`;
       time.dateTime = hunt.completedAt;
       time.textContent = formatJournalDate(hunt.completedAt);
       copy.append(title,time);
       remove.type = 'button';
       remove.className = 'hunt-history-delete';
       remove.textContent = 'Delete';
-      remove.setAttribute('aria-label',`Delete Hunt from ${time.textContent}`);
+      remove.setAttribute('aria-label',`Delete Sprite Run from ${time.textContent}`);
       remove.addEventListener('click',() => {
-        if (!window.confirm('Delete this Hunt from Hunt History? Its Sprite Dust receipt will stay in the account.')) return;
-        huntHistory = huntHistory.filter((entry) => entry.id !== hunt.id);
-        saveHuntHistory();
-        renderHuntHistory();
-        showToast('Hunt deleted');
+        requestClearConfirmation(() => {
+          huntHistory = huntHistory.filter((entry) => entry.id !== hunt.id);
+          saveHuntHistory();
+          renderHuntHistory();
+          showToast('Sprite Run deleted');
+        });
       });
       header.append(copy,remove);
 
@@ -1941,7 +2112,7 @@
       items.className = 'hunt-history-items';
       if (!hunt.items.length) {
         const empty = document.createElement('span');
-        empty.textContent = 'Timer-only Hunt · no Sprites checked out';
+        empty.textContent = 'Timer-only Sprite Run · no Sprites checked out';
         items.appendChild(empty);
       } else {
         hunt.items.forEach((item) => {
@@ -2382,14 +2553,25 @@
     return Number(rarityDustRewards(familyRarity(family))[normalizedLevel]) || 0;
   }
 
-  function rarityDustDescription(rarity) {
+  function renderExtractionDust(rarity) {
+    const hidden = isUnownedPage() || appView === APP_VIEW_VAULT;
+    extractionDustDetails.hidden = hidden;
+    if (hidden) {
+      extractionDustDetails.open = false;
+      extractionDustLevels.replaceChildren();
+      return;
+    }
     const rewards = rarityDustRewards(rarity);
-    const entries = [1,2,3,4,5].flatMap((level) => hasOwn(rewards,String(level))
-      ? [`L${level} ${formatDust(rewards[String(level)])}`]
-      : []);
-    return entries.length
-      ? `Extraction Sprite Dust — ${entries.join(' · ')}`
-      : 'Extraction Sprite Dust rewards increase with Sprite level.';
+    extractionDustLevels.replaceChildren();
+    [1,2,3,4,5].forEach((level) => {
+      const row = document.createElement('span');
+      const label = document.createElement('b');
+      const value = document.createElement('strong');
+      label.textContent = `Level ${level}`;
+      value.innerHTML = `${dustBottleSvg()} ${formatDust(rewards[String(level)] || 0)} Dust`;
+      row.append(label,value);
+      extractionDustLevels.appendChild(row);
+    });
   }
 
   function formatDust(value) {
@@ -2878,7 +3060,6 @@
     const imageButton = card.querySelector('.image-button');
     const collectButton = card.querySelector('.collect-button');
     const crownButton = card.querySelector('.crown-button');
-    const collectionCountEmblem = card.querySelector('.collection-count-emblem');
     const vaultDisplay = appView === APP_VIEW_VAULT;
     const huntDisplay = huntMode.active && !vaultDisplay;
     card.setAttribute('aria-label',`${variantName} ${groupName}${current.mastered ? ', mastered' : ''}`);
@@ -2886,7 +3067,7 @@
     imageButton.tabIndex = vaultDisplay || huntDisplay ? -1 : 0;
     imageButton.setAttribute('aria-label',vaultDisplay
       ? `${variantName} ${groupName} display case`
-      : (huntDisplay ? `${variantName} ${groupName} Hunt card` : (spriteEditMode ? `Upload image for ${variantName} ${groupName}` : collectedAction)));
+      : (huntDisplay ? `${variantName} ${groupName} Sprite Run card` : (spriteEditMode ? `Upload image for ${variantName} ${groupName}` : collectedAction)));
     if (spriteEditMode || vaultDisplay || huntDisplay) imageButton.removeAttribute('aria-pressed');
     else imageButton.setAttribute('aria-pressed',String(Boolean(current.collected)));
     collectButton.setAttribute('aria-label',collectedAction);
@@ -2904,38 +3085,6 @@
     const masterLabel = card.querySelector('.master-label');
     masterLabel.textContent = masterText || '';
     masterLabel.hidden = !masterText;
-    collectionCountEmblem.textContent = String(Math.max(0,Number(current.collectionCount) || 0));
-    const collectionCount = Math.max(0,Number(current.collectionCount) || 0);
-    const canResetCollectionCount = !vaultDisplay && !huntDisplay && collectionCount > 0;
-    collectionCountEmblem.disabled = !canResetCollectionCount;
-    collectionCountEmblem.tabIndex = canResetCollectionCount ? 0 : -1;
-    collectionCountEmblem.setAttribute('aria-label',canResetCollectionCount
-      ? `${collectionCount} lifetime collections. Reset count for ${variantName} ${groupName}`
-      : `${collectionCount} lifetime collections`);
-    collectionCountEmblem.title = canResetCollectionCount ? 'Reset times collected' : '';
-  }
-
-  function openCollectionCountReset(card,current,family,variant) {
-    const collectionCount = Math.max(0,Number(current.collectionCount) || 0);
-    if (!collectionCount || huntMode.active || appView === APP_VIEW_VAULT) return;
-    const familyName = familyView(family).name || 'Sprite';
-    const variantName = variantView(family,variant).name || 'Variant';
-    pendingCollectionCountReset = { card,current,family,variant };
-    collectionCountResetMessage.textContent = `Reset ${variantName} ${familyName} from ${collectionCount} times collected to 0? This will not remove it from your collection or change mastery.`;
-    document.documentElement.classList.add('collection-count-reset-open');
-    document.body.classList.add('collection-count-reset-open');
-    collectionCountResetDialog.showModal();
-    requestAnimationFrame(() => collectionCountResetTitle.focus());
-  }
-
-  function resetCollectionCount(event) {
-    event.preventDefault();
-    if (!pendingCollectionCountReset) return collectionCountResetDialog.close();
-    const { card,current,family,variant } = pendingCollectionCountReset;
-    current.collectionCount = 0;
-    saveProgress();
-    updateCard(card,current,family,variant);
-    collectionCountResetDialog.close();
   }
 
   function saveRecentMissingChanges() {
@@ -3097,9 +3246,6 @@
     crown.type = 'button';
     crown.className = 'crown-button';
     crown.innerHTML = crownSvg();
-    const collectionCountEmblem = document.createElement('button');
-    collectionCountEmblem.type = 'button';
-    collectionCountEmblem.className = 'collection-count-emblem';
     const seasonBadge = document.createElement('span');
     seasonBadge.className = 'sprite-season-badge';
     seasonBadge.textContent = seasonViewLabel(spriteSeasonId(family,variant));
@@ -3292,11 +3438,11 @@
     huntCartButton.type = 'button';
     huntCartButton.className = 'hunt-add-cart-button';
     huntCartButton.innerHTML = '<span aria-hidden="true">+</span>';
-    huntCartButton.setAttribute('aria-label',`Add ${view.name || 'sprite'} ${familyInfo.name || ''} to Hunt cart`.trim());
+    huntCartButton.setAttribute('aria-label',`Add ${view.name || 'sprite'} ${familyInfo.name || ''} to Sprite Run cart`.trim());
 
     const masterLabel = document.createElement('div');
     masterLabel.className = 'master-label';
-    card.append(crown,collectionCountEmblem,seasonBadge,imageWrap,editorTools,percentageEditor,variantLine,listLabel,collect,huntCartButton,masterLabel);
+    card.append(crown,seasonBadge,imageWrap,editorTools,percentageEditor,variantLine,listLabel,collect,huntCartButton,masterLabel);
 
     const toggleCollected = () => {
       if (huntMode.active) return;
@@ -3321,7 +3467,6 @@
     });
     collect.addEventListener('click',toggleCollected);
     huntCartButton.addEventListener('click',() => addSpriteToHuntCart(family,variant));
-    collectionCountEmblem.addEventListener('click',() => openCollectionCountReset(card,current,family,variant));
     crown.addEventListener('click',() => {
       if (huntMode.active) return;
       const before = snapshotVariantState(current);
@@ -3548,7 +3693,7 @@
       pageTitleEl,
       isUnownedPage() ? (missingView === 'unmastered' ? 'Unmastered Sprites' : 'Unowned Sprites') : page.title
     );
-    renderOptionalText(extractionDustDescriptionEl,isUnownedPage() ? '' : rarityDustDescription(activeRarity));
+    renderExtractionDust(activeRarity);
     renderOptionalText(pageDescriptionEl,isUnownedPage() ? '' : page.description);
     document.getElementById('checklistPage').setAttribute('aria-labelledby','activePageTitle');
     let eagerImagesRemaining = 2;
@@ -3813,7 +3958,7 @@
   function spriteSearchState(entry) {
     if (huntMode.active) {
       const copies = huntCart.filter((item) => item.familyId === entry.familyId && item.variantId === entry.variantId).length;
-      return copies ? `${copies} in cart · Add again` : 'Add to Hunt cart';
+      return copies ? `${copies} in cart · Add again` : 'Add to Sprite Run cart';
     }
     const current = state[entry.familyId]?.[entry.variantId] || {};
     if (current.mastered) return design.header.masteredLabel || 'Mastered';
@@ -3826,6 +3971,22 @@
     spriteSearchInput.setAttribute('aria-expanded','false');
   }
 
+  function centerSearchResultCard(card,reducedMotion) {
+    const row = card.closest('.variant-row');
+    if (row) {
+      const targetLeft = Math.max(0,card.offsetLeft - ((row.clientWidth - card.offsetWidth) / 2));
+      if (typeof row.scrollTo === 'function') row.scrollTo({ left:targetLeft, behavior:reducedMotion ? 'auto' : 'smooth' });
+      else row.scrollLeft = targetLeft;
+    }
+    const rect = card.getBoundingClientRect();
+    const top = Math.max(0,window.scrollY + rect.top - ((window.innerHeight - rect.height) / 2));
+    try {
+      window.scrollTo({ top, left:0, behavior:reducedMotion ? 'auto' : 'smooth' });
+    } catch {
+      card.scrollIntoView({ behavior:reducedMotion ? 'auto' : 'smooth', block:'center', inline:'nearest' });
+    }
+  }
+
   function openSpriteSearchResult(entry) {
     closeSpriteSearchResults();
     spriteSearchInput.blur();
@@ -3834,12 +3995,14 @@
     } else if (seasonView !== CURRENT_SEASON_ID) {
       setSeasonView(CURRENT_SEASON_ID,{ announce:false });
     }
-    switchRarity(entry.rarity,{ historyMode:'push' });
+    if (activeRarity !== entry.rarity || isUnownedPage()) {
+      switchRarity(entry.rarity,{ historyMode:'push' });
+    }
     requestAnimationFrame(() => {
       const card = [...document.querySelectorAll('.card')].find((item) => item.dataset.familyId === entry.familyId && item.dataset.variantId === entry.variantId);
       if (!card) return showToast('That sprite is currently hidden.');
-      const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
-      card.scrollIntoView({ behavior:reducedMotion ? 'auto' : 'smooth', block:'center', inline:'center' });
+      const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches === true;
+      centerSearchResultCard(card,reducedMotion);
       card.classList.add('search-target');
       setTimeout(() => card.classList.remove('search-target'),2600);
       card.querySelector('.collect-button')?.focus({ preventScroll:true });
@@ -4792,6 +4955,48 @@
   });
   journalActionFilter.addEventListener('change',renderJournal);
   clearJournalActivityBtn.addEventListener('click',clearJournalActivity);
+  journalMapZones.forEach((button) => {
+    button.addEventListener('click',() => {
+      const zone = button.dataset.journalMapZone || '';
+      journalLocationFilter = journalLocationFilter === zone ? '' : zone;
+      renderJournal();
+    });
+  });
+  journalMemoryForm.addEventListener('submit',saveJournalMemory);
+  document.getElementById('cancelJournalMemoryBtn').addEventListener('click',() => journalMemoryDialog.close());
+  journalMemoryPhoto.addEventListener('change',async () => {
+    const file = journalMemoryPhoto.files?.[0];
+    if (!file) return;
+    journalMemoryStatus.textContent = 'Preparing photo…';
+    try {
+      pendingJournalMemoryPhoto = await prepareMemoryPhoto(file);
+      journalMemoryPhotoPreview.src = pendingJournalMemoryPhoto;
+      journalMemoryPhotoPreview.hidden = false;
+      journalMemoryStatus.textContent = 'Photo ready to save.';
+    } catch (error) {
+      journalMemoryPhoto.value = '';
+      journalMemoryStatus.textContent = error.message || 'That photo could not be opened.';
+    }
+  });
+  journalMemoryDialog.addEventListener('close',() => {
+    pendingJournalMemoryId = '';
+    pendingJournalMemoryPhoto = '';
+    document.documentElement.classList.remove('journal-memory-open');
+    document.body.classList.remove('journal-memory-open');
+  });
+  clearDataForm.addEventListener('submit',async (event) => {
+    event.preventDefault();
+    const action = pendingClearAction;
+    pendingClearAction = null;
+    clearDataDialog.close();
+    if (action) await action();
+  });
+  document.getElementById('cancelClearDataBtn').addEventListener('click',() => clearDataDialog.close());
+  clearDataDialog.addEventListener('close',() => {
+    pendingClearAction = null;
+    document.documentElement.classList.remove('clear-data-open');
+    document.body.classList.remove('clear-data-open');
+  });
   huntModeBtn.addEventListener('click',toggleHuntMode);
   huntModeBtn.addEventListener('pointerup',() => requestAnimationFrame(() => huntModeBtn.blur()));
   huntCheckoutBtn.addEventListener('click',openHuntCheckout);
@@ -4808,11 +5013,13 @@
   floatingHomeBtn.addEventListener('click',() => goHomeToRare());
   spriteDustBalanceBtn.addEventListener('click',() => setAppView(APP_VIEW_DUST));
   document.getElementById('clearHuntHistoryBtn').addEventListener('click',() => {
-    if (!huntHistory.length || !window.confirm('Delete your entire Hunt History? Sprite Dust receipts will stay in the account.')) return;
-    huntHistory = [];
-    saveHuntHistory();
-    renderHuntHistory();
-    showToast('Hunt History cleared');
+    if (!huntHistory.length) return;
+    requestClearConfirmation(() => {
+      huntHistory = [];
+      saveHuntHistory();
+      renderHuntHistory();
+      showToast('Sprite Run History cleared');
+    });
   });
   document.getElementById('recordDustPurchaseBtn').addEventListener('click',openDustPurchaseDialog);
   document.getElementById('editDustBalanceBtn').addEventListener('click',openDustBalanceDialog);
@@ -4821,13 +5028,6 @@
   dustBalanceDialog.addEventListener('close',() => {
     document.documentElement.classList.remove('dust-balance-open');
     document.body.classList.remove('dust-balance-open');
-  });
-  collectionCountResetForm.addEventListener('submit',resetCollectionCount);
-  document.getElementById('cancelCollectionCountResetBtn').addEventListener('click',() => collectionCountResetDialog.close());
-  collectionCountResetDialog.addEventListener('close',() => {
-    pendingCollectionCountReset = null;
-    document.documentElement.classList.remove('collection-count-reset-open');
-    document.body.classList.remove('collection-count-reset-open');
   });
   dustPurchaseForm.addEventListener('submit',recordDustPurchase);
   document.getElementById('cancelDustPurchaseBtn').addEventListener('click',() => dustPurchaseDialog.close());
@@ -5026,7 +5226,7 @@
                 : (isUnownedPage() ? `#${missingView}` : `#${activeRarity.toLowerCase()}`))));
   if (location.hash !== activeHash) history.replaceState({ rarity:activeRarity },'',activeHash);
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./service-worker.js?v=123',{ updateViaCache:'none' }).then((registration) => registration.update()).catch(() => {});
+    navigator.serviceWorker.register('./service-worker.js?v=124',{ updateViaCache:'none' }).then((registration) => registration.update()).catch(() => {});
   }
   const signalAppRendered = () => window.dispatchEvent(new Event('sprite-app-rendered'));
   if (document.fonts?.ready) {

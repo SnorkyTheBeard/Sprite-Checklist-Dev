@@ -1,15 +1,15 @@
-const CACHE = 'galaxy-sprite-checklist-v123';
+const CACHE = 'galaxy-sprite-checklist-v124';
 const CORE = [
   './',
   './index.html',
-  './styles.css?v=123',
+  './styles.css?v=124',
   './vault-v105.css?v=112',
   './viewport-v106.css?v=107',
   './scene-v113.css?v=114',
   './published-design.js',
   './art-config.js?v=67',
   './data.js?v=82',
-  './app.js?v=123',
+  './app.js?v=124',
   './manifest.webmanifest?v=101',
   './fonts/Burbank Big Condensed Black.otf',
   './fonts/Fredoka-Regular.woff2',
@@ -45,7 +45,6 @@ const CORE = [
   './assets/page-backgrounds/page-bg-unowned.webp?v=93',
   './assets/page-backgrounds/page-bg-unmastered.webp?v=93',
   './assets/page-backgrounds/page-bg-sprite-vault-v100.webp',
-  './assets/journal/chapter-7-season-3-map.webp?v=116',
   './assets/header/main-header.webp?v=3'
 ];
 const FRESH_CODE_FILES = new Set(['styles.css','vault-v105.css','viewport-v106.css','scene-v113.css','art-config.js','data.js','app.js','manifest.webmanifest']);

@@ -718,6 +718,199 @@ body.vault-view .card.mastered .crown-button svg {
   }
 }
 
+/* V124: interactive Journal memories, Sprite Runs, Dust details, and card safety. */
+.collection-count-emblem,
+.collection-count-reset-dialog { display:none !important; }
+
+html.journal-memory-open,
+body.journal-memory-open,
+html.clear-data-open,
+body.clear-data-open { overflow:hidden !important; overscroll-behavior:none; }
+
+body.tracker-view .app-shell,
+body.tracker-view #mainContent,
+body.tracker-view #checklistPage,
+body.tracker-view #collections,
+body.tracker-view .collection,
+body.tracker-view .variant-row,
+body.tracker-view .card { position:relative; }
+
+body.tracker-view #mainContent,
+body.tracker-view #checklistPage,
+body.tracker-view #collections,
+body.tracker-view .collection { z-index:2; }
+
+body.tracker-view .variant-row {
+  z-index:3;
+  margin-inline:-8px !important;
+  padding-inline:14px !important;
+  scroll-padding-inline:14px !important;
+}
+
+body.tracker-view .card {
+  z-index:4;
+  -webkit-backdrop-filter:blur(13px) saturate(118%);
+  backdrop-filter:blur(13px) saturate(118%);
+}
+
+body.tracker-view .collection[data-rarity="Rare"] .card { background:linear-gradient(145deg,rgba(43,133,216,.65),rgba(5,48,116,.52)) !important; }
+body.tracker-view .collection[data-rarity="Epic"] .card { background:linear-gradient(145deg,rgba(138,64,204,.65),rgba(57,17,116,.52)) !important; }
+body.tracker-view .collection[data-rarity="Legendary"] .card { background:linear-gradient(145deg,rgba(218,99,27,.65),rgba(104,35,6,.52)) !important; }
+body.tracker-view .collection[data-rarity="Mythic"] .card { background:linear-gradient(145deg,rgba(207,151,24,.65),rgba(91,56,0,.52)) !important; }
+
+body.vault-view #spriteDustBalanceBtn { display:none !important; }
+
+.extraction-dust-details {
+  position:relative;
+  width:max-content;
+  max-width:min(100%,360px);
+  margin:8px auto 0;
+  color:#f5f8ff;
+  text-align:left;
+}
+.extraction-dust-details[hidden] { display:none !important; }
+.extraction-dust-details summary {
+  width:max-content;
+  min-height:34px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:7px;
+  margin:auto;
+  padding:6px 13px;
+  list-style:none;
+  border:1px solid rgba(255,255,255,.35);
+  border-radius:999px;
+  background:rgba(7,12,25,.62);
+  box-shadow:inset 0 1px rgba(255,255,255,.15),0 5px 14px rgba(0,0,0,.26);
+  font-size:12px;
+  font-weight:900;
+  cursor:pointer;
+  -webkit-backdrop-filter:blur(10px);
+  backdrop-filter:blur(10px);
+}
+.extraction-dust-details summary::-webkit-details-marker { display:none; }
+.extraction-dust-details summary::after { content:"+"; font:900 17px/1 Arial,sans-serif; }
+.extraction-dust-details[open] summary::after { content:"−"; }
+.extraction-dust-levels {
+  position:absolute;
+  top:calc(100% + 7px);
+  left:50%;
+  z-index:35;
+  width:min(300px,calc(100vw - 38px));
+  display:grid;
+  gap:4px;
+  padding:9px;
+  transform:translateX(-50%);
+  border:1px solid rgba(255,255,255,.24);
+  border-radius:15px;
+  background:rgba(5,10,22,.95);
+  box-shadow:0 18px 38px rgba(0,0,0,.5);
+  -webkit-backdrop-filter:blur(16px);
+  backdrop-filter:blur(16px);
+}
+.extraction-dust-levels > span {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:16px;
+  padding:7px 9px;
+  border-radius:9px;
+  background:rgba(255,255,255,.055);
+  font-size:11px;
+}
+.extraction-dust-levels strong { display:flex; align-items:center; gap:5px; color:#fff0a7; }
+.extraction-dust-levels .dust-bottle-icon { width:17px; height:17px; }
+
+.journal-map-art { display:block; width:100%; height:auto; aspect-ratio:776 / 436; }
+.journal-map-zone {
+  display:grid;
+  place-items:center;
+  padding:0;
+  pointer-events:auto;
+  appearance:none;
+  -webkit-appearance:none;
+  cursor:pointer;
+  transition:background .18s ease,box-shadow .18s ease,transform .18s ease;
+}
+.journal-map-zone span {
+  padding:3px 8px;
+  color:#fff;
+  border-radius:999px;
+  background:rgba(2,9,18,.75);
+  font-size:11px;
+  font-weight:950;
+  text-shadow:0 1px 3px #000;
+}
+.journal-map-zone:hover,
+.journal-map-zone:focus-visible,
+.journal-map-zone.is-active {
+  background:color-mix(in srgb,currentColor 24%,transparent);
+  box-shadow:0 0 0 2px rgba(255,255,255,.62),inset 0 0 25px color-mix(in srgb,currentColor 30%,transparent),0 0 22px currentColor;
+}
+.journal-map-zone.is-active { transform:scale(1.015); }
+.journal-map-instructions { margin:10px 0 0; color:#b9cadc; font-size:11px; text-align:center; }
+
+.journal-memories {
+  margin-top:18px;
+  padding:18px;
+  border:1px solid rgba(255,255,255,.15);
+  border-radius:22px;
+  background:rgba(6,10,20,.66);
+}
+.journal-memory-list { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(250px,100%),1fr)); gap:11px; }
+.journal-memory-card {
+  display:grid;
+  grid-template-columns:72px minmax(0,1fr);
+  align-items:center;
+  gap:11px;
+  padding:11px;
+  overflow:hidden;
+  border:1px solid rgba(255,255,255,.18);
+  border-left:4px solid #58c8ff;
+  border-radius:15px;
+  background:rgba(255,255,255,.06);
+}
+.journal-memory-card[data-rarity="Epic"] { border-left-color:#b65eff; }
+.journal-memory-card[data-rarity="Legendary"] { border-left-color:#ff983f; }
+.journal-memory-card[data-rarity="Mythic"] { border-left-color:#ffd65a; }
+.journal-memory-card > img { width:72px; height:72px; grid-row:1 / 3; object-fit:cover; border-radius:11px; }
+.journal-memory-card > div { min-width:0; }
+.journal-memory-card h4,.journal-memory-card p { margin:0; }
+.journal-memory-card h4 { color:#fff; font-size:15px; }
+.journal-memory-card strong,.journal-memory-card time { display:block; margin-top:2px; }
+.journal-memory-card strong { color:#a6ddff; font-size:11px; }
+.journal-memory-card time { color:#aab9c9; font-size:9px; }
+.journal-memory-card p { margin-top:7px; color:#dce6ef; font-size:11px; overflow-wrap:anywhere; }
+.journal-memory-card > button,.journal-memory-button {
+  min-height:32px;
+  padding:6px 9px;
+  color:#eaf7ff;
+  border:1px solid rgba(128,215,255,.32);
+  border-radius:999px;
+  background:rgba(54,151,204,.14);
+  font-size:10px;
+  font-weight:900;
+}
+.journal-memory-button[aria-pressed="true"] { color:#fff1a8; border-color:rgba(255,220,102,.4); background:rgba(196,137,20,.16); }
+.journal-memory-dialog textarea { width:100%; padding:10px; resize:vertical; color:#fff; border:1px solid rgba(255,255,255,.2); border-radius:12px; background:#10172a; font:inherit; }
+.journal-memory-photo-picker { display:grid; gap:7px; margin-top:12px; color:#eaf4ff; font-weight:900; }
+.journal-memory-photo-picker small,.journal-memory-dialog .add-sprite-label span { color:#aab9ca; font-weight:600; }
+.journal-memory-photo-picker input { width:100%; color:#dbe8f5; }
+.journal-memory-photo-preview { width:100%; max-height:270px; margin-top:12px; object-fit:contain; border-radius:13px; background:#050912; }
+#journalMemoryStatus { min-height:18px; color:#b9d8ed; font-size:11px; }
+
+.clear-data-dialog { width:min(90vw,360px); text-align:center; }
+.clear-data-actions { display:grid; grid-template-columns:1fr; }
+.clear-data-actions button { width:100%; }
+
+@media (max-width:620px) {
+  body.tracker-view .variant-row { margin-inline:-6px !important; padding-inline:12px !important; scroll-padding-inline:12px !important; }
+  .journal-map-zone span { font-size:9px; }
+  .journal-memory-card { grid-template-columns:60px minmax(0,1fr); }
+  .journal-memory-card > img { width:60px; height:60px; }
+}
+
 /* V123: inset modal scrolling, stable editor controls, and rarity-level extraction rewards. */
 .backup-dialog {
   max-height:none !important;

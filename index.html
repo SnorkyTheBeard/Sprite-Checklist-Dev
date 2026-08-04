@@ -283,7 +283,7 @@
       }
     })();
   </script>
-<link rel="stylesheet" href="styles.css?v=123">
+<link rel="stylesheet" href="styles.css?v=124">
 <link rel="stylesheet" href="vault-v105.css?v=112">
 <link rel="stylesheet" href="viewport-v106.css?v=107">
 <link rel="stylesheet" href="scene-v113.css?v=114">
@@ -342,7 +342,7 @@
               <circle cx="10" cy="10" r="6.5"></circle>
               <path d="M10 6.5V10l2.5 1.7M15.2 15.2 20 20M17 4l2 2"></path>
             </svg>
-            <span>Hunt History</span>
+            <span>Sprite Run History</span>
           </button>
         </nav>
       </div>
@@ -380,11 +380,11 @@
 
     <section class="tracker-tools tracker-primary-view" aria-label="Collection tools">
       <div class="hunt-mode-control">
-        <button id="huntModeBtn" type="button" aria-label="Start Hunt" aria-pressed="false" title="Start Hunt">
+        <button id="huntModeBtn" type="button" aria-label="Start Sprite Run" aria-pressed="false" title="Start Sprite Run">
           <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-            <circle cx="12" cy="12" r="7"></circle>
-            <circle cx="12" cy="12" r="2.5"></circle>
-            <path d="M12 2v4M12 18v4M2 12h4M18 12h4"></path>
+            <path d="M8 7V5.8A4 4 0 0 1 12 2a4 4 0 0 1 4 3.8V7"></path>
+            <rect x="5" y="7" width="14" height="14" rx="3"></rect>
+            <path d="M8 11h8M8 15h8M5 12H3v6h2M19 12h2v6h-2"></path>
           </svg>
         </button>
         <span id="huntTimer" aria-live="polite" hidden>00:00</span>
@@ -412,7 +412,7 @@
 
     <section class="hunt-cart-tray tracker-primary-view" id="huntCartTray" aria-live="polite" hidden>
       <div>
-        <span>Hunt cart</span>
+        <span>Sprite Run cart</span>
         <strong id="huntCartSummary">0 Sprites · 0 Dust</strong>
       </div>
       <button id="huntCheckoutBtn" type="button">Checkout</button>
@@ -482,11 +482,22 @@
           </div>
         </div>
         <div class="journal-map-layout">
-          <figure class="journal-map-figure">
-            <img src="assets/journal/chapter-7-season-3-map.webp?v=116" alt="Current Fortnite Chapter 7 Season 3 island map" width="776" height="436">
-            <span class="journal-map-zone journal-map-zone-top" aria-hidden="true"></span>
-            <span class="journal-map-zone journal-map-zone-bottom" aria-hidden="true"></span>
-            <span class="journal-map-zone journal-map-zone-boss" aria-hidden="true"></span>
+          <figure class="journal-map-figure" aria-labelledby="journalMapInstructions">
+            <svg class="journal-map-art" viewBox="0 0 776 436" role="img" aria-label="Stylized island map divided into top, boss fight, and bottom areas">
+              <defs>
+                <linearGradient id="journalSea" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#071a2e"></stop><stop offset="1" stop-color="#092c43"></stop></linearGradient>
+                <linearGradient id="journalIsland" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#90d7c2"></stop><stop offset=".5" stop-color="#5fa887"></stop><stop offset="1" stop-color="#d19a62"></stop></linearGradient>
+                <filter id="journalGlow"><feDropShadow dx="0" dy="7" stdDeviation="9" flood-color="#000" flood-opacity=".55"></feDropShadow></filter>
+              </defs>
+              <rect width="776" height="436" rx="26" fill="url(#journalSea)"></rect>
+              <g opacity=".32" fill="none" stroke="#7bcce8" stroke-width="2"><path d="M0 80c130 40 190-35 310 8s210 25 466-20"></path><path d="M0 355c165-50 251 33 391-5s250-23 385 9"></path></g>
+              <path filter="url(#journalGlow)" fill="url(#journalIsland)" stroke="#c9efe1" stroke-width="5" d="M198 58c74-39 156-26 217-2 48 19 100 17 143 58 35 33 42 75 21 106 35 35 20 89-19 111-35 20-72 18-111 38-53 27-96 20-135-5-48 15-100-3-122-41-55-2-87-42-69-83-37-35-27-80 10-108 21-17 38-30 65-42Z"></path>
+              <g fill="#dffaf2" opacity=".55"><circle cx="279" cy="117" r="8"></circle><circle cx="454" cy="104" r="6"></circle><circle cx="231" cy="273" r="7"></circle><circle cx="502" cy="294" r="9"></circle><circle cx="376" cy="339" r="6"></circle></g>
+              <path d="M214 205c67-34 121 31 179 3s112-35 170-1" fill="none" stroke="#e2f4dc" stroke-width="8" stroke-linecap="round" opacity=".6"></path>
+            </svg>
+            <button class="journal-map-zone journal-map-zone-top" type="button" data-journal-map-zone="Top of Map" aria-label="Show Top of Map activity"><span>Top</span></button>
+            <button class="journal-map-zone journal-map-zone-bottom" type="button" data-journal-map-zone="Bottom of Map" aria-label="Show Bottom of Map activity"><span>Bottom</span></button>
+            <button class="journal-map-zone journal-map-zone-boss" type="button" data-journal-map-zone="Boss Fight" aria-label="Show Boss Fight activity"><span>Boss</span></button>
           </figure>
           <div class="journal-map-legend" aria-label="Map collection totals">
             <div data-journal-zone="Top of Map"><i aria-hidden="true"></i><span>Top of Map</span><strong id="journalZoneTopCount">0</strong></div>
@@ -494,7 +505,19 @@
             <div data-journal-zone="Boss Fight"><i aria-hidden="true"></i><span>Boss Fight</span><strong id="journalZoneBossCount">0</strong></div>
           </div>
         </div>
-        <p class="journal-empty-copy" id="journalLocationEmpty">Start Hunt Mode to begin tracking where Sprites are found.</p>
+        <p class="journal-map-instructions" id="journalMapInstructions">Tap a map area to filter your activity. Tap it again to show every area.</p>
+        <p class="journal-empty-copy" id="journalLocationEmpty">Start a Sprite Run to begin tracking where Sprites are found.</p>
+      </section>
+
+      <section class="journal-memories" aria-labelledby="journalMemoriesTitle">
+        <div class="journal-section-heading">
+          <div><span>Saved moments</span><h3 id="journalMemoriesTitle">Memories</h3></div>
+        </div>
+        <div class="journal-memory-list" id="journalMemoryList"></div>
+        <div class="feature-empty-state" id="journalMemoryEmpty">
+          <strong>No saved memories yet.</strong>
+          <span>Choose Add to Journal beside any activity to keep it here with an optional photo.</span>
+        </div>
       </section>
 
       <section class="journal-history" aria-labelledby="journalHistoryTitle">
@@ -528,21 +551,21 @@
     <section class="hunt-history-page" id="huntHistoryPage" aria-labelledby="huntHistoryTitle" hidden>
       <header class="feature-page-head">
         <span>Completed runs</span>
-        <h2 id="huntHistoryTitle">Hunt History</h2>
-        <p>Every completed Hunt is saved on this device and in your downloaded backup.</p>
+        <h2 id="huntHistoryTitle">Sprite Run History</h2>
+        <p>Every completed Sprite Run is saved on this device and in your downloaded backup.</p>
       </header>
-      <section class="hunt-history-summary" aria-label="Hunt totals">
-        <article><span>Hunts</span><strong id="huntHistoryTotal">0</strong></article>
+      <section class="hunt-history-summary" aria-label="Sprite Run totals">
+        <article><span>Runs</span><strong id="huntHistoryTotal">0</strong></article>
         <article><span>Sprites</span><strong id="huntHistorySpriteTotal">0</strong></article>
         <article><span>Dust earned</span><strong id="huntHistoryDustTotal">0</strong></article>
       </section>
       <div class="feature-page-actions">
-        <button class="danger-btn" id="clearHuntHistoryBtn" type="button">Clear Hunt History</button>
+        <button class="danger-btn" id="clearHuntHistoryBtn" type="button">Clear Run History</button>
       </div>
       <div class="hunt-history-list" id="huntHistoryList"></div>
       <div class="feature-empty-state" id="huntHistoryEmpty">
-        <strong>No completed Hunts yet.</strong>
-        <span>Start a Hunt from the Current Tracker and your results will appear here.</span>
+        <strong>No completed Sprite Runs yet.</strong>
+        <span>Start a Sprite Run from the Current Tracker and your results will appear here.</span>
       </div>
     </section>
 
@@ -566,7 +589,7 @@
         <div class="dust-receipt-list" id="dustReceiptList"></div>
         <div class="feature-empty-state" id="dustReceiptEmpty">
           <strong>No receipts yet.</strong>
-          <span>Hunt deposits and recorded Sprite Dust purchases will appear here.</span>
+          <span>Sprite Run deposits and recorded Sprite Dust purchases will appear here.</span>
         </div>
       </section>
     </section>
@@ -579,7 +602,10 @@
           <div>
             <p class="page-eyebrow" id="pageEyebrow"></p>
             <h2 id="activePageTitle">Rare Sprites</h2>
-            <p class="extraction-dust-description" id="extractionDustDescription"></p>
+            <details class="extraction-dust-details" id="extractionDustDetails">
+              <summary>Extraction Dust</summary>
+              <div class="extraction-dust-levels" id="extractionDustLevels"></div>
+            </details>
             <p id="pageDescription"></p>
           </div>
           <div class="page-head-actions">
@@ -735,7 +761,7 @@
       <div class="backup-tool-grid">
         <section>
           <h3>Save a backup</h3>
-          <p>Includes progress, collection dates, Journal activity, Hunt History, your active Hunt cart, and the Sprite Dust account.</p>
+          <p>Includes progress, collection dates, Journal memories and activity, Sprite Run History, your active Run cart, and the Sprite Dust account.</p>
           <button class="primary-btn" id="downloadBackupBtn" type="button">Download backup file</button>
         </section>
         <section>
@@ -789,8 +815,8 @@
 
   <dialog class="reset-dialog hunt-checkout-dialog" id="huntCheckoutDialog" aria-labelledby="huntCheckoutTitle">
     <form id="huntCheckoutForm">
-      <h2 id="huntCheckoutTitle" tabindex="-1">Hunt Checkout</h2>
-      <p id="huntCheckoutDuration">Hunt time: 00:00</p>
+      <h2 id="huntCheckoutTitle" tabindex="-1">Sprite Run Checkout</h2>
+      <p id="huntCheckoutDuration">Run time: 00:00</p>
       <div class="hunt-checkout-items" id="huntCheckoutItems"></div>
       <div class="hunt-checkout-total">
         <span>Deposit total</span>
@@ -798,7 +824,7 @@
       </div>
       <p class="hunt-checkout-warning" id="huntCheckoutWarning" hidden>Some Sprites do not have a Dust value saved for that level and will add 0 Dust.</p>
       <div class="dialog-actions">
-        <button id="continueHuntBtn" type="button">Continue Hunt</button>
+        <button id="continueHuntBtn" type="button">Continue Run</button>
         <button class="primary-btn" id="completeHuntOrderBtn" type="submit">Complete Order</button>
       </div>
     </form>
@@ -833,13 +859,31 @@
     </form>
   </dialog>
 
-  <dialog class="reset-dialog collection-count-reset-dialog" id="collectionCountResetDialog" aria-labelledby="collectionCountResetTitle">
-    <form id="collectionCountResetForm">
-      <h2 id="collectionCountResetTitle" tabindex="-1">Reset Times Collected?</h2>
-      <p id="collectionCountResetMessage">This will reset this Sprite's lifetime collection count to 0.</p>
+  <dialog class="reset-dialog journal-memory-dialog" id="journalMemoryDialog" aria-labelledby="journalMemoryTitle">
+    <form id="journalMemoryForm">
+      <h2 id="journalMemoryTitle" tabindex="-1">Add to Journal</h2>
+      <p id="journalMemorySprite">Save this moment as a memory.</p>
+      <label class="add-sprite-label" for="journalMemoryNote">Memory note <span>(optional)</span></label>
+      <textarea id="journalMemoryNote" maxlength="400" rows="4" placeholder="What made this Sprite memorable?"></textarea>
+      <label class="journal-memory-photo-picker" for="journalMemoryPhoto">
+        <span>Add a photo <small>(optional)</small></span>
+        <input id="journalMemoryPhoto" type="file" accept="image/png,image/jpeg,image/webp">
+      </label>
+      <img class="journal-memory-photo-preview" id="journalMemoryPhotoPreview" alt="Selected memory photo preview" hidden>
+      <p id="journalMemoryStatus" role="status" aria-live="polite"></p>
       <div class="dialog-actions">
-        <button id="cancelCollectionCountResetBtn" type="button">Cancel</button>
-        <button class="danger-btn" type="submit">Reset to 0</button>
+        <button id="cancelJournalMemoryBtn" type="button">Cancel</button>
+        <button class="primary-btn" type="submit">Save Memory</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog class="reset-dialog clear-data-dialog" id="clearDataDialog" aria-labelledby="clearDataTitle">
+    <form id="clearDataForm">
+      <h2 id="clearDataTitle" tabindex="-1">Are you sure?</h2>
+      <div class="dialog-actions clear-data-actions">
+        <button class="danger-btn" id="confirmClearDataBtn" type="submit">Yes</button>
+        <button id="cancelClearDataBtn" type="button">Cancel</button>
       </div>
     </form>
   </dialog>
@@ -848,6 +892,6 @@
   <noscript>This checklist needs JavaScript enabled to save progress.</noscript>
 
   <script src="data.js?v=82"></script>
-  <script src="app.js?v=123"></script>
+  <script src="app.js?v=124"></script>
 </body>
 </html>
