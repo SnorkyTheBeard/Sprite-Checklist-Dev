@@ -20,6 +20,8 @@
   const APP_VIEW_TRACKER = 'tracker';
   const APP_VIEW_VAULT = 'vault';
   const APP_VIEW_JOURNAL = 'journal';
+  const APP_VIEW_HUNTS = 'hunts';
+  const APP_VIEW_DUST = 'dust';
 
   function appStorageScope() {
     const firstPathPart = decodeURIComponent(location.pathname.split('/').filter(Boolean)[0] || 'root');
@@ -35,14 +37,19 @@
   const SPRITE_CARD_EDITS_KEY = `galaxy_sprite_tracker_sprite_cards_v1_${STORAGE_SCOPE}`;
   const PRE_RESTORE_PROGRESS_KEY = `galaxy_sprite_tracker_progress_before_restore_v1_${STORAGE_SCOPE}`;
   const HUNT_MODE_KEY = `galaxy_sprite_tracker_hunt_mode_v1_${STORAGE_SCOPE}`;
+  const HUNT_CART_KEY = `galaxy_sprite_tracker_hunt_cart_v1_${STORAGE_SCOPE}`;
+  const HUNT_HISTORY_KEY = `galaxy_sprite_tracker_hunt_history_v1_${STORAGE_SCOPE}`;
+  const DUST_LEDGER_KEY = `galaxy_sprite_tracker_dust_ledger_v1_${STORAGE_SCOPE}`;
   const JOURNAL_FALLBACK_KEY = `galaxy_sprite_tracker_collection_journal_v1_${STORAGE_SCOPE}`;
   const JOURNAL_DB_NAME = `galaxy-sprite-tracker-journal-${STORAGE_SCOPE}`;
   const JOURNAL_DB_STORE = 'entries';
   const MAX_JOURNAL_ENTRIES = 500;
   const LEGACY_PROGRESS_KEY = 'galaxy_sprite_tracker_progress_v1';
   const BACKUP_FORMAT = 'my-sprite-tracker-backup';
-  const BACKUP_VERSION = 2;
+  const BACKUP_VERSION = 3;
   const MAX_BACKUP_BYTES = 2 * 1024 * 1024;
+  const MAX_HUNT_HISTORY = 300;
+  const MAX_DUST_RECEIPTS = 1000;
   const SEASON_VIEWS = [...seasonCatalog.map((season) => season.id),SEASON_VIEW_ALL];
   const CARD_REORDER_MIME = 'application/x-sprite-card';
   const GITHUB_TOKEN_SESSION_KEY = `galaxy_sprite_tracker_github_token_${STORAGE_SCOPE}`;
@@ -108,20 +115,94 @@
     const hashView = decodeURIComponent(location.hash.slice(1)).toLowerCase();
     if (hashView === APP_VIEW_VAULT && SEASON_FEATURE_VISIBLE) return APP_VIEW_VAULT;
     if (hashView === APP_VIEW_JOURNAL) return APP_VIEW_JOURNAL;
+    if (hashView === APP_VIEW_HUNTS) return APP_VIEW_HUNTS;
+    if (hashView === APP_VIEW_DUST) return APP_VIEW_DUST;
     return APP_VIEW_TRACKER;
   }
 
   function loadHuntMode() {
     const saved = readJson(HUNT_MODE_KEY) || {};
     const startedAt = validIsoDate(saved.startedAt);
+    const sessionStartedAt = validIsoDate(saved.sessionStartedAt) || startedAt;
     const lastDurationMs = Number.isFinite(Number(saved.lastDurationMs))
       ? Math.max(0,Math.min(Number(saved.lastDurationMs),7 * 24 * 60 * 60 * 1000))
       : 0;
     return {
       active:saved.active === true && Boolean(startedAt),
       startedAt,
+      sessionStartedAt,
       lastDurationMs
     };
+  }
+
+  function normalizeHuntCart(value) {
+    if (!Array.isArray(value)) return [];
+    return value.slice(0,250).flatMap((item) => {
+      if (!item || typeof item !== 'object') return [];
+      const familyId = String(item.familyId || '').slice(0,200);
+      const variantId = String(item.variantId || '').slice(0,200);
+      if (!familyId || !variantId) return [];
+      return [{
+        id:String(item.id || `${Date.now()}-${Math.random().toString(36).slice(2)}`).slice(0,200),
+        familyId,
+        variantId,
+        level:Math.max(1,Math.min(5,Math.round(Number(item.level) || 1))),
+        addedAt:validIsoDate(item.addedAt) || new Date().toISOString()
+      }];
+    });
+  }
+
+  function normalizeHuntHistory(value) {
+    if (!Array.isArray(value)) return [];
+    return value.slice(0,MAX_HUNT_HISTORY).flatMap((hunt) => {
+      if (!hunt || typeof hunt !== 'object') return [];
+      const completedAt = validIsoDate(hunt.completedAt);
+      if (!completedAt) return [];
+      const items = Array.isArray(hunt.items) ? hunt.items.slice(0,250).flatMap((item) => {
+        if (!item || typeof item !== 'object') return [];
+        return [{
+          familyId:String(item.familyId || '').slice(0,200),
+          variantId:String(item.variantId || '').slice(0,200),
+          familyName:String(item.familyName || 'Sprite').slice(0,80),
+          variantName:String(item.variantName || 'Variant').slice(0,80),
+          rarity:rarities.includes(item.rarity) ? item.rarity : defaultRarity,
+          level:Math.max(1,Math.min(5,Math.round(Number(item.level) || 1))),
+          dust:Math.max(0,Math.min(1000000,Math.round(Number(item.dust) || 0)))
+        }];
+      }) : [];
+      return [{
+        id:String(hunt.id || `${Date.parse(completedAt)}-hunt`).slice(0,200),
+        startedAt:validIsoDate(hunt.startedAt),
+        completedAt,
+        durationMs:Math.max(0,Math.min(7 * 24 * 60 * 60 * 1000,Number(hunt.durationMs) || 0)),
+        dustEarned:Math.max(0,Math.min(100000000,Math.round(Number(hunt.dustEarned) || 0))),
+        items
+      }];
+    });
+  }
+
+  function normalizeDustLedger(value) {
+    if (!Array.isArray(value)) return [];
+    return value.slice(0,MAX_DUST_RECEIPTS).flatMap((entry) => {
+      if (!entry || typeof entry !== 'object') return [];
+      const createdAt = validIsoDate(entry.createdAt);
+      const type = entry.type === 'purchase' ? 'purchase' : (entry.type === 'deposit' ? 'deposit' : '');
+      const amount = Math.max(0,Math.min(100000000,Math.round(Number(entry.amount) || 0)));
+      if (!createdAt || !type || !amount) return [];
+      return [{
+        id:String(entry.id || `${Date.parse(createdAt)}-${type}`).slice(0,200),
+        type,
+        amount,
+        note:String(entry.note || (type === 'deposit' ? 'Hunt deposit' : 'Sprite Dust purchase')).slice(0,100),
+        createdAt,
+        huntId:String(entry.huntId || '').slice(0,200)
+      }];
+    });
+  }
+
+  function loadStoredArray(key,normalizer) {
+    try { return normalizer(JSON.parse(localStorage.getItem(key) || '[]')); }
+    catch { return []; }
   }
 
   function loadRecentMissingChanges() {
@@ -451,6 +532,9 @@
   let pendingLocationDetails = null;
   let huntMode = loadHuntMode();
   let huntTimerInterval = 0;
+  let huntCart = loadStoredArray(HUNT_CART_KEY,normalizeHuntCart);
+  let huntHistory = loadStoredArray(HUNT_HISTORY_KEY,normalizeHuntHistory);
+  let dustLedger = loadStoredArray(DUST_LEDGER_KEY,normalizeDustLedger);
 
   const tabsEl = document.getElementById('rarityTabs');
   const collectionsEl = document.getElementById('collections');
@@ -472,6 +556,8 @@
   const closeAppMenuBtn = document.getElementById('closeAppMenuBtn');
   const seasonVaultPage = document.getElementById('seasonVaultPage');
   const collectionJournalPage = document.getElementById('collectionJournalPage');
+  const huntHistoryPage = document.getElementById('huntHistoryPage');
+  const spriteDustPage = document.getElementById('spriteDustPage');
   const journalTopLocation = document.getElementById('journalTopLocation');
   const journalTopLocationCount = document.getElementById('journalTopLocationCount');
   const journalLocationsLogged = document.getElementById('journalLocationsLogged');
@@ -493,6 +579,34 @@
   const locationMasteredAtLabel = document.getElementById('locationMasteredAtLabel');
   const huntModeBtn = document.getElementById('huntModeBtn');
   const huntTimer = document.getElementById('huntTimer');
+  const huntCartTray = document.getElementById('huntCartTray');
+  const huntCartSummary = document.getElementById('huntCartSummary');
+  const huntCheckoutBtn = document.getElementById('huntCheckoutBtn');
+  const huntCheckoutDialog = document.getElementById('huntCheckoutDialog');
+  const huntCheckoutForm = document.getElementById('huntCheckoutForm');
+  const huntCheckoutTitle = document.getElementById('huntCheckoutTitle');
+  const huntCheckoutDuration = document.getElementById('huntCheckoutDuration');
+  const huntCheckoutItems = document.getElementById('huntCheckoutItems');
+  const huntCheckoutDustTotal = document.getElementById('huntCheckoutDustTotal');
+  const huntCheckoutWarning = document.getElementById('huntCheckoutWarning');
+  const completeHuntOrderBtn = document.getElementById('completeHuntOrderBtn');
+  const huntHistoryList = document.getElementById('huntHistoryList');
+  const huntHistoryEmpty = document.getElementById('huntHistoryEmpty');
+  const huntHistoryTotal = document.getElementById('huntHistoryTotal');
+  const huntHistorySpriteTotal = document.getElementById('huntHistorySpriteTotal');
+  const huntHistoryDustTotal = document.getElementById('huntHistoryDustTotal');
+  const spriteDustBalanceBtn = document.getElementById('spriteDustBalanceBtn');
+  const spriteDustBalance = document.getElementById('spriteDustBalance');
+  const spriteDustAccountBalance = document.getElementById('spriteDustAccountBalance');
+  const dustReceiptList = document.getElementById('dustReceiptList');
+  const dustReceiptEmpty = document.getElementById('dustReceiptEmpty');
+  const dustPurchaseDialog = document.getElementById('dustPurchaseDialog');
+  const dustPurchaseForm = document.getElementById('dustPurchaseForm');
+  const dustPurchaseTitle = document.getElementById('dustPurchaseTitle');
+  const dustPurchaseAmount = document.getElementById('dustPurchaseAmount');
+  const dustPurchaseNote = document.getElementById('dustPurchaseNote');
+  const dustPurchaseStatus = document.getElementById('dustPurchaseStatus');
+  const floatingHomeBtn = document.getElementById('floatingHomeBtn');
   const spriteSearchForm = document.getElementById('spriteSearchForm');
   const spriteSearchInput = document.getElementById('spriteSearchInput');
   const spriteSearchResults = document.getElementById('spriteSearchResults');
@@ -555,6 +669,18 @@
     try { localStorage.setItem(HUNT_MODE_KEY,JSON.stringify(huntMode)); } catch { /* Hunt Mode can continue for this visit. */ }
   }
 
+  function saveHuntCart() {
+    try { localStorage.setItem(HUNT_CART_KEY,JSON.stringify(huntCart)); } catch { showToast('The Hunt cart could not be saved.'); }
+  }
+
+  function saveHuntHistory() {
+    try { localStorage.setItem(HUNT_HISTORY_KEY,JSON.stringify(huntHistory)); } catch { showToast('Hunt History could not be saved.'); }
+  }
+
+  function saveDustLedger() {
+    try { localStorage.setItem(DUST_LEDGER_KEY,JSON.stringify(dustLedger)); } catch { showToast('The Sprite Dust account could not be saved.'); }
+  }
+
   function huntElapsedMs() {
     if (!huntMode.active || !huntMode.startedAt) return huntMode.lastDurationMs || 0;
     return Math.max(0,Date.now() - Date.parse(huntMode.startedAt));
@@ -582,24 +708,254 @@
     huntModeBtn.setAttribute('aria-pressed',String(huntMode.active));
     huntModeBtn.setAttribute('aria-label',huntMode.active ? 'End Hunt' : 'Start Hunt');
     huntModeBtn.title = huntMode.active ? 'End Hunt' : 'Start Hunt';
+    document.body.classList.toggle('hunt-mode-active',huntMode.active);
     updateHuntTimer();
+    renderHuntCartTray();
     if (huntMode.active) huntTimerInterval = window.setInterval(updateHuntTimer,1000);
   }
 
   function toggleHuntMode() {
     if (huntMode.active) {
-      huntMode.lastDurationMs = huntElapsedMs();
-      huntMode.active = false;
-      huntMode.startedAt = '';
-      saveHuntMode();
-      applyHuntMode();
-      showToast(`Hunt ended · ${formatHuntDuration(huntMode.lastDurationMs)}`);
+      if (huntCart.length) openHuntCheckout();
+      else finishEmptyHunt();
       return;
     }
-    huntMode = { active:true, startedAt:new Date().toISOString(), lastDurationMs:0 };
+    const resume = Boolean(huntCart.length && huntMode.lastDurationMs);
+    const now = Date.now();
+    huntMode = {
+      active:true,
+      startedAt:new Date(now - (resume ? huntMode.lastDurationMs : 0)).toISOString(),
+      sessionStartedAt:resume ? (huntMode.sessionStartedAt || new Date(now - huntMode.lastDurationMs).toISOString()) : new Date(now).toISOString(),
+      lastDurationMs:resume ? huntMode.lastDurationMs : 0
+    };
     saveHuntMode();
     applyHuntMode();
-    showToast('Hunt started · locations will be offered when Sprites are collected');
+    if (spriteSearchInput.value.trim()) renderSpriteSearchResults();
+    showToast(resume ? 'Hunt resumed' : 'Hunt started · add Sprites to your cart');
+  }
+
+  function huntItemInfo(item) {
+    const family = allFamilies().find((entry) => entry.id === item.familyId);
+    const variant = family && orderedVariants(family).find((entry) => entry.id === item.variantId);
+    if (!family || !variant) return null;
+    return {
+      family,
+      variant,
+      familyName:familyView(family).name || 'Sprite',
+      variantName:variantView(family,variant).name || 'Variant',
+      rarity:familyRarity(family),
+      dust:spriteDustAtLevel(family,variant,item.level)
+    };
+  }
+
+  function huntCartDustTotal() {
+    return huntCart.reduce((total,item) => total + (huntItemInfo(item)?.dust || 0),0);
+  }
+
+  function renderHuntCartTray() {
+    const count = huntCart.length;
+    huntCartTray.hidden = !huntMode.active && !count;
+    huntCartSummary.textContent = `${count} ${count === 1 ? 'Sprite' : 'Sprites'} · ${formatDust(huntCartDustTotal())} Dust`;
+    huntCheckoutBtn.disabled = !count;
+    huntCheckoutBtn.textContent = huntMode.active ? 'Checkout' : 'Review cart';
+  }
+
+  function addSpriteToHuntCart(family,variant) {
+    if (!huntMode.active) return showToast('Start Hunt Mode before adding Sprites to the cart.');
+    huntCart.push({
+      id:`${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      familyId:family.id,
+      variantId:variant.id,
+      level:1,
+      addedAt:new Date().toISOString()
+    });
+    saveHuntCart();
+    renderHuntCartTray();
+    if (spriteSearchInput.value.trim()) {
+      spriteSearchInput.value = '';
+      clearSpriteSearchBtn.hidden = true;
+      closeSpriteSearchResults();
+      spriteSearchInput.focus({ preventScroll:true });
+    }
+    showToast(`${familyView(family).name} · ${variantView(family,variant).name} added to Hunt cart`);
+  }
+
+  function freezeHuntTimer() {
+    if (huntMode.active) huntMode.lastDurationMs = huntElapsedMs();
+    huntMode.active = false;
+    huntMode.startedAt = '';
+    saveHuntMode();
+    applyHuntMode();
+  }
+
+  function resumeHuntFromCheckout() {
+    if (huntCheckoutDialog.open) huntCheckoutDialog.close();
+    if (huntMode.active) return;
+    const elapsed = Math.max(0,huntMode.lastDurationMs || 0);
+    huntMode.active = true;
+    huntMode.startedAt = new Date(Date.now() - elapsed).toISOString();
+    huntMode.sessionStartedAt ||= new Date(Date.now() - elapsed).toISOString();
+    saveHuntMode();
+    applyHuntMode();
+    showToast('Hunt resumed');
+  }
+
+  function updateHuntCartLevel(itemId,level) {
+    const item = huntCart.find((entry) => entry.id === itemId);
+    if (!item) return;
+    item.level = Math.max(1,Math.min(5,Math.round(Number(level) || 1)));
+    saveHuntCart();
+    renderHuntCheckout();
+    renderHuntCartTray();
+  }
+
+  function removeHuntCartItem(itemId) {
+    huntCart = huntCart.filter((item) => item.id !== itemId);
+    saveHuntCart();
+    renderHuntCheckout();
+    renderHuntCartTray();
+  }
+
+  function renderHuntCheckout() {
+    huntCheckoutItems.replaceChildren();
+    let missingDust = false;
+    huntCart.forEach((item) => {
+      const info = huntItemInfo(item);
+      if (!info) return;
+      if (!info.dust) missingDust = true;
+      const row = document.createElement('article');
+      row.className = 'hunt-checkout-item';
+      row.dataset.rarity = info.rarity;
+      const copy = document.createElement('div');
+      const name = document.createElement('strong');
+      const detail = document.createElement('span');
+      name.textContent = `${info.familyName} · ${info.variantName}`;
+      detail.textContent = info.rarity;
+      copy.append(name,detail);
+      const levelLabel = document.createElement('label');
+      const levelCaption = document.createElement('span');
+      const levelSelect = document.createElement('select');
+      levelCaption.textContent = 'Level';
+      [1,2,3,4,5].forEach((level) => {
+        const option = document.createElement('option');
+        option.value = String(level);
+        option.textContent = String(level);
+        option.selected = item.level === level;
+        levelSelect.appendChild(option);
+      });
+      levelSelect.addEventListener('change',() => updateHuntCartLevel(item.id,levelSelect.value));
+      levelLabel.append(levelCaption,levelSelect);
+      const dust = document.createElement('strong');
+      dust.className = 'hunt-checkout-item-dust';
+      dust.textContent = `${formatDust(info.dust)} Dust`;
+      const remove = document.createElement('button');
+      remove.type = 'button';
+      remove.className = 'hunt-checkout-remove';
+      remove.textContent = '×';
+      remove.setAttribute('aria-label',`Remove ${info.familyName} ${info.variantName} from Hunt cart`);
+      remove.addEventListener('click',() => removeHuntCartItem(item.id));
+      row.append(copy,levelLabel,dust,remove);
+      huntCheckoutItems.appendChild(row);
+    });
+    huntCheckoutDuration.textContent = `Hunt time: ${formatHuntDuration(huntMode.lastDurationMs || huntElapsedMs())}`;
+    huntCheckoutDustTotal.textContent = formatDust(huntCartDustTotal());
+    huntCheckoutWarning.hidden = !missingDust;
+    completeHuntOrderBtn.disabled = !huntCart.length;
+  }
+
+  function openHuntCheckout() {
+    if (!huntCart.length) return showToast('Your Hunt cart is empty.');
+    freezeHuntTimer();
+    renderHuntCheckout();
+    document.documentElement.classList.add('hunt-checkout-open');
+    document.body.classList.add('hunt-checkout-open');
+    if (!huntCheckoutDialog.open) huntCheckoutDialog.showModal();
+    requestAnimationFrame(() => {
+      try { huntCheckoutTitle.focus({ preventScroll:true }); }
+      catch { huntCheckoutTitle.focus(); }
+    });
+  }
+
+  function huntHistoryEntry(items,dustEarned) {
+    const completedAt = new Date().toISOString();
+    return {
+      id:`hunt-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      startedAt:huntMode.sessionStartedAt || '',
+      completedAt,
+      durationMs:Math.max(0,huntMode.lastDurationMs || huntElapsedMs()),
+      dustEarned:Math.max(0,Math.round(dustEarned || 0)),
+      items
+    };
+  }
+
+  function resetHuntSession() {
+    huntCart = [];
+    huntMode = { active:false, startedAt:'', sessionStartedAt:'', lastDurationMs:0 };
+    saveHuntCart();
+    saveHuntMode();
+    applyHuntMode();
+  }
+
+  function finishEmptyHunt() {
+    freezeHuntTimer();
+    const hunt = huntHistoryEntry([],0);
+    huntHistory.unshift(hunt);
+    huntHistory = normalizeHuntHistory(huntHistory);
+    saveHuntHistory();
+    resetHuntSession();
+    renderHuntHistory();
+    showToast(`Hunt saved · ${formatHuntDuration(hunt.durationMs)}`);
+  }
+
+  function completeHuntOrder(event) {
+    event.preventDefault();
+    if (!huntCart.length) return;
+    freezeHuntTimer();
+    const completedAt = new Date().toISOString();
+    const historyItems = [];
+    huntCart.forEach((item) => {
+      const info = huntItemInfo(item);
+      if (!info) return;
+      const current = variantState(item.familyId,item.variantId);
+      const before = snapshotVariantState(current);
+      current.collected = true;
+      current.collectedAt ||= completedAt;
+      current.collectionCount = Math.min(1000000,(Number(current.collectionCount) || 0) + 1);
+      recordJournalEntry(before.collected ? 'recollected' : 'collected',info.family,info.variant,before,current,{ timestamp:completedAt });
+      historyItems.push({
+        familyId:item.familyId,
+        variantId:item.variantId,
+        familyName:info.familyName,
+        variantName:info.variantName,
+        rarity:info.rarity,
+        level:item.level,
+        dust:info.dust
+      });
+    });
+    const dustEarned = historyItems.reduce((total,item) => total + item.dust,0);
+    const hunt = huntHistoryEntry(historyItems,dustEarned);
+    huntHistory.unshift(hunt);
+    huntHistory = normalizeHuntHistory(huntHistory);
+    if (dustEarned > 0) {
+      dustLedger.unshift({
+        id:`deposit-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        type:'deposit',
+        amount:dustEarned,
+        note:`Hunt deposit · ${historyItems.length} ${historyItems.length === 1 ? 'Sprite' : 'Sprites'}`,
+        createdAt:completedAt,
+        huntId:hunt.id
+      });
+      dustLedger = normalizeDustLedger(dustLedger);
+    }
+    saveProgress();
+    saveHuntHistory();
+    saveDustLedger();
+    scheduleJournalSave();
+    if (huntCheckoutDialog.open) huntCheckoutDialog.close();
+    resetHuntSession();
+    renderAll();
+    goHomeToRare({ focusSearch:true, announce:false });
+    showToast(`Order complete · ${historyItems.length} Sprites · ${formatDust(dustEarned)} Dust`);
   }
 
   function currentSpriteViewMode() {
@@ -659,16 +1015,23 @@
   function applyAppView() {
     const vaultOpen = appView === APP_VIEW_VAULT;
     const journalOpen = appView === APP_VIEW_JOURNAL;
+    const huntsOpen = appView === APP_VIEW_HUNTS;
+    const dustOpen = appView === APP_VIEW_DUST;
+    const featureOpen = journalOpen || huntsOpen || dustOpen;
     document.body.classList.toggle('vault-view',vaultOpen);
     document.body.classList.toggle('journal-view',journalOpen);
+    document.body.classList.toggle('hunt-history-view',huntsOpen);
+    document.body.classList.toggle('dust-account-view',dustOpen);
     document.querySelectorAll('.tracker-primary-view').forEach((element) => {
-      element.hidden = vaultOpen || journalOpen;
+      element.hidden = vaultOpen || featureOpen;
     });
     seasonVaultPage.hidden = !SEASON_FEATURE_VISIBLE || !vaultOpen;
     collectionJournalPage.hidden = !journalOpen;
-    tabsEl.hidden = journalOpen;
-    document.getElementById('mainContent').hidden = journalOpen;
-    document.querySelector('.app-shell > footer').hidden = journalOpen;
+    huntHistoryPage.hidden = !huntsOpen;
+    spriteDustPage.hidden = !dustOpen;
+    tabsEl.hidden = featureOpen;
+    document.getElementById('mainContent').hidden = featureOpen;
+    document.querySelector('.app-shell > footer').hidden = featureOpen;
     document.querySelectorAll('[data-app-view]').forEach((button) => {
       const selected = button.dataset.appView === appView;
       button.classList.toggle('is-active',selected);
@@ -680,7 +1043,7 @@
   function setAppView(view,{ announce = true, season = null } = {}) {
     const next = view === APP_VIEW_VAULT && SEASON_FEATURE_VISIBLE
       ? APP_VIEW_VAULT
-      : (view === APP_VIEW_JOURNAL ? APP_VIEW_JOURNAL : APP_VIEW_TRACKER);
+      : ([APP_VIEW_JOURNAL,APP_VIEW_HUNTS,APP_VIEW_DUST].includes(view) ? view : APP_VIEW_TRACKER);
     const changed = appView !== next;
     if (next === APP_VIEW_VAULT && season !== null) vaultSeasonView = sanitizeSeasonView(season);
     appView = next;
@@ -695,15 +1058,43 @@
       ? '#vault'
       : (appView === APP_VIEW_JOURNAL
           ? '#journal'
-          : (isUnownedPage() ? `#${missingView}` : `#${activeRarity.toLowerCase()}`));
+          : (appView === APP_VIEW_HUNTS
+              ? '#hunts'
+              : (appView === APP_VIEW_DUST
+                  ? '#dust'
+                  : (isUnownedPage() ? `#${missingView}` : `#${activeRarity.toLowerCase()}`))));
     if (location.hash !== viewHash) history.replaceState({ appView, rarity:activeRarity },'',viewHash);
     if (changed) window.scrollTo({ top:0, behavior:'auto' });
     closeAppMenu();
     if (changed) playAppViewTransition();
     if (announce && changed) {
-      const label = appView === APP_VIEW_VAULT ? 'Sprite Vault' : (appView === APP_VIEW_JOURNAL ? 'Collection Journal' : 'Current Tracker');
+      const label = appView === APP_VIEW_VAULT
+        ? 'Sprite Vault'
+        : (appView === APP_VIEW_JOURNAL
+            ? 'Collection Journal'
+            : (appView === APP_VIEW_HUNTS ? 'Hunt History' : (appView === APP_VIEW_DUST ? 'Sprite Dust' : 'Current Tracker')));
       showToast(label);
     }
+  }
+
+  function goHomeToRare({ focusSearch = false, announce = true } = {}) {
+    if (appMenuDialog.open) closeAppMenu();
+    if (huntCheckoutDialog.open) huntCheckoutDialog.close();
+    if (dustPurchaseDialog.open) dustPurchaseDialog.close();
+    appView = APP_VIEW_TRACKER;
+    seasonView = CURRENT_SEASON_ID;
+    activeRarity = defaultRarity;
+    missingView = 'unowned';
+    renderAll();
+    if (location.hash !== '#rare') history.replaceState({ appView:APP_VIEW_TRACKER, rarity:defaultRarity },'','#rare');
+    requestAnimationFrame(() => {
+      window.scrollTo({ top:0, left:0, behavior:'auto' });
+      if (focusSearch) {
+        try { spriteSearchInput.focus({ preventScroll:true }); }
+        catch { spriteSearchInput.focus(); }
+      }
+    });
+    if (announce) showToast('Rare Current Tracker');
   }
 
   function applySeasonViewControls() {
@@ -780,6 +1171,7 @@
     if (!Array.isArray(edits.publishedAdded)) edits.publishedAdded = [];
     if (!edits.images || typeof edits.images !== 'object' || Array.isArray(edits.images)) edits.images = {};
     if (!edits.percentages || typeof edits.percentages !== 'object' || Array.isArray(edits.percentages)) edits.percentages = {};
+    if (!edits.dustLevels || typeof edits.dustLevels !== 'object' || Array.isArray(edits.dustLevels)) edits.dustLevels = {};
     if (!edits.archived || typeof edits.archived !== 'object' || Array.isArray(edits.archived)) edits.archived = {};
     return edits;
   }
@@ -839,6 +1231,7 @@
       name:hasOwn(custom,'name') ? custom.name : variant.name,
       image:hasOwn(cardEdits.images,variant.id) ? cardEdits.images[variant.id] : (hasOwn(custom,'image') ? custom.image : variant.image),
       rarityPercentage:hasOwn(cardEdits.percentages,variant.id) ? cardEdits.percentages[variant.id] : String(custom.rarityPercentage || ''),
+      dustLevels:normalizeDustLevels(hasOwn(cardEdits.dustLevels,variant.id) ? cardEdits.dustLevels[variant.id] : custom.dustLevels),
       visible:hasOwn(custom,'visible') ? Boolean(custom.visible) : true,
       deleted:Boolean(custom.deleted) || (Array.isArray(cardEdits.deleted) && cardEdits.deleted.includes(variant.id)),
       seasonId:SEASON_VIEWS.includes(cardEdits.seasons?.[variant.id])
@@ -1028,7 +1421,13 @@
   function variantState(familyId,variantId) {
     state[familyId] ||= {};
     state[familyId][variantId] ||= { collected:false, mastered:false };
-    return state[familyId][variantId];
+    const current = state[familyId][variantId];
+    if (!Number.isFinite(Number(current.collectionCount)) || Number(current.collectionCount) < 0) {
+      current.collectionCount = current.collected ? 1 : 0;
+    } else {
+      current.collectionCount = Math.min(1000000,Math.round(Number(current.collectionCount)));
+    }
+    return current;
   }
 
   function validIsoDate(value) {
@@ -1065,7 +1464,8 @@
       mastered,
       collectedAt:validIsoDate(current?.collectedAt),
       masteredAt:validIsoDate(current?.masteredAt),
-      locationFound:cleanLocation(current?.locationFound)
+      locationFound:cleanLocation(current?.locationFound),
+      collectionCount:Math.max(0,Math.min(1000000,Math.round(Number(current?.collectionCount) || (current?.collected ? 1 : 0))))
     };
   }
 
@@ -1079,6 +1479,7 @@
     else delete current.masteredAt;
     if (clean.locationFound) current.locationFound = clean.locationFound;
     else delete current.locationFound;
+    current.collectionCount = clean.collectionCount;
     if (!current.collected) {
       current.mastered = false;
       delete current.collectedAt;
@@ -1160,7 +1561,7 @@
       if (!entry || typeof entry !== 'object' || !safeBackupKey(entry.familyId) || !safeBackupKey(entry.variantId)) return [];
       const timestamp = validIsoDate(entry.timestamp);
       if (!timestamp) return [];
-      const type = ['collected','uncollected','mastered','unmastered','details'].includes(entry.type) ? entry.type : '';
+      const type = ['collected','recollected','uncollected','mastered','unmastered','details'].includes(entry.type) ? entry.type : '';
       if (!type) return [];
       return [{
         id:String(entry.id || journalId()).slice(0,160),
@@ -1269,6 +1670,7 @@
   function journalActionText(type) {
     return ({
       collected:'Added to collection',
+      recollected:'Collected again',
       uncollected:'Removed from collection',
       mastered:'Marked Mastered',
       unmastered:'Mastery removed',
@@ -1278,7 +1680,7 @@
 
   function journalFilterMatches(entry,filter) {
     if (filter === 'all') return true;
-    if (filter === 'collected') return entry.type === 'collected';
+    if (filter === 'collected') return entry.type === 'collected' || entry.type === 'recollected';
     if (filter === 'mastered') return entry.type === 'mastered';
     if (filter === 'removed') return entry.type === 'uncollected' || entry.type === 'unmastered';
     return entry.type === filter;
@@ -1400,6 +1802,157 @@
       row.append(thumb,copy,actions);
       journalEntryList.appendChild(row);
     });
+  }
+
+  function dustBalanceValue() {
+    return dustLedger.reduce((balance,receipt) => {
+      const direction = receipt.type === 'purchase' ? -1 : 1;
+      return balance + (direction * receipt.amount);
+    },0);
+  }
+
+  function renderHuntHistory() {
+    if (!huntHistoryPage) return;
+    huntHistory = normalizeHuntHistory(huntHistory);
+    const spriteTotal = huntHistory.reduce((total,hunt) => total + hunt.items.length,0);
+    const dustTotal = huntHistory.reduce((total,hunt) => total + hunt.dustEarned,0);
+    huntHistoryTotal.textContent = String(huntHistory.length);
+    huntHistorySpriteTotal.textContent = String(spriteTotal);
+    huntHistoryDustTotal.textContent = formatDust(dustTotal);
+    huntHistoryList.replaceChildren();
+    huntHistoryEmpty.hidden = Boolean(huntHistory.length);
+    document.getElementById('clearHuntHistoryBtn').disabled = !huntHistory.length;
+
+    huntHistory.forEach((hunt,index) => {
+      const card = document.createElement('article');
+      card.className = 'hunt-history-card';
+      const header = document.createElement('header');
+      const copy = document.createElement('div');
+      const title = document.createElement('h3');
+      const time = document.createElement('time');
+      const remove = document.createElement('button');
+      title.textContent = `Hunt ${huntHistory.length - index}`;
+      time.dateTime = hunt.completedAt;
+      time.textContent = formatJournalDate(hunt.completedAt);
+      copy.append(title,time);
+      remove.type = 'button';
+      remove.className = 'hunt-history-delete';
+      remove.textContent = 'Delete';
+      remove.setAttribute('aria-label',`Delete Hunt from ${time.textContent}`);
+      remove.addEventListener('click',() => {
+        if (!window.confirm('Delete this Hunt from Hunt History? Its Sprite Dust receipt will stay in the account.')) return;
+        huntHistory = huntHistory.filter((entry) => entry.id !== hunt.id);
+        saveHuntHistory();
+        renderHuntHistory();
+        showToast('Hunt deleted');
+      });
+      header.append(copy,remove);
+
+      const metrics = document.createElement('div');
+      metrics.className = 'hunt-history-metrics';
+      const duration = document.createElement('strong');
+      const sprites = document.createElement('strong');
+      const dust = document.createElement('strong');
+      duration.innerHTML = `<span>Time</span>${formatHuntDuration(hunt.durationMs)}`;
+      sprites.innerHTML = `<span>Sprites</span>${hunt.items.length}`;
+      dust.innerHTML = `<span>Dust</span>${formatDust(hunt.dustEarned)}`;
+      metrics.append(duration,sprites,dust);
+
+      const items = document.createElement('div');
+      items.className = 'hunt-history-items';
+      if (!hunt.items.length) {
+        const empty = document.createElement('span');
+        empty.textContent = 'Timer-only Hunt · no Sprites checked out';
+        items.appendChild(empty);
+      } else {
+        hunt.items.forEach((item) => {
+          const row = document.createElement('span');
+          row.dataset.rarity = item.rarity;
+          row.textContent = `${item.familyName} · ${item.variantName} · L${item.level} · ${formatDust(item.dust)} Dust`;
+          items.appendChild(row);
+        });
+      }
+      card.append(header,metrics,items);
+      huntHistoryList.appendChild(card);
+    });
+  }
+
+  function renderDustAccount() {
+    if (!spriteDustPage) return;
+    dustLedger = normalizeDustLedger(dustLedger);
+    const balance = Math.max(0,dustBalanceValue());
+    spriteDustBalance.textContent = formatDust(balance);
+    spriteDustAccountBalance.textContent = formatDust(balance);
+    dustReceiptList.replaceChildren();
+    dustReceiptEmpty.hidden = Boolean(dustLedger.length);
+    document.getElementById('recordDustPurchaseBtn').disabled = balance < 1;
+
+    dustLedger.forEach((receipt) => {
+      const row = document.createElement('article');
+      row.className = `dust-receipt dust-receipt-${receipt.type}`;
+      const icon = document.createElement('span');
+      const copy = document.createElement('div');
+      const title = document.createElement('strong');
+      const time = document.createElement('time');
+      const amount = document.createElement('strong');
+      icon.className = 'dust-receipt-icon';
+      icon.textContent = receipt.type === 'deposit' ? '↓' : '↑';
+      title.textContent = receipt.note;
+      time.dateTime = receipt.createdAt;
+      time.textContent = formatJournalDate(receipt.createdAt);
+      copy.append(title,time);
+      amount.className = 'dust-receipt-amount';
+      amount.textContent = `${receipt.type === 'deposit' ? '+' : '−'}${formatDust(receipt.amount)}`;
+      row.append(icon,copy,amount);
+      dustReceiptList.appendChild(row);
+    });
+  }
+
+  function openDustPurchaseDialog() {
+    const balance = Math.max(0,dustBalanceValue());
+    if (!balance) return showToast('There is no Sprite Dust available to spend.');
+    dustPurchaseForm.reset();
+    dustPurchaseAmount.max = String(balance);
+    dustPurchaseStatus.textContent = `Available: ${formatDust(balance)} Dust`;
+    dustPurchaseStatus.dataset.state = '';
+    document.documentElement.classList.add('dust-purchase-open');
+    document.body.classList.add('dust-purchase-open');
+    if (!dustPurchaseDialog.open) dustPurchaseDialog.showModal();
+    requestAnimationFrame(() => {
+      try { dustPurchaseTitle.focus({ preventScroll:true }); }
+      catch { dustPurchaseTitle.focus(); }
+    });
+  }
+
+  function recordDustPurchase(event) {
+    event.preventDefault();
+    const amount = Math.round(Number(dustPurchaseAmount.value));
+    const note = dustPurchaseNote.value.trim();
+    const balance = Math.max(0,dustBalanceValue());
+    if (!Number.isFinite(amount) || amount < 1) {
+      dustPurchaseStatus.dataset.state = 'error';
+      dustPurchaseStatus.textContent = 'Enter a whole Sprite Dust amount greater than 0.';
+      return;
+    }
+    if (amount > balance) {
+      dustPurchaseStatus.dataset.state = 'error';
+      dustPurchaseStatus.textContent = `That is more than the available ${formatDust(balance)} Dust.`;
+      return;
+    }
+    if (!note) return;
+    dustLedger.unshift({
+      id:`purchase-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      type:'purchase',
+      amount,
+      note,
+      createdAt:new Date().toISOString(),
+      huntId:''
+    });
+    dustLedger = normalizeDustLedger(dustLedger);
+    saveDustLedger();
+    dustPurchaseDialog.close();
+    renderDustAccount();
+    showToast(`${formatDust(amount)} Sprite Dust purchase recorded`);
   }
 
   function undoJournalEntry(entryId) {
@@ -1634,6 +2187,45 @@
     return true;
   }
 
+  function normalizeDustLevels(value) {
+    const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+    return Object.fromEntries([1,2,3,4,5].flatMap((level) => {
+      const amount = Number(source[level] ?? source[String(level)]);
+      if (!Number.isFinite(amount) || amount < 0) return [];
+      return [[String(level),Math.min(1000000,Math.round(amount))]];
+    }));
+  }
+
+  function saveSpriteDustLevels(family,variant,fields) {
+    const levels = {};
+    let invalid = false;
+    [1,2,3,4,5].forEach((level) => {
+      const raw = String(fields[level]?.value || '').trim();
+      if (!raw) return;
+      if (!/^\d{1,7}$/.test(raw) || Number(raw) > 1000000) invalid = true;
+      else levels[String(level)] = Math.round(Number(raw));
+    });
+    if (invalid) {
+      showToast('Enter whole Sprite Dust amounts from 0 to 1,000,000.');
+      return false;
+    }
+    const previousEdits = cloneJson(spriteCardEdits);
+    familyCardEdits(family.id).dustLevels[variant.id] = levels;
+    if (!saveCardEditOrRestore(previousEdits)) return false;
+    renderCollections();
+    updateCounters();
+    showToast(Object.keys(levels).length ? `${variantView(family,variant).name}: Dust values saved` : 'Sprite Dust values removed');
+    return true;
+  }
+
+  function spriteDustAtLevel(family,variant,level = 1) {
+    return Number(variantView(family,variant).dustLevels[String(Math.max(1,Math.min(5,Number(level) || 1)))]) || 0;
+  }
+
+  function formatDust(value) {
+    return Math.max(0,Math.round(Number(value) || 0)).toLocaleString();
+  }
+
   function spriteCardEditsFingerprint() {
     return JSON.stringify({
       families:spriteCardEdits.families || {},
@@ -1649,6 +2241,7 @@
       || (Array.isArray(edits.order) && edits.order.length)
       || (edits.images && typeof edits.images === 'object' && Object.keys(edits.images).length)
       || (edits.percentages && typeof edits.percentages === 'object' && Object.keys(edits.percentages).length)
+      || (edits.dustLevels && typeof edits.dustLevels === 'object' && Object.keys(edits.dustLevels).length)
       || (edits.archived && typeof edits.archived === 'object' && Object.keys(edits.archived).length)
       || hasOwn(edits,'archivedGroup')
     ));
@@ -1823,6 +2416,14 @@
         family.variants[variantId] ||= {};
         if (percentage) family.variants[variantId].rarityPercentage = String(percentage);
         else delete family.variants[variantId].rarityPercentage;
+      });
+
+      Object.entries(edits.dustLevels && typeof edits.dustLevels === 'object' ? edits.dustLevels : {}).forEach(([variantId,levels]) => {
+        if (Array.isArray(edits.deleted) && edits.deleted.includes(variantId)) return;
+        family.variants[variantId] ||= {};
+        const cleanLevels = normalizeDustLevels(levels);
+        if (Object.keys(cleanLevels).length) family.variants[variantId].dustLevels = cleanLevels;
+        else delete family.variants[variantId].dustLevels;
       });
     });
     nextDesign._meta = { ...(nextDesign._meta || {}), publishedAt:Date.now() };
@@ -2103,6 +2704,7 @@
     const imageButton = card.querySelector('.image-button');
     const collectButton = card.querySelector('.collect-button');
     const crownButton = card.querySelector('.crown-button');
+    const collectionCountEmblem = card.querySelector('.collection-count-emblem');
     const vaultDisplay = appView === APP_VIEW_VAULT;
     card.setAttribute('aria-label',`${variantName} ${groupName}${current.mastered ? ', mastered' : ''}`);
     imageButton.disabled = vaultDisplay;
@@ -2123,6 +2725,8 @@
     const masterLabel = card.querySelector('.master-label');
     masterLabel.textContent = masterText || '';
     masterLabel.hidden = !masterText;
+    collectionCountEmblem.textContent = String(Math.max(0,Number(current.collectionCount) || 0));
+    collectionCountEmblem.setAttribute('aria-label',`${Math.max(0,Number(current.collectionCount) || 0)} lifetime collections`);
   }
 
   function saveRecentMissingChanges() {
@@ -2276,6 +2880,7 @@
     card.className = 'card';
     card.dataset.familyId = family.id;
     card.dataset.variantId = variant.id;
+    card.dataset.rarity = familyRarity(family);
     card.classList.toggle('archived-sprite',previousSeason);
     if (view.customCard) applyCustomBackground(card,view.cardColor,view.cardImage,view.cardMode);
 
@@ -2283,6 +2888,8 @@
     crown.type = 'button';
     crown.className = 'crown-button';
     crown.innerHTML = crownSvg();
+    const collectionCountEmblem = document.createElement('span');
+    collectionCountEmblem.className = 'collection-count-emblem';
     const seasonBadge = document.createElement('span');
     seasonBadge.className = 'sprite-season-badge';
     seasonBadge.textContent = seasonViewLabel(spriteSeasonId(family,variant));
@@ -2399,6 +3006,7 @@
         edits.order = edits.order.filter((id) => id !== variant.id);
         delete edits.images[variant.id];
         delete edits.percentages[variant.id];
+        delete edits.dustLevels[variant.id];
         delete edits.archived[variant.id];
 
         if (!saveCardEditOrRestore(previousEdits)) return;
@@ -2433,8 +3041,66 @@
     percentageInput.setAttribute('aria-label',`Rarity percentage for ${view.name || 'sprite'} ${familyInfo.name || ''}`.trim());
     percentageEditor.append(percentageEditorLabel,percentageInput);
 
+    const dustEditor = document.createElement('div');
+    dustEditor.className = 'sprite-dust-editor';
+    const dustEditorTitle = document.createElement('strong');
+    dustEditorTitle.textContent = 'Dust by level';
+    const dustEditorFields = {};
+    const dustEditorGrid = document.createElement('div');
+    [1,2,3,4,5].forEach((level) => {
+      const label = document.createElement('label');
+      const caption = document.createElement('span');
+      const input = document.createElement('input');
+      caption.textContent = `L${level}`;
+      input.type = 'number';
+      input.min = '0';
+      input.max = '1000000';
+      input.step = '1';
+      input.inputMode = 'numeric';
+      input.placeholder = '0';
+      input.value = hasOwn(view.dustLevels,String(level)) ? String(view.dustLevels[String(level)]) : '';
+      input.setAttribute('aria-label',`Level ${level} Sprite Dust for ${view.name || 'sprite'} ${familyInfo.name || ''}`.trim());
+      dustEditorFields[level] = input;
+      label.append(caption,input);
+      dustEditorGrid.appendChild(label);
+    });
+    const saveDustButton = document.createElement('button');
+    saveDustButton.type = 'button';
+    saveDustButton.textContent = 'Save dust';
+    dustEditor.append(dustEditorTitle,dustEditorGrid,saveDustButton);
+
+    const makeDustDetails = (className) => {
+      const details = document.createElement('details');
+      details.className = className;
+      details.hidden = !Object.keys(view.dustLevels).length && !spriteEditMode;
+      const summary = document.createElement('summary');
+      const levelOne = Number(view.dustLevels['1']) || 0;
+      summary.textContent = levelOne ? `${formatDust(levelOne)} Dust` : 'Dust —';
+      summary.setAttribute('aria-label',`Show Sprite Dust by level for ${view.name || 'sprite'} ${familyInfo.name || ''}`.trim());
+      const menu = document.createElement('span');
+      menu.className = 'sprite-dust-level-menu';
+      [1,2,3,4,5].forEach((level) => {
+        const row = document.createElement('span');
+        const label = document.createElement('span');
+        const amount = document.createElement('strong');
+        label.textContent = `Level ${level}`;
+        amount.textContent = hasOwn(view.dustLevels,String(level)) ? `${formatDust(view.dustLevels[String(level)])} Dust` : 'Not set';
+        row.append(label,amount);
+        menu.appendChild(row);
+      });
+      details.append(summary,menu);
+      details.addEventListener('toggle',() => {
+        if (!details.open) return;
+        document.querySelectorAll('details.sprite-dust-details[open],details.sprite-list-dust-details[open]').forEach((item) => {
+          if (item !== details) item.open = false;
+        });
+      });
+      return details;
+    };
+
     const variantLine = document.createElement('div');
     variantLine.className = 'sprite-variant-line';
+    const dustDetails = makeDustDetails('sprite-dust-details');
     const rarityPercentage = document.createElement('span');
     rarityPercentage.className = 'sprite-rarity-percentage';
     rarityPercentage.textContent = view.rarityPercentage || '';
@@ -2442,7 +3108,7 @@
     const title = document.createElement('h4');
     title.textContent = view.name || '';
     title.hidden = !view.name;
-    variantLine.append(rarityPercentage,title);
+    variantLine.append(dustDetails,rarityPercentage,title);
 
     const listLabel = document.createElement('div');
     listLabel.className = 'sprite-list-label';
@@ -2450,6 +3116,7 @@
     listGroupName.textContent = familyInfo.name || family.name || 'Sprite';
     const listVariantLine = document.createElement('div');
     listVariantLine.className = 'sprite-list-variant-line';
+    const listDustDetails = makeDustDetails('sprite-list-dust-details');
     const listRarityPercentage = document.createElement('span');
     listRarityPercentage.className = 'sprite-list-rarity-percentage';
     listRarityPercentage.textContent = view.rarityPercentage || '';
@@ -2457,7 +3124,7 @@
     const listVariantName = document.createElement('span');
     listVariantName.className = 'sprite-list-variant-name';
     listVariantName.textContent = view.name || 'Unnamed';
-    listVariantLine.append(listRarityPercentage,listVariantName);
+    listVariantLine.append(listDustDetails,listRarityPercentage,listVariantName);
     listLabel.append(listGroupName,listVariantLine);
 
     const collect = document.createElement('button');
@@ -2470,9 +3137,15 @@
     collectLabel.className = 'collect-label';
     collect.append(box,collectLabel);
 
+    const huntCartButton = document.createElement('button');
+    huntCartButton.type = 'button';
+    huntCartButton.className = 'hunt-add-cart-button';
+    huntCartButton.innerHTML = '<span aria-hidden="true">＋</span> Add to Hunt Cart';
+    huntCartButton.setAttribute('aria-label',`Add ${view.name || 'sprite'} ${familyInfo.name || ''} to Hunt cart`.trim());
+
     const masterLabel = document.createElement('div');
     masterLabel.className = 'master-label';
-    card.append(crown,seasonBadge,imageWrap,editorTools,percentageEditor,variantLine,listLabel,collect,masterLabel);
+    card.append(crown,collectionCountEmblem,seasonBadge,imageWrap,editorTools,percentageEditor,dustEditor,variantLine,listLabel,collect,huntCartButton,masterLabel);
 
     const toggleCollected = () => {
       const before = snapshotVariantState(current);
@@ -2480,6 +3153,7 @@
       current.collected = !current.collected;
       if (current.collected) {
         current.collectedAt = current.collectedAt || collectedAt;
+        current.collectionCount = Math.min(1000000,(Number(current.collectionCount) || 0) + 1);
       } else {
         current.mastered = false;
         delete current.collectedAt;
@@ -2487,14 +3161,14 @@
         delete current.locationFound;
       }
       const type = current.collected ? 'collected' : 'uncollected';
-      const journalEntry = commitCardChange(card,family,variant,current,current.collected ? 'Added to collection' : 'Removed from collection',before,type);
-      if (current.collected && huntMode.active) openLocationDetails(family,variant,journalEntry?.id,{ newlyCollected:true });
+      commitCardChange(card,family,variant,current,current.collected ? 'Added to collection' : 'Removed from collection',before,type);
     };
     imageButton.addEventListener('click',() => {
       if (spriteEditMode) return fileInput.click();
       toggleCollected();
     });
     collect.addEventListener('click',toggleCollected);
+    huntCartButton.addEventListener('click',() => addSpriteToHuntCart(family,variant));
     crown.addEventListener('click',() => {
       const before = snapshotVariantState(current);
       const changedAt = new Date().toISOString();
@@ -2503,12 +3177,12 @@
         current.collected = true;
         current.collectedAt = current.collectedAt || changedAt;
         current.masteredAt = changedAt;
+        if (!before.collected) current.collectionCount = Math.min(1000000,(Number(current.collectionCount) || 0) + 1);
       } else {
         delete current.masteredAt;
       }
       const type = current.mastered ? 'mastered' : 'unmastered';
-      const journalEntry = commitCardChange(card,family,variant,current,current.mastered ? 'Mastered' : 'Mastery removed',before,type);
-      if (!before.collected && current.collected && huntMode.active) openLocationDetails(family,variant,journalEntry?.id,{ newlyCollected:true });
+      commitCardChange(card,family,variant,current,current.mastered ? 'Mastered' : 'Mastery removed',before,type);
     });
     [imageButton,collect,crown].forEach((button) => {
       button.addEventListener('pointerup',() => requestAnimationFrame(() => button.blur()));
@@ -2527,6 +3201,7 @@
         percentageInput.blur();
       }
     });
+    saveDustButton.addEventListener('click',() => saveSpriteDustLevels(family,variant,dustEditorFields));
 
     const acceptImage = async (file) => {
       imageWrap.classList.add('drop-saving');
@@ -2901,6 +3576,8 @@
     updateCounters();
     updatePublishButton();
     renderJournal();
+    renderHuntHistory();
+    renderDustAccount();
     applyHuntMode();
   }
 
@@ -2982,6 +3659,10 @@
   }
 
   function spriteSearchState(entry) {
+    if (huntMode.active) {
+      const copies = huntCart.filter((item) => item.familyId === entry.familyId && item.variantId === entry.variantId).length;
+      return copies ? `${copies} in cart · Add again` : 'Add to Hunt cart';
+    }
     const current = state[entry.familyId]?.[entry.variantId] || {};
     if (current.mastered) return design.header.masteredLabel || 'Mastered';
     if (current.collected) return design.header.collectedLabel || 'In Collection';
@@ -3016,6 +3697,13 @@
     });
   }
 
+  function addSpriteSearchResultToHunt(entry) {
+    const family = allFamilies().find((item) => item.id === entry.familyId);
+    const variant = family && orderedVariants(family).find((item) => item.id === entry.variantId);
+    if (!family || !variant) return showToast('That Sprite is no longer available.');
+    addSpriteToHuntCart(family,variant);
+  }
+
   function renderSpriteSearchResults() {
     const query = spriteSearchInput.value.trim();
     clearSpriteSearchBtn.hidden = !query;
@@ -3043,7 +3731,7 @@
         status.textContent = spriteSearchState(entry);
         text.append(title,detail);
         button.append(text,status);
-        button.addEventListener('click',() => openSpriteSearchResult(entry));
+        button.addEventListener('click',() => huntMode.active ? addSpriteSearchResultToHunt(entry) : openSpriteSearchResult(entry));
         spriteSearchResults.appendChild(button);
       });
     }
@@ -3128,6 +3816,17 @@
     },{ saved:0, collected:0, mastered:0 });
   }
 
+  function sanitizeHuntModeBackup(value) {
+    const source = value && typeof value === 'object' ? value : {};
+    const startedAt = validIsoDate(source.startedAt);
+    return {
+      active:source.active === true && Boolean(startedAt),
+      startedAt,
+      sessionStartedAt:validIsoDate(source.sessionStartedAt) || startedAt,
+      lastDurationMs:Math.max(0,Math.min(7 * 24 * 60 * 60 * 1000,Number(source.lastDurationMs) || 0))
+    };
+  }
+
   async function backupPayload() {
     if (journalInitialization) await journalInitialization;
     return {
@@ -3138,7 +3837,11 @@
       progress:sanitizeProgress(state),
       viewModes:sanitizeViewModes(spriteViewModes),
       seasonView:sanitizeSeasonView(vaultSeasonView),
-      journal:normalizeJournalEntries(journalEntries)
+      journal:normalizeJournalEntries(journalEntries),
+      huntMode:sanitizeHuntModeBackup(huntMode),
+      huntCart:normalizeHuntCart(huntCart),
+      huntHistory:normalizeHuntHistory(huntHistory),
+      dustLedger:normalizeDustLedger(dustLedger)
     };
   }
 
@@ -3165,14 +3868,18 @@
 
   function parsedBackup(value) {
     if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('That is not a Sprite Tracker backup.');
-    if (value.format !== BACKUP_FORMAT || ![1,BACKUP_VERSION].includes(value.version)) {
+    if (value.format !== BACKUP_FORMAT || ![1,2,BACKUP_VERSION].includes(value.version)) {
       throw new Error('That file is not a compatible Sprite Tracker backup.');
     }
     return {
       progress:sanitizeProgress(value.progress),
       viewModes:sanitizeViewModes(value.viewModes),
       seasonView:sanitizeSeasonView(value.seasonView),
-      journal:value.version >= 2 ? normalizeJournalEntries(value.journal) : []
+      journal:value.version >= 2 ? normalizeJournalEntries(value.journal) : [],
+      huntMode:value.version >= 3 ? sanitizeHuntModeBackup(value.huntMode) : sanitizeHuntModeBackup(huntMode),
+      huntCart:value.version >= 3 ? normalizeHuntCart(value.huntCart) : normalizeHuntCart(huntCart),
+      huntHistory:value.version >= 3 ? normalizeHuntHistory(value.huntHistory) : normalizeHuntHistory(huntHistory),
+      dustLedger:value.version >= 3 ? normalizeDustLedger(value.dustLedger) : normalizeDustLedger(dustLedger)
     };
   }
 
@@ -3238,7 +3945,11 @@
       progress:sanitizeProgress(state),
       viewModes:sanitizeViewModes(spriteViewModes),
       seasonView:sanitizeSeasonView(vaultSeasonView),
-      journal:normalizeJournalEntries(journalEntries)
+      journal:normalizeJournalEntries(journalEntries),
+      huntMode:sanitizeHuntModeBackup(huntMode),
+      huntCart:normalizeHuntCart(huntCart),
+      huntHistory:normalizeHuntHistory(huntHistory),
+      dustLedger:normalizeDustLedger(dustLedger)
     };
     try {
       localStorage.setItem(PRE_RESTORE_PROGRESS_KEY,JSON.stringify(safetyCopy));
@@ -3250,13 +3961,27 @@
     state = pendingRestore.progress;
     spriteViewModes = pendingRestore.viewModes;
     vaultSeasonView = pendingRestore.seasonView;
+    huntMode = pendingRestore.huntMode;
+    huntCart = pendingRestore.huntCart;
+    huntHistory = pendingRestore.huntHistory;
+    dustLedger = pendingRestore.dustLedger;
     seasonView = appView === APP_VIEW_VAULT ? vaultSeasonView : CURRENT_SEASON_ID;
     if (!saveProgress()) {
       state = safetyCopy.progress;
+      spriteViewModes = safetyCopy.viewModes;
+      vaultSeasonView = safetyCopy.seasonView;
+      huntMode = safetyCopy.huntMode;
+      huntCart = safetyCopy.huntCart;
+      huntHistory = safetyCopy.huntHistory;
+      dustLedger = safetyCopy.dustLedger;
       return;
     }
     try { localStorage.setItem(VIEW_MODES_KEY,JSON.stringify(spriteViewModes)); } catch { /* Progress is still safely restored. */ }
     try { localStorage.setItem(SEASON_VIEW_KEY,vaultSeasonView); } catch { /* The restored view remains active for this visit. */ }
+    saveHuntMode();
+    saveHuntCart();
+    saveHuntHistory();
+    saveDustLedger();
     await replaceJournalEntries(pendingRestore.journal);
     pendingRestore = null;
     backupDialog.close();
@@ -3272,10 +3997,18 @@
       state = sanitizeProgress(saved.progress);
       spriteViewModes = sanitizeViewModes(saved.viewModes);
       vaultSeasonView = sanitizeSeasonView(saved.seasonView);
+      huntMode = sanitizeHuntModeBackup(saved.huntMode);
+      huntCart = normalizeHuntCart(saved.huntCart);
+      huntHistory = normalizeHuntHistory(saved.huntHistory);
+      dustLedger = normalizeDustLedger(saved.dustLedger);
       seasonView = appView === APP_VIEW_VAULT ? vaultSeasonView : CURRENT_SEASON_ID;
       if (!saveProgress()) throw new Error('Progress could not be saved.');
       localStorage.setItem(VIEW_MODES_KEY,JSON.stringify(spriteViewModes));
       localStorage.setItem(SEASON_VIEW_KEY,vaultSeasonView);
+      saveHuntMode();
+      saveHuntCart();
+      saveHuntHistory();
+      saveDustLedger();
       await replaceJournalEntries(saved.journal || []);
       localStorage.removeItem(PRE_RESTORE_PROGRESS_KEY);
       backupDialog.close();
@@ -3908,6 +4641,33 @@
   journalActionFilter.addEventListener('change',renderJournal);
   huntModeBtn.addEventListener('click',toggleHuntMode);
   huntModeBtn.addEventListener('pointerup',() => requestAnimationFrame(() => huntModeBtn.blur()));
+  huntCheckoutBtn.addEventListener('click',openHuntCheckout);
+  huntCheckoutForm.addEventListener('submit',completeHuntOrder);
+  document.getElementById('continueHuntBtn').addEventListener('click',resumeHuntFromCheckout);
+  huntCheckoutDialog.addEventListener('cancel',(event) => {
+    event.preventDefault();
+    resumeHuntFromCheckout();
+  });
+  huntCheckoutDialog.addEventListener('close',() => {
+    document.documentElement.classList.remove('hunt-checkout-open');
+    document.body.classList.remove('hunt-checkout-open');
+  });
+  floatingHomeBtn.addEventListener('click',() => goHomeToRare());
+  spriteDustBalanceBtn.addEventListener('click',() => setAppView(APP_VIEW_DUST));
+  document.getElementById('clearHuntHistoryBtn').addEventListener('click',() => {
+    if (!huntHistory.length || !window.confirm('Delete your entire Hunt History? Sprite Dust receipts will stay in the account.')) return;
+    huntHistory = [];
+    saveHuntHistory();
+    renderHuntHistory();
+    showToast('Hunt History cleared');
+  });
+  document.getElementById('recordDustPurchaseBtn').addEventListener('click',openDustPurchaseDialog);
+  dustPurchaseForm.addEventListener('submit',recordDustPurchase);
+  document.getElementById('cancelDustPurchaseBtn').addEventListener('click',() => dustPurchaseDialog.close());
+  dustPurchaseDialog.addEventListener('close',() => {
+    document.documentElement.classList.remove('dust-purchase-open');
+    document.body.classList.remove('dust-purchase-open');
+  });
   document.addEventListener('visibilitychange',() => {
     if (!document.hidden && huntMode.active) updateHuntTimer();
   });
@@ -3977,7 +4737,10 @@
   spriteSearchForm.addEventListener('submit',(event) => {
     event.preventDefault();
     const matches = findSpriteMatches(spriteSearchInput.value);
-    if (matches[0]) openSpriteSearchResult(matches[0]);
+    if (matches[0]) {
+      if (huntMode.active) addSpriteSearchResultToHunt(matches[0]);
+      else openSpriteSearchResult(matches[0]);
+    }
     else {
       renderSpriteSearchResults();
       spriteSearchStatus.textContent = 'No matching sprites';
@@ -4066,6 +4829,14 @@
       setAppView(APP_VIEW_JOURNAL,{ announce:false });
       return;
     }
+    if (hashView === APP_VIEW_HUNTS) {
+      setAppView(APP_VIEW_HUNTS,{ announce:false });
+      return;
+    }
+    if (hashView === APP_VIEW_DUST) {
+      setAppView(APP_VIEW_DUST,{ announce:false });
+      return;
+    }
     if (appView !== APP_VIEW_TRACKER) setAppView(APP_VIEW_TRACKER,{ announce:false });
     if (hashView === 'unowned' || hashView === 'unmastered') missingView = hashView;
     switchRarity(rarityFromHash() || defaultRarity);
@@ -4079,10 +4850,14 @@
     ? '#vault'
     : (appView === APP_VIEW_JOURNAL
         ? '#journal'
-        : (isUnownedPage() ? `#${missingView}` : `#${activeRarity.toLowerCase()}`));
+        : (appView === APP_VIEW_HUNTS
+            ? '#hunts'
+            : (appView === APP_VIEW_DUST
+                ? '#dust'
+                : (isUnownedPage() ? `#${missingView}` : `#${activeRarity.toLowerCase()}`))));
   if (location.hash !== activeHash) history.replaceState({ rarity:activeRarity },'',activeHash);
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./service-worker.js?v=116',{ updateViaCache:'none' }).then((registration) => registration.update()).catch(() => {});
+    navigator.serviceWorker.register('./service-worker.js?v=117',{ updateViaCache:'none' }).then((registration) => registration.update()).catch(() => {});
   }
   const signalAppRendered = () => window.dispatchEvent(new Event('sprite-app-rendered'));
   if (document.fonts?.ready) {
