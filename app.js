@@ -19,6 +19,7 @@
   const SEASON_VIEW_ALL = 'all';
   const APP_VIEW_TRACKER = 'tracker';
   const APP_VIEW_VAULT = 'vault';
+  const APP_VIEW_JOURNAL = 'journal';
 
   function appStorageScope() {
     const firstPathPart = decodeURIComponent(location.pathname.split('/').filter(Boolean)[0] || 'root');
@@ -33,9 +34,13 @@
   const SEASON_VIEW_KEY = `galaxy_sprite_tracker_season_view_v1_${STORAGE_SCOPE}`;
   const SPRITE_CARD_EDITS_KEY = `galaxy_sprite_tracker_sprite_cards_v1_${STORAGE_SCOPE}`;
   const PRE_RESTORE_PROGRESS_KEY = `galaxy_sprite_tracker_progress_before_restore_v1_${STORAGE_SCOPE}`;
+  const JOURNAL_FALLBACK_KEY = `galaxy_sprite_tracker_collection_journal_v1_${STORAGE_SCOPE}`;
+  const JOURNAL_DB_NAME = `galaxy-sprite-tracker-journal-${STORAGE_SCOPE}`;
+  const JOURNAL_DB_STORE = 'entries';
+  const MAX_JOURNAL_ENTRIES = 500;
   const LEGACY_PROGRESS_KEY = 'galaxy_sprite_tracker_progress_v1';
   const BACKUP_FORMAT = 'my-sprite-tracker-backup';
-  const BACKUP_VERSION = 1;
+  const BACKUP_VERSION = 2;
   const MAX_BACKUP_BYTES = 2 * 1024 * 1024;
   const SEASON_VIEWS = [...seasonCatalog.map((season) => season.id),SEASON_VIEW_ALL];
   const CARD_REORDER_MIME = 'application/x-sprite-card';
@@ -100,7 +105,9 @@
 
   function loadAppView() {
     const hashView = decodeURIComponent(location.hash.slice(1)).toLowerCase();
-    return hashView === APP_VIEW_VAULT && SEASON_FEATURE_VISIBLE ? APP_VIEW_VAULT : APP_VIEW_TRACKER;
+    if (hashView === APP_VIEW_VAULT && SEASON_FEATURE_VISIBLE) return APP_VIEW_VAULT;
+    if (hashView === APP_VIEW_JOURNAL) return APP_VIEW_JOURNAL;
+    return APP_VIEW_TRACKER;
   }
 
   function loadRecentMissingChanges() {
@@ -422,6 +429,12 @@
   let showcaseObjectUrl = '';
   let showcaseFile = null;
   let showcaseGenerationToken = 0;
+  let journalEntries = [];
+  let journalReady = false;
+  let pendingJournalEntries = [];
+  let journalWriteQueue = Promise.resolve();
+  let journalInitialization = null;
+  let pendingLocationDetails = null;
 
   const tabsEl = document.getElementById('rarityTabs');
   const collectionsEl = document.getElementById('collections');
@@ -442,6 +455,24 @@
   const appMenuDialog = document.getElementById('appMenuDialog');
   const closeAppMenuBtn = document.getElementById('closeAppMenuBtn');
   const seasonVaultPage = document.getElementById('seasonVaultPage');
+  const collectionJournalPage = document.getElementById('collectionJournalPage');
+  const journalTopLocation = document.getElementById('journalTopLocation');
+  const journalTopLocationCount = document.getElementById('journalTopLocationCount');
+  const journalLocationsLogged = document.getElementById('journalLocationsLogged');
+  const journalEntryCount = document.getElementById('journalEntryCount');
+  const journalLocationBars = document.getElementById('journalLocationBars');
+  const journalLocationEmpty = document.getElementById('journalLocationEmpty');
+  const journalActionFilter = document.getElementById('journalActionFilter');
+  const journalEntryList = document.getElementById('journalEntryList');
+  const journalEmptyState = document.getElementById('journalEmptyState');
+  const locationFoundDialog = document.getElementById('locationFoundDialog');
+  const locationFoundForm = document.getElementById('locationFoundForm');
+  const locationFoundTitle = document.getElementById('locationFoundTitle');
+  const locationFoundSpriteName = document.getElementById('locationFoundSpriteName');
+  const locationFoundSelect = document.getElementById('locationFoundSelect');
+  const locationCollectedAt = document.getElementById('locationCollectedAt');
+  const locationMasteredAt = document.getElementById('locationMasteredAt');
+  const locationMasteredAtLabel = document.getElementById('locationMasteredAtLabel');
   const spriteSearchForm = document.getElementById('spriteSearchForm');
   const spriteSearchInput = document.getElementById('spriteSearchInput');
   const spriteSearchResults = document.getElementById('spriteSearchResults');
@@ -556,11 +587,17 @@
 
   function applyAppView() {
     const vaultOpen = appView === APP_VIEW_VAULT;
+    const journalOpen = appView === APP_VIEW_JOURNAL;
     document.body.classList.toggle('vault-view',vaultOpen);
+    document.body.classList.toggle('journal-view',journalOpen);
     document.querySelectorAll('.tracker-primary-view').forEach((element) => {
-      element.hidden = vaultOpen;
+      element.hidden = vaultOpen || journalOpen;
     });
     seasonVaultPage.hidden = !SEASON_FEATURE_VISIBLE || !vaultOpen;
+    collectionJournalPage.hidden = !journalOpen;
+    tabsEl.hidden = journalOpen;
+    document.getElementById('mainContent').hidden = journalOpen;
+    document.querySelector('.app-shell > footer').hidden = journalOpen;
     document.querySelectorAll('[data-app-view]').forEach((button) => {
       const selected = button.dataset.appView === appView;
       button.classList.toggle('is-active',selected);
@@ -570,7 +607,9 @@
   }
 
   function setAppView(view,{ announce = true, season = null } = {}) {
-    const next = view === APP_VIEW_VAULT && SEASON_FEATURE_VISIBLE ? APP_VIEW_VAULT : APP_VIEW_TRACKER;
+    const next = view === APP_VIEW_VAULT && SEASON_FEATURE_VISIBLE
+      ? APP_VIEW_VAULT
+      : (view === APP_VIEW_JOURNAL ? APP_VIEW_JOURNAL : APP_VIEW_TRACKER);
     const changed = appView !== next;
     if (next === APP_VIEW_VAULT && season !== null) vaultSeasonView = sanitizeSeasonView(season);
     appView = next;
@@ -583,12 +622,17 @@
     renderAll();
     const viewHash = appView === APP_VIEW_VAULT
       ? '#vault'
-      : (isUnownedPage() ? `#${missingView}` : `#${activeRarity.toLowerCase()}`);
+      : (appView === APP_VIEW_JOURNAL
+          ? '#journal'
+          : (isUnownedPage() ? `#${missingView}` : `#${activeRarity.toLowerCase()}`));
     if (location.hash !== viewHash) history.replaceState({ appView, rarity:activeRarity },'',viewHash);
     if (changed) window.scrollTo({ top:0, behavior:'auto' });
     closeAppMenu();
     if (changed) playAppViewTransition();
-    if (announce && changed) showToast(appView === APP_VIEW_VAULT ? 'Sprite Vault' : 'Current Tracker');
+    if (announce && changed) {
+      const label = appView === APP_VIEW_VAULT ? 'Sprite Vault' : (appView === APP_VIEW_JOURNAL ? 'Collection Journal' : 'Current Tracker');
+      showToast(label);
+    }
   }
 
   function applySeasonViewControls() {
@@ -914,6 +958,460 @@
     state[familyId] ||= {};
     state[familyId][variantId] ||= { collected:false, mastered:false };
     return state[familyId][variantId];
+  }
+
+  function validIsoDate(value) {
+    if (typeof value !== 'string' || !value || value.length > 40) return '';
+    const time = Date.parse(value);
+    return Number.isFinite(time) ? new Date(time).toISOString() : '';
+  }
+
+  function cleanLocation(value) {
+    return typeof value === 'string' ? value.trim().slice(0,80) : '';
+  }
+
+  function snapshotVariantState(current) {
+    const mastered = current?.mastered === true;
+    return {
+      collected:current?.collected === true || mastered,
+      mastered,
+      collectedAt:validIsoDate(current?.collectedAt),
+      masteredAt:validIsoDate(current?.masteredAt),
+      locationFound:cleanLocation(current?.locationFound)
+    };
+  }
+
+  function applyVariantSnapshot(current,snapshot) {
+    const clean = snapshotVariantState(snapshot);
+    current.collected = clean.collected;
+    current.mastered = clean.mastered;
+    if (clean.collectedAt) current.collectedAt = clean.collectedAt;
+    else delete current.collectedAt;
+    if (clean.masteredAt) current.masteredAt = clean.masteredAt;
+    else delete current.masteredAt;
+    if (clean.locationFound) current.locationFound = clean.locationFound;
+    else delete current.locationFound;
+    if (!current.collected) {
+      current.mastered = false;
+      delete current.collectedAt;
+      delete current.masteredAt;
+      delete current.locationFound;
+    } else if (!current.mastered) {
+      delete current.masteredAt;
+    }
+    return current;
+  }
+
+  function journalId() {
+    const random = globalThis.crypto?.randomUUID?.() || Math.random().toString(36).slice(2);
+    return `${Date.now()}-${random}`;
+  }
+
+  function openJournalDatabase() {
+    if (!('indexedDB' in window)) return Promise.reject(new Error('IndexedDB unavailable'));
+    return new Promise((resolve,reject) => {
+      const request = indexedDB.open(JOURNAL_DB_NAME,1);
+      request.onupgradeneeded = () => {
+        const database = request.result;
+        if (!database.objectStoreNames.contains(JOURNAL_DB_STORE)) {
+          database.createObjectStore(JOURNAL_DB_STORE,{ keyPath:'id' });
+        }
+      };
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error || new Error('Journal database unavailable'));
+    });
+  }
+
+  async function readJournalDatabase() {
+    const database = await openJournalDatabase();
+    try {
+      return await new Promise((resolve,reject) => {
+        const transaction = database.transaction(JOURNAL_DB_STORE,'readonly');
+        const request = transaction.objectStore(JOURNAL_DB_STORE).getAll();
+        request.onsuccess = () => resolve(Array.isArray(request.result) ? request.result : []);
+        request.onerror = () => reject(request.error || new Error('Journal could not be read'));
+      });
+    } finally {
+      database.close();
+    }
+  }
+
+  async function writeJournalDatabase(entries) {
+    const database = await openJournalDatabase();
+    try {
+      await new Promise((resolve,reject) => {
+        const transaction = database.transaction(JOURNAL_DB_STORE,'readwrite');
+        const store = transaction.objectStore(JOURNAL_DB_STORE);
+        store.clear();
+        entries.forEach((entry) => store.put(entry));
+        transaction.oncomplete = () => resolve();
+        transaction.onerror = () => reject(transaction.error || new Error('Journal could not be saved'));
+        transaction.onabort = () => reject(transaction.error || new Error('Journal save was interrupted'));
+      });
+    } finally {
+      database.close();
+    }
+  }
+
+  function readJournalFallback() {
+    try {
+      const value = JSON.parse(localStorage.getItem(JOURNAL_FALLBACK_KEY) || '[]');
+      return Array.isArray(value) ? value : [];
+    } catch {
+      return [];
+    }
+  }
+
+  function journalEntryTimestamp(entry) {
+    return Date.parse(entry?.timestamp || '') || 0;
+  }
+
+  function normalizeJournalEntries(value) {
+    if (!Array.isArray(value)) return [];
+    return value.slice(0,MAX_JOURNAL_ENTRIES).flatMap((entry) => {
+      if (!entry || typeof entry !== 'object' || !safeBackupKey(entry.familyId) || !safeBackupKey(entry.variantId)) return [];
+      const timestamp = validIsoDate(entry.timestamp);
+      if (!timestamp) return [];
+      const type = ['collected','uncollected','mastered','unmastered','details'].includes(entry.type) ? entry.type : '';
+      if (!type) return [];
+      return [{
+        id:String(entry.id || journalId()).slice(0,160),
+        timestamp,
+        type,
+        familyId:String(entry.familyId),
+        variantId:String(entry.variantId),
+        familyName:String(entry.familyName || 'Sprite').slice(0,80),
+        variantName:String(entry.variantName || 'Variant').slice(0,80),
+        rarity:rarities.includes(entry.rarity) ? entry.rarity : defaultRarity,
+        seasonId:String(entry.seasonId || CURRENT_SEASON_ID).slice(0,80),
+        before:snapshotVariantState(entry.before),
+        after:snapshotVariantState(entry.after),
+        undone:entry.undone === true,
+        undoneAt:validIsoDate(entry.undoneAt)
+      }];
+    }).sort((a,b) => journalEntryTimestamp(b) - journalEntryTimestamp(a));
+  }
+
+  async function initializeJournal() {
+    let stored = [];
+    try {
+      stored = await readJournalDatabase();
+    } catch {
+      stored = readJournalFallback();
+    }
+    const pending = pendingJournalEntries;
+    pendingJournalEntries = [];
+    journalEntries = normalizeJournalEntries([...pending,...stored]).slice(0,MAX_JOURNAL_ENTRIES);
+    journalReady = true;
+    if (pending.length) scheduleJournalSave();
+    renderJournal();
+  }
+
+  function scheduleJournalSave() {
+    journalWriteQueue = journalWriteQueue.catch(() => {}).then(async () => {
+      if (!journalReady) return;
+      const clean = normalizeJournalEntries(journalEntries).slice(0,MAX_JOURNAL_ENTRIES);
+      journalEntries = clean;
+      try {
+        await writeJournalDatabase(clean);
+        try { localStorage.removeItem(JOURNAL_FALLBACK_KEY); } catch { /* IndexedDB is the durable store. */ }
+      } catch {
+        try { localStorage.setItem(JOURNAL_FALLBACK_KEY,JSON.stringify(clean)); } catch { /* Keep the in-memory journal. */ }
+      }
+    });
+    return journalWriteQueue;
+  }
+
+  function replaceJournalEntries(entries) {
+    journalEntries = normalizeJournalEntries(entries).slice(0,MAX_JOURNAL_ENTRIES);
+    journalReady = true;
+    renderJournal();
+    return scheduleJournalSave();
+  }
+
+  function recordJournalEntry(type,family,variant,before,current,{ timestamp = null } = {}) {
+    const familyInfo = familyView(family);
+    const variantInfo = variantView(family,variant);
+    const entry = {
+      id:journalId(),
+      timestamp:validIsoDate(timestamp) || new Date().toISOString(),
+      type,
+      familyId:family.id,
+      variantId:variant.id,
+      familyName:familyInfo.name || family.name || 'Sprite',
+      variantName:variantInfo.name || variant.name || 'Variant',
+      rarity:familyRarity(family),
+      seasonId:spriteSeasonId(family,variant),
+      before:snapshotVariantState(before),
+      after:snapshotVariantState(current),
+      undone:false,
+      undoneAt:''
+    };
+    if (journalReady) journalEntries.unshift(entry);
+    else pendingJournalEntries.unshift(entry);
+    if (journalReady) {
+      journalEntries = normalizeJournalEntries(journalEntries).slice(0,MAX_JOURNAL_ENTRIES);
+      scheduleJournalSave();
+      renderJournal();
+    }
+    return entry;
+  }
+
+  function updateJournalEntry(entryId,current,{ timestamp = null } = {}) {
+    const entry = [...pendingJournalEntries,...journalEntries].find((item) => item.id === entryId);
+    if (!entry) return;
+    entry.after = snapshotVariantState(current);
+    if (timestamp) entry.timestamp = validIsoDate(timestamp) || entry.timestamp;
+    if (journalReady) {
+      scheduleJournalSave();
+      renderJournal();
+    }
+  }
+
+  function journalSprite(entry) {
+    const family = allFamilies().find((item) => item.id === entry.familyId);
+    const variant = family && orderedVariants(family).find((item) => item.id === entry.variantId);
+    return { family,variant };
+  }
+
+  function variantSnapshotsMatch(left,right) {
+    return JSON.stringify(snapshotVariantState(left)) === JSON.stringify(snapshotVariantState(right));
+  }
+
+  function journalActionText(type) {
+    return ({
+      collected:'Added to collection',
+      uncollected:'Removed from collection',
+      mastered:'Marked Mastered',
+      unmastered:'Mastery removed',
+      details:'Collection details updated'
+    })[type] || 'Collection updated';
+  }
+
+  function journalFilterMatches(entry,filter) {
+    if (filter === 'all') return true;
+    if (filter === 'collected') return entry.type === 'collected';
+    if (filter === 'mastered') return entry.type === 'mastered';
+    if (filter === 'removed') return entry.type === 'uncollected' || entry.type === 'unmastered';
+    return entry.type === filter;
+  }
+
+  function formatJournalDate(value) {
+    const date = new Date(value);
+    if (!Number.isFinite(date.getTime())) return 'Date unavailable';
+    return new Intl.DateTimeFormat(undefined,{
+      month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit'
+    }).format(date);
+  }
+
+  function journalCurrentLocationStats() {
+    const counts = new Map();
+    let logged = 0;
+    Object.values(state || {}).forEach((variants) => {
+      Object.values(variants || {}).forEach((current) => {
+        const location = cleanLocation(current?.locationFound);
+        if (!current?.collected || !location || location === 'Not sure') return;
+        logged += 1;
+        counts.set(location,(counts.get(location) || 0) + 1);
+      });
+    });
+    const ranked = [...counts.entries()].sort((left,right) => right[1] - left[1] || left[0].localeCompare(right[0]));
+    return { logged,ranked };
+  }
+
+  function renderJournal() {
+    if (!collectionJournalPage) return;
+    const visibleEntries = (journalReady ? journalEntries : pendingJournalEntries)
+      .filter((entry) => !entry.undone)
+      .sort((a,b) => journalEntryTimestamp(b) - journalEntryTimestamp(a));
+    const locationStats = journalCurrentLocationStats();
+    const top = locationStats.ranked[0];
+    journalTopLocation.textContent = top?.[0] || 'No locations yet';
+    journalTopLocationCount.textContent = top
+      ? `${top[1]} ${top[1] === 1 ? 'Sprite was' : 'Sprites were'} collected here.`
+      : 'Add a location when you collect a Sprite.';
+    journalLocationsLogged.textContent = String(locationStats.logged);
+    journalEntryCount.textContent = String(visibleEntries.length);
+    journalLocationBars.replaceChildren();
+    journalLocationEmpty.hidden = Boolean(locationStats.ranked.length);
+    const maxLocationCount = locationStats.ranked[0]?.[1] || 1;
+    locationStats.ranked.slice(0,6).forEach(([location,count]) => {
+      const row = document.createElement('div');
+      row.className = 'journal-location-row';
+      const label = document.createElement('span');
+      label.textContent = location;
+      const track = document.createElement('span');
+      track.className = 'journal-location-track';
+      const fill = document.createElement('i');
+      fill.style.width = `${Math.max(8,count / maxLocationCount * 100)}%`;
+      track.appendChild(fill);
+      const number = document.createElement('strong');
+      number.textContent = String(count);
+      row.append(label,track,number);
+      journalLocationBars.appendChild(row);
+    });
+
+    const filter = journalActionFilter?.value || 'all';
+    const filtered = visibleEntries.filter((entry) => journalFilterMatches(entry,filter)).slice(0,150);
+    journalEntryList.replaceChildren();
+    journalEmptyState.hidden = Boolean(filtered.length);
+    if (!journalReady && !filtered.length) {
+      journalEmptyState.querySelector('strong').textContent = 'Opening your journal…';
+      journalEmptyState.querySelector('span').textContent = 'Your saved activity will appear in a moment.';
+    } else if (!visibleEntries.length) {
+      journalEmptyState.querySelector('strong').textContent = 'Your journal is ready.';
+      journalEmptyState.querySelector('span').textContent = 'Collect or master a Sprite and its time will appear here automatically.';
+    } else if (!filtered.length) {
+      journalEmptyState.querySelector('strong').textContent = 'No matching activity.';
+      journalEmptyState.querySelector('span').textContent = 'Choose another filter to see more journal entries.';
+    }
+
+    filtered.forEach((entry) => {
+      const { family,variant } = journalSprite(entry);
+      const current = state[entry.familyId]?.[entry.variantId];
+      const familyInfo = family ? familyView(family) : null;
+      const variantInfo = family && variant ? variantView(family,variant) : null;
+      const row = document.createElement('article');
+      row.className = 'journal-entry';
+      row.dataset.rarity = entry.rarity;
+      const thumb = document.createElement('div');
+      thumb.className = 'journal-entry-thumb';
+      const imageSource = displayImageSource(variantInfo?.image);
+      if (imageSource) {
+        const image = document.createElement('img');
+        image.src = imageSource;
+        image.alt = '';
+        image.loading = 'lazy';
+        image.width = 72;
+        image.height = 72;
+        thumb.appendChild(image);
+      } else {
+        thumb.textContent = (entry.familyName || 'S').slice(0,1).toUpperCase();
+      }
+      const copy = document.createElement('div');
+      copy.className = 'journal-entry-copy';
+      const name = document.createElement('h4');
+      name.textContent = `${familyInfo?.name || entry.familyName} · ${variantInfo?.name || entry.variantName}`;
+      const action = document.createElement('strong');
+      action.textContent = journalActionText(entry.type);
+      const time = document.createElement('time');
+      time.dateTime = entry.timestamp;
+      time.textContent = formatJournalDate(entry.timestamp);
+      copy.append(name,action,time);
+      const location = cleanLocation(entry.after?.locationFound);
+      if (location) {
+        const place = document.createElement('span');
+        place.className = 'journal-entry-location';
+        place.textContent = `Found at ${location}`;
+        copy.appendChild(place);
+      }
+      const actions = document.createElement('div');
+      actions.className = 'journal-entry-actions';
+      if (current?.collected && family && variant) {
+        const edit = document.createElement('button');
+        edit.type = 'button';
+        edit.textContent = current.locationFound ? 'Edit details' : 'Add location';
+        edit.addEventListener('click',() => openLocationDetails(family,variant));
+        actions.appendChild(edit);
+      }
+      const undo = document.createElement('button');
+      undo.type = 'button';
+      undo.className = 'journal-undo-button';
+      const canUndo = Boolean(current) && variantSnapshotsMatch(current,entry.after);
+      undo.textContent = canUndo ? 'Undo' : 'Changed later';
+      undo.disabled = !canUndo;
+      undo.setAttribute('aria-label',canUndo ? `Undo ${journalActionText(entry.type)} for ${entry.familyName} ${entry.variantName}` : 'This entry cannot be undone because the Sprite changed again later');
+      undo.addEventListener('click',() => undoJournalEntry(entry.id));
+      actions.appendChild(undo);
+      row.append(thumb,copy,actions);
+      journalEntryList.appendChild(row);
+    });
+  }
+
+  function undoJournalEntry(entryId) {
+    const entry = journalEntries.find((item) => item.id === entryId && !item.undone);
+    if (!entry) return;
+    const { family,variant } = journalSprite(entry);
+    const current = state[entry.familyId]?.[entry.variantId];
+    if (!current || !variantSnapshotsMatch(current,entry.after)) {
+      showToast('This Sprite changed again later, so that entry cannot be undone safely.');
+      return;
+    }
+    applyVariantSnapshot(current,entry.before);
+    entry.undone = true;
+    entry.undoneAt = new Date().toISOString();
+    saveProgress();
+    scheduleJournalSave();
+    renderAll();
+    showToast(`${family && variant ? variantView(family,variant).name : entry.variantName}: change undone`);
+  }
+
+  function isoToLocalDateTime(value) {
+    const date = new Date(value);
+    if (!Number.isFinite(date.getTime())) return '';
+    const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+    return local.toISOString().slice(0,16);
+  }
+
+  function localDateTimeToIso(value) {
+    if (!value) return '';
+    const date = new Date(value);
+    return Number.isFinite(date.getTime()) ? date.toISOString() : '';
+  }
+
+  function openLocationDetails(family,variant,journalEntryId = '',{ newlyCollected = false } = {}) {
+    const current = variantState(family.id,variant.id);
+    if (!current.collected) return;
+    pendingLocationDetails = {
+      familyId:family.id,
+      variantId:variant.id,
+      journalEntryId,
+      newlyCollected,
+      before:snapshotVariantState(current)
+    };
+    const name = `${familyView(family).name || 'Sprite'} · ${variantView(family,variant).name || 'Variant'}`;
+    locationFoundTitle.textContent = newlyCollected ? 'Where did you find it?' : 'Edit collection details';
+    locationFoundSpriteName.textContent = name;
+    const knownLocation = [...locationFoundSelect.options].some((option) => option.value === current.locationFound);
+    locationFoundSelect.value = knownLocation ? (current.locationFound || '') : 'Other landmark';
+    locationCollectedAt.value = isoToLocalDateTime(current.collectedAt || new Date().toISOString());
+    locationMasteredAt.value = isoToLocalDateTime(current.masteredAt || '');
+    locationMasteredAtLabel.hidden = !current.mastered;
+    document.documentElement.classList.add('journal-dialog-open');
+    document.body.classList.add('journal-dialog-open');
+    if (!locationFoundDialog.open) locationFoundDialog.showModal();
+  }
+
+  function closeLocationDetails() {
+    pendingLocationDetails = null;
+    if (locationFoundDialog.open) locationFoundDialog.close();
+  }
+
+  function saveLocationDetails(event) {
+    event.preventDefault();
+    if (!pendingLocationDetails) return closeLocationDetails();
+    const { familyId,variantId,journalEntryId,newlyCollected,before } = pendingLocationDetails;
+    const family = allFamilies().find((item) => item.id === familyId);
+    const variant = family && orderedVariants(family).find((item) => item.id === variantId);
+    if (!family || !variant) return closeLocationDetails();
+    const current = variantState(familyId,variantId);
+    const collectedAt = localDateTimeToIso(locationCollectedAt.value) || current.collectedAt || new Date().toISOString();
+    const masteredAt = current.mastered ? (localDateTimeToIso(locationMasteredAt.value) || current.masteredAt || collectedAt) : '';
+    current.collectedAt = collectedAt;
+    if (current.mastered) current.masteredAt = masteredAt;
+    else delete current.masteredAt;
+    const location = cleanLocation(locationFoundSelect.value);
+    if (location) current.locationFound = location;
+    else delete current.locationFound;
+    if (journalEntryId && newlyCollected) {
+      updateJournalEntry(journalEntryId,current,{ timestamp:collectedAt });
+    } else if (!variantSnapshotsMatch(before,current)) {
+      recordJournalEntry('details',family,variant,before,current,{ timestamp:new Date().toISOString() });
+    }
+    saveProgress();
+    closeLocationDetails();
+    renderJournal();
+    showToast(location ? `Location saved: ${location}` : 'Collection time saved');
   }
 
   function imageMode(mode) {
@@ -1578,8 +2076,8 @@
         id:`${family.id}:${variant.id}:${Date.now()}`,
         familyId:family.id,
         variantId:variant.id,
-        before:{ collected:Boolean(before.collected), mastered:Boolean(before.mastered) },
-        after:{ collected:Boolean(current.collected), mastered:Boolean(current.mastered) }
+        before:snapshotVariantState(before),
+        after:snapshotVariantState(current)
       },
       ...existing.filter((entry) => entry.familyId !== family.id || entry.variantId !== variant.id)
     ].slice(0,4);
@@ -1593,8 +2091,16 @@
     const family = allFamilies().find((item) => item.id === entry.familyId);
     const variant = family && orderedVariants(family).find((item) => item.id === entry.variantId);
     const current = variantState(entry.familyId,entry.variantId);
-    current.collected = Boolean(entry.before?.collected);
-    current.mastered = Boolean(entry.before?.mastered);
+    applyVariantSnapshot(current,entry.before);
+    const journalEntry = [...pendingJournalEntries,...journalEntries].find((item) => !item.undone
+      && item.familyId === entry.familyId
+      && item.variantId === entry.variantId
+      && variantSnapshotsMatch(item.after,entry.after));
+    if (journalEntry) {
+      journalEntry.undone = true;
+      journalEntry.undoneAt = new Date().toISOString();
+      scheduleJournalSave();
+    }
     recentMissingChanges[mode] = entries.filter((item) => item.id !== entryId);
     saveProgress();
     saveRecentMissingChanges();
@@ -1663,13 +2169,15 @@
     });
   }
 
-  function commitCardChange(card,family,variant,current,message,before = null) {
+  function commitCardChange(card,family,variant,current,message,before = null,type = '') {
     recordRecentMissingChange(family,variant,before,current);
+    const journalEntry = before && type ? recordJournalEntry(type,family,variant,before,current) : null;
     updateCard(card,current,family,variant);
     saveProgress();
     if (isUnownedPage()) renderCollections();
     updateCounters();
     showToast(`${variantView(family,variant).name || family.name}: ${message}`);
+    return journalEntry;
   }
 
   function cardDropAfter(card,event) {
@@ -1890,10 +2398,20 @@
     card.append(crown,seasonBadge,imageWrap,editorTools,percentageEditor,variantLine,listLabel,collect,masterLabel);
 
     const toggleCollected = () => {
-      const before = { collected:Boolean(current.collected), mastered:Boolean(current.mastered) };
+      const before = snapshotVariantState(current);
+      const collectedAt = new Date().toISOString();
       current.collected = !current.collected;
-      if (!current.collected) current.mastered = false;
-      commitCardChange(card,family,variant,current,current.collected ? 'Added to collection' : 'Removed from collection',before);
+      if (current.collected) {
+        current.collectedAt = current.collectedAt || collectedAt;
+      } else {
+        current.mastered = false;
+        delete current.collectedAt;
+        delete current.masteredAt;
+        delete current.locationFound;
+      }
+      const type = current.collected ? 'collected' : 'uncollected';
+      const journalEntry = commitCardChange(card,family,variant,current,current.collected ? 'Added to collection' : 'Removed from collection',before,type);
+      if (current.collected) openLocationDetails(family,variant,journalEntry?.id,{ newlyCollected:true });
     };
     imageButton.addEventListener('click',() => {
       if (spriteEditMode) return fileInput.click();
@@ -1901,10 +2419,19 @@
     });
     collect.addEventListener('click',toggleCollected);
     crown.addEventListener('click',() => {
-      const before = { collected:Boolean(current.collected), mastered:Boolean(current.mastered) };
+      const before = snapshotVariantState(current);
+      const changedAt = new Date().toISOString();
       current.mastered = !current.mastered;
-      if (current.mastered) current.collected = true;
-      commitCardChange(card,family,variant,current,current.mastered ? 'Mastered' : 'Mastery removed',before);
+      if (current.mastered) {
+        current.collected = true;
+        current.collectedAt = current.collectedAt || changedAt;
+        current.masteredAt = changedAt;
+      } else {
+        delete current.masteredAt;
+      }
+      const type = current.mastered ? 'mastered' : 'unmastered';
+      const journalEntry = commitCardChange(card,family,variant,current,current.mastered ? 'Mastered' : 'Mastery removed',before,type);
+      if (!before.collected && current.collected) openLocationDetails(family,variant,journalEntry?.id,{ newlyCollected:true });
     });
     moveLeft.addEventListener('click',() => moveSpriteCard(family,variant.id,-1));
     moveRight.addEventListener('click',() => moveSpriteCard(family,variant.id,1));
@@ -2293,6 +2820,7 @@
     renderCollections();
     updateCounters();
     updatePublishButton();
+    renderJournal();
   }
 
   function switchRarity(rarity,options = {}) {
@@ -2486,11 +3014,7 @@
         if (!safeBackupKey(variantId) || !current || typeof current !== 'object' || Array.isArray(current)) return;
         variantCount += 1;
         if (variantCount > 5000) throw new Error('This backup contains too many Sprite cards.');
-        const mastered = current.mastered === true;
-        cleanVariants[variantId] = {
-          collected:current.collected === true || mastered,
-          mastered
-        };
+        cleanVariants[variantId] = snapshotVariantState(current);
       });
       clean[familyId] = cleanVariants;
     });
@@ -2523,7 +3047,8 @@
     },{ saved:0, collected:0, mastered:0 });
   }
 
-  function backupPayload() {
+  async function backupPayload() {
+    if (journalInitialization) await journalInitialization;
     return {
       format:BACKUP_FORMAT,
       version:BACKUP_VERSION,
@@ -2531,12 +3056,13 @@
       app:'My Sprite Tracker',
       progress:sanitizeProgress(state),
       viewModes:sanitizeViewModes(spriteViewModes),
-      seasonView:sanitizeSeasonView(vaultSeasonView)
+      seasonView:sanitizeSeasonView(vaultSeasonView),
+      journal:normalizeJournalEntries(journalEntries)
     };
   }
 
-  function downloadProgressBackup() {
-    const payload = backupPayload();
+  async function downloadProgressBackup() {
+    const payload = await backupPayload();
     const blob = new Blob([`${JSON.stringify(payload,null,2)}\n`],{ type:'application/json' });
     const date = payload.exportedAt.slice(0,10);
     downloadableFile(blob,`my-sprite-tracker-backup-${date}.json`);
@@ -2558,13 +3084,14 @@
 
   function parsedBackup(value) {
     if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('That is not a Sprite Tracker backup.');
-    if (value.format !== BACKUP_FORMAT || value.version !== BACKUP_VERSION) {
+    if (value.format !== BACKUP_FORMAT || ![1,BACKUP_VERSION].includes(value.version)) {
       throw new Error('That file is not a compatible Sprite Tracker backup.');
     }
     return {
       progress:sanitizeProgress(value.progress),
       viewModes:sanitizeViewModes(value.viewModes),
-      seasonView:sanitizeSeasonView(value.seasonView)
+      seasonView:sanitizeSeasonView(value.seasonView),
+      journal:value.version >= 2 ? normalizeJournalEntries(value.journal) : []
     };
   }
 
@@ -2623,12 +3150,14 @@
     backupDialog.showModal();
   }
 
-  function restoreSelectedBackup() {
+  async function restoreSelectedBackup() {
     if (!pendingRestore) return;
+    if (journalInitialization) await journalInitialization;
     const safetyCopy = {
       progress:sanitizeProgress(state),
       viewModes:sanitizeViewModes(spriteViewModes),
-      seasonView:sanitizeSeasonView(vaultSeasonView)
+      seasonView:sanitizeSeasonView(vaultSeasonView),
+      journal:normalizeJournalEntries(journalEntries)
     };
     try {
       localStorage.setItem(PRE_RESTORE_PROGRESS_KEY,JSON.stringify(safetyCopy));
@@ -2647,13 +3176,14 @@
     }
     try { localStorage.setItem(VIEW_MODES_KEY,JSON.stringify(spriteViewModes)); } catch { /* Progress is still safely restored. */ }
     try { localStorage.setItem(SEASON_VIEW_KEY,vaultSeasonView); } catch { /* The restored view remains active for this visit. */ }
+    await replaceJournalEntries(pendingRestore.journal);
     pendingRestore = null;
     backupDialog.close();
     renderAll();
     showToast('Progress restored from backup');
   }
 
-  function undoLastRestore() {
+  async function undoLastRestore() {
     const raw = safeStorageGet(PRE_RESTORE_PROGRESS_KEY);
     if (!raw) return;
     try {
@@ -2665,6 +3195,7 @@
       if (!saveProgress()) throw new Error('Progress could not be saved.');
       localStorage.setItem(VIEW_MODES_KEY,JSON.stringify(spriteViewModes));
       localStorage.setItem(SEASON_VIEW_KEY,vaultSeasonView);
+      await replaceJournalEntries(saved.journal || []);
       localStorage.removeItem(PRE_RESTORE_PROGRESS_KEY);
       backupDialog.close();
       renderAll();
@@ -3293,6 +3824,14 @@
   document.querySelectorAll('[data-app-view]').forEach((button) => {
     button.addEventListener('click',() => setAppView(button.dataset.appView));
   });
+  journalActionFilter.addEventListener('change',renderJournal);
+  locationFoundForm.addEventListener('submit',saveLocationDetails);
+  document.getElementById('skipLocationFoundBtn').addEventListener('click',closeLocationDetails);
+  locationFoundDialog.addEventListener('close',() => {
+    pendingLocationDetails = null;
+    document.documentElement.classList.remove('journal-dialog-open');
+    document.body.classList.remove('journal-dialog-open');
+  });
   seasonViewSelect.addEventListener('change',() => setSeasonView(seasonViewSelect.value));
   showcaseBtn.addEventListener('click',openShowcaseDialog);
   showcaseForm.addEventListener('submit',generateShowcaseImage);
@@ -3437,6 +3976,10 @@
       setAppView(APP_VIEW_VAULT,{ announce:false });
       return;
     }
+    if (hashView === APP_VIEW_JOURNAL) {
+      setAppView(APP_VIEW_JOURNAL,{ announce:false });
+      return;
+    }
     if (appView !== APP_VIEW_TRACKER) setAppView(APP_VIEW_TRACKER,{ announce:false });
     if (hashView === 'unowned' || hashView === 'unmastered') missingView = hashView;
     switchRarity(rarityFromHash() || defaultRarity);
@@ -3444,13 +3987,16 @@
   document.getElementById('resetBtn').addEventListener('click',() => resetDialog.showModal());
   document.getElementById('confirmResetBtn').addEventListener('click',resetProgress);
 
+  journalInitialization = initializeJournal();
   renderAll();
   const activeHash = appView === APP_VIEW_VAULT
     ? '#vault'
-    : (isUnownedPage() ? `#${missingView}` : `#${activeRarity.toLowerCase()}`);
+    : (appView === APP_VIEW_JOURNAL
+        ? '#journal'
+        : (isUnownedPage() ? `#${missingView}` : `#${activeRarity.toLowerCase()}`));
   if (location.hash !== activeHash) history.replaceState({ rarity:activeRarity },'',activeHash);
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./service-worker.js?v=114',{ updateViaCache:'none' }).then((registration) => registration.update()).catch(() => {});
+    navigator.serviceWorker.register('./service-worker.js?v=115',{ updateViaCache:'none' }).then((registration) => registration.update()).catch(() => {});
   }
   const signalAppRendered = () => window.dispatchEvent(new Event('sprite-app-rendered'));
   if (document.fonts?.ready) {

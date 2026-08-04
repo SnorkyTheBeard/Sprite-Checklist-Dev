@@ -328,6 +328,15 @@
             </svg>
             <span>Sprite Vault</span>
           </button>
+          <button class="app-menu-item" type="button" data-app-view="journal">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M5 4.5A2.5 2.5 0 0 1 7.5 2H20v17H7.5A2.5 2.5 0 0 0 5 21.5Z"></path>
+              <path d="M5 4.5v17M9 7h7M9 11h5"></path>
+              <circle cx="16.5" cy="15.5" r="3.5"></circle>
+              <path d="M16.5 13.5v2.2l1.5 1"></path>
+            </svg>
+            <span>Collection Journal</span>
+          </button>
         </nav>
       </div>
     </dialog>
@@ -407,6 +416,67 @@
             <span><strong id="seasonVaultMastered">0 / 0</strong> mastered</span>
             <span class="season-vault-track" aria-hidden="true"><i id="seasonVaultMasteredBar"></i></span>
           </div>
+        </div>
+      </section>
+    </section>
+
+    <section class="collection-journal-page" id="collectionJournalPage" aria-labelledby="collectionJournalTitle" hidden>
+      <header class="collection-journal-head">
+        <p>Personal collection history</p>
+        <h2 id="collectionJournalTitle">Collection Journal</h2>
+        <span>Your dates and locations stay in this browser and in your downloaded backups.</span>
+      </header>
+
+      <section class="journal-insights" aria-label="Collection location insights">
+        <article class="journal-insight-card journal-top-location">
+          <span>Top collecting spot</span>
+          <strong id="journalTopLocation">No locations yet</strong>
+          <small id="journalTopLocationCount">Add a location when you collect a Sprite.</small>
+        </article>
+        <article class="journal-insight-card">
+          <span>Locations logged</span>
+          <strong id="journalLocationsLogged">0</strong>
+          <small>currently collected Sprites</small>
+        </article>
+        <article class="journal-insight-card">
+          <span>Journal entries</span>
+          <strong id="journalEntryCount">0</strong>
+          <small>progress changes recorded</small>
+        </article>
+      </section>
+
+      <section class="journal-location-chart" aria-labelledby="journalLocationChartTitle">
+        <div class="journal-section-heading">
+          <div>
+            <span>Collection map</span>
+            <h3 id="journalLocationChartTitle">Where you find your Sprites</h3>
+          </div>
+        </div>
+        <div class="journal-location-bars" id="journalLocationBars"></div>
+        <p class="journal-empty-copy" id="journalLocationEmpty">Your most-used locations will appear here.</p>
+      </section>
+
+      <section class="journal-history" aria-labelledby="journalHistoryTitle">
+        <div class="journal-section-heading journal-history-heading">
+          <div>
+            <span>Newest first</span>
+            <h3 id="journalHistoryTitle">Activity</h3>
+          </div>
+          <label class="journal-filter-label" for="journalActionFilter">
+            <span class="visually-hidden">Filter journal activity</span>
+            <select id="journalActionFilter">
+              <option value="all">All activity</option>
+              <option value="collected">Collected</option>
+              <option value="mastered">Mastered</option>
+              <option value="removed">Removed</option>
+              <option value="details">Details edited</option>
+            </select>
+          </label>
+        </div>
+        <div class="journal-entry-list" id="journalEntryList" aria-live="polite"></div>
+        <div class="journal-empty-state" id="journalEmptyState">
+          <strong>Your journal is ready.</strong>
+          <span>Collect or master a Sprite and its time will appear here automatically.</span>
         </div>
       </section>
     </section>
@@ -568,7 +638,7 @@
       <div class="backup-tool-grid">
         <section>
           <h3>Save a backup</h3>
-          <p>Includes every collected and mastered choice.</p>
+          <p>Includes progress, collection dates, locations, and Journal activity.</p>
           <button class="primary-btn" id="downloadBackupBtn" type="button">Download backup file</button>
         </section>
         <section>
@@ -589,10 +659,53 @@
     </form>
   </dialog>
 
+  <dialog class="reset-dialog location-found-dialog" id="locationFoundDialog" aria-labelledby="locationFoundTitle">
+    <form id="locationFoundForm">
+      <h2 id="locationFoundTitle">Where did you find it?</h2>
+      <p id="locationFoundSpriteName">Add optional details to this journal entry.</p>
+      <div class="location-found-fields">
+        <label for="locationFoundSelect">
+          <span>Location found</span>
+          <select id="locationFoundSelect">
+            <option value="">Not added</option>
+            <option value="Lifty Lodge">Lifty Lodge</option>
+            <option value="Battlewoods">Battlewoods</option>
+            <option value="Latte Landing">Latte Landing</option>
+            <option value="Wonkeeland">Wonkeeland</option>
+            <option value="Frosted Flats">Frosted Flats</option>
+            <option value="Sinister Strip">Sinister Strip</option>
+            <option value="Golden Grove">Golden Grove</option>
+            <option value="Shaken Sanctuary">Shaken Sanctuary</option>
+            <option value="Cluster Coast">Cluster Coast</option>
+            <option value="Sunken Shores">Sunken Shores</option>
+            <option value="Heatwave Harbor">Heatwave Harbor</option>
+            <option value="Calamari Canyon">Calamari Canyon</option>
+            <option value="Chopped Shop">Chopped Shop</option>
+            <option value="Other landmark">Other landmark</option>
+            <option value="Not sure">Not sure</option>
+          </select>
+        </label>
+        <label for="locationCollectedAt">
+          <span>Collected date &amp; time</span>
+          <input id="locationCollectedAt" type="datetime-local">
+        </label>
+        <label for="locationMasteredAt" id="locationMasteredAtLabel">
+          <span>Mastered date &amp; time</span>
+          <input id="locationMasteredAt" type="datetime-local">
+        </label>
+      </div>
+      <p class="location-found-note">You can skip this now and add or change it later from the Collection Journal.</p>
+      <div class="dialog-actions">
+        <button id="skipLocationFoundBtn" type="button">Skip</button>
+        <button class="primary-btn" type="submit">Save details</button>
+      </div>
+    </form>
+  </dialog>
+
   <div class="status-toast" id="statusToast" role="status" aria-live="polite"></div>
   <noscript>This checklist needs JavaScript enabled to save progress.</noscript>
 
   <script src="data.js?v=82"></script>
-  <script src="app.js?v=114"></script>
+  <script src="app.js?v=115"></script>
 </body>
 </html>
