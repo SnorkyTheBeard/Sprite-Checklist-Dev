@@ -718,6 +718,249 @@ body.vault-view .card.mastered .crown-button svg {
   }
 }
 
+/* V125: mobile visual repair — continuous backdrop, safe cards, fixed Home, and a cleaner Journal map. */
+html,
+body {
+  min-height:100%;
+}
+
+body.tracker-view:not(.vault-view) {
+  background-color:var(--theme-page-bg,#050505) !important;
+  background-image:none !important;
+}
+
+body.tracker-view:not(.vault-view) .page-backdrop {
+  position:fixed !important;
+  inset:0 !important;
+  width:100vw !important;
+  height:100vh !important;
+  height:100dvh !important;
+  min-height:100svh;
+  background-color:var(--theme-page-bg,#050505) !important;
+  background-image:
+    radial-gradient(ellipse at 14% 4%,var(--rarity-haze),transparent 38%),
+    radial-gradient(ellipse at 88% 36%,var(--rarity-sheen),transparent 42%),
+    linear-gradient(180deg,rgba(3,5,15,.12),rgba(3,5,15,.36)),
+    var(--theme-page-image) !important;
+  background-position:center top !important;
+  background-size:cover !important;
+  background-repeat:no-repeat !important;
+}
+
+/* The viewport backdrop owns the artwork. The scrolling checklist must stay transparent. */
+body.tracker-view:not(.vault-view) #checklistPage {
+  width:100% !important;
+  max-width:100% !important;
+  margin-inline:0 !important;
+  padding-inline:clamp(6px,2.8vw,18px) !important;
+  overflow-x:hidden !important;
+  background-color:transparent !important;
+  background-image:none !important;
+}
+
+body.tracker-view:not(.vault-view) #collections,
+body.tracker-view:not(.vault-view) .collection {
+  width:100% !important;
+  max-width:100% !important;
+  overflow:visible !important;
+}
+
+body.tracker-view:not(.vault-view) .variant-row {
+  width:100% !important;
+  max-width:100% !important;
+  margin-inline:0 !important;
+  padding:22px 18px 14px !important;
+  scroll-padding-inline:18px !important;
+  overflow-x:auto !important;
+  overflow-y:hidden !important;
+}
+
+body.tracker-view:not(.vault-view) .variant-row::after {
+  content:"";
+  flex:0 0 1px;
+}
+
+body.tracker-view:not(.vault-view) .card {
+  scroll-margin-inline:18px;
+  -webkit-backdrop-filter:blur(13px) saturate(118%);
+  backdrop-filter:blur(13px) saturate(118%);
+}
+
+/* 55% transparent means the glass color is 45% opaque; card contents remain fully opaque. */
+body.tracker-view:not(.vault-view) .collection[data-rarity="Rare"] .card {
+  background:linear-gradient(145deg,rgba(43,133,216,.45),rgba(5,48,116,.45)) !important;
+}
+body.tracker-view:not(.vault-view) .collection[data-rarity="Epic"] .card {
+  background:linear-gradient(145deg,rgba(138,64,204,.45),rgba(57,17,116,.45)) !important;
+}
+body.tracker-view:not(.vault-view) .collection[data-rarity="Legendary"] .card {
+  background:linear-gradient(145deg,rgba(218,99,27,.45),rgba(104,35,6,.45)) !important;
+}
+body.tracker-view:not(.vault-view) .collection[data-rarity="Mythic"] .card {
+  background:linear-gradient(145deg,rgba(207,151,24,.45),rgba(91,56,0,.45)) !important;
+}
+
+.floating-home-button {
+  position:fixed !important;
+  inset:auto auto max(14px,calc(10px + env(safe-area-inset-bottom,0px))) 50% !important;
+  z-index:2147483000 !important;
+  margin:0 !important;
+  transform:translate3d(-50%,0,0) !important;
+  -webkit-transform:translate3d(-50%,0,0) !important;
+  backface-visibility:hidden;
+  -webkit-backface-visibility:hidden;
+  will-change:transform;
+}
+
+/* Locations of Luck: compact, equal tap targets over an illustrated map. */
+.journal-location-chart {
+  overflow:hidden;
+  border-color:rgba(120,205,239,.24);
+  background:linear-gradient(160deg,rgba(7,20,34,.93),rgba(4,10,21,.92));
+}
+
+.journal-map-layout {
+  grid-template-columns:minmax(0,2.2fr) minmax(168px,.8fr);
+  gap:14px;
+}
+
+.journal-map-figure {
+  aspect-ratio:776 / 436;
+  border-color:rgba(173,226,247,.38);
+  border-radius:20px;
+  background:#061321;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 14px 32px rgba(0,0,0,.34);
+}
+
+.journal-map-art {
+  width:100%;
+  height:100%;
+  object-fit:cover;
+}
+
+.journal-map-waves { opacity:.34; stroke-width:3; }
+.journal-map-river { stroke:url(#journalRiver); stroke-width:10; opacity:.9; }
+.journal-map-road { stroke:#f3dba2; stroke-width:5; stroke-dasharray:9 9; opacity:.65; }
+.journal-map-boss-mark { fill:#fff0a2; stroke:#6d4b08; stroke-width:2; filter:drop-shadow(0 0 7px rgba(255,218,94,.85)); }
+
+.journal-map-zone,
+.journal-map-zone-top,
+.journal-map-zone-bottom,
+.journal-map-zone-boss {
+  position:absolute;
+  z-index:4;
+  width:78px;
+  height:78px;
+  padding:0;
+  display:grid;
+  place-items:center;
+  pointer-events:auto;
+  border:2px solid currentColor;
+  border-radius:50%;
+  transform:translate(-50%,-50%);
+  -webkit-transform:translate(-50%,-50%);
+  box-shadow:0 0 0 3px rgba(3,10,17,.55),inset 0 0 18px rgba(255,255,255,.13),0 6px 16px rgba(0,0,0,.38);
+}
+
+.journal-map-zone-top {
+  top:29%;
+  left:39%;
+  color:#63d2ff;
+  background:rgba(18,116,169,.54);
+}
+
+.journal-map-zone-bottom {
+  top:72%;
+  left:58%;
+  color:#ffad68;
+  background:rgba(169,78,21,.54);
+}
+
+.journal-map-zone-boss {
+  top:49%;
+  left:50%;
+  color:#8ef0a8;
+  background:rgba(24,126,65,.56);
+  border-style:solid;
+}
+
+.journal-map-zone span {
+  padding:4px 8px;
+  color:#fff;
+  border:0;
+  border-radius:999px;
+  background:rgba(2,8,15,.78);
+  font-size:10px;
+  font-weight:950;
+  letter-spacing:.02em;
+  text-shadow:0 1px 3px #000;
+}
+
+.journal-map-zone:hover,
+.journal-map-zone:focus-visible,
+.journal-map-zone.is-active {
+  transform:translate(-50%,-50%) scale(1.07);
+  -webkit-transform:translate(-50%,-50%) scale(1.07);
+  box-shadow:0 0 0 3px rgba(255,255,255,.86),inset 0 0 22px rgba(255,255,255,.25),0 0 24px currentColor;
+}
+
+.journal-map-legend {
+  align-content:center;
+  gap:8px;
+}
+
+.journal-map-legend > div {
+  min-height:54px;
+  padding:10px 11px;
+  border-color:rgba(255,255,255,.14);
+  background:linear-gradient(145deg,rgba(255,255,255,.075),rgba(255,255,255,.035));
+}
+
+.journal-map-instructions {
+  margin:10px 0 0;
+  color:#afc6d8;
+  font-size:11px;
+  text-align:center;
+}
+
+@media (max-width:700px) {
+  body.tracker-view:not(.vault-view) #checklistPage {
+    padding-inline:4px !important;
+  }
+
+  body.tracker-view:not(.vault-view) .variant-row {
+    padding-inline:16px !important;
+    scroll-padding-inline:16px !important;
+  }
+
+  .journal-map-layout {
+    grid-template-columns:1fr;
+    gap:10px;
+  }
+
+  .journal-map-zone,
+  .journal-map-zone-top,
+  .journal-map-zone-bottom,
+  .journal-map-zone-boss {
+    width:62px;
+    height:62px;
+  }
+
+  .journal-map-zone span {
+    padding:3px 6px;
+    font-size:8px;
+  }
+
+  .journal-map-legend {
+    grid-template-columns:repeat(3,minmax(0,1fr));
+  }
+
+  .journal-map-legend > div {
+    min-height:68px;
+    padding:8px 6px;
+  }
+}
+
 /* V124: interactive Journal memories, Sprite Runs, Dust details, and card safety. */
 .collection-count-emblem,
 .collection-count-reset-dialog { display:none !important; }
@@ -5216,6 +5459,107 @@ body.tracker-view .card.mastered .master-label {
 }
 
 /* v103 final overrides: keep the real Edge-safe backdrop and Vault cases above all legacy rules. */
+
+/* V125 FINAL CASCADE GATE: keep these mobile repairs after every Tracker and Journal legacy rule. */
+body.tracker-view:not(.vault-view) #checklistPage {
+  width:100% !important;
+  max-width:100% !important;
+  margin-inline:0 !important;
+  padding-inline:clamp(6px,2.8vw,18px) !important;
+  overflow-x:hidden !important;
+  background-color:transparent !important;
+  background-image:none !important;
+}
+
+body.tracker-view:not(.vault-view) #collections,
+body.tracker-view:not(.vault-view) .collection {
+  width:100% !important;
+  max-width:100% !important;
+  overflow:visible !important;
+}
+
+body.tracker-view:not(.vault-view) .variant-row {
+  width:100% !important;
+  max-width:100% !important;
+  margin-inline:0 !important;
+  padding:22px 18px 14px !important;
+  scroll-padding-inline:18px !important;
+  overflow-x:auto !important;
+  overflow-y:hidden !important;
+}
+
+body.tracker-view:not(.vault-view) .collection[data-rarity="Rare"] .card { background:linear-gradient(145deg,rgba(43,133,216,.45),rgba(5,48,116,.45)) !important; }
+body.tracker-view:not(.vault-view) .collection[data-rarity="Epic"] .card { background:linear-gradient(145deg,rgba(138,64,204,.45),rgba(57,17,116,.45)) !important; }
+body.tracker-view:not(.vault-view) .collection[data-rarity="Legendary"] .card { background:linear-gradient(145deg,rgba(218,99,27,.45),rgba(104,35,6,.45)) !important; }
+body.tracker-view:not(.vault-view) .collection[data-rarity="Mythic"] .card { background:linear-gradient(145deg,rgba(207,151,24,.45),rgba(91,56,0,.45)) !important; }
+
+.floating-home-button {
+  position:fixed !important;
+  top:auto !important;
+  right:auto !important;
+  bottom:max(14px,calc(10px + env(safe-area-inset-bottom,0px))) !important;
+  left:50% !important;
+  z-index:2147483000 !important;
+  margin:0 !important;
+  transform:translate3d(-50%,0,0) !important;
+  -webkit-transform:translate3d(-50%,0,0) !important;
+}
+
+.journal-map-layout { grid-template-columns:minmax(0,2.2fr) minmax(168px,.8fr) !important; gap:14px !important; }
+.journal-map-figure {
+  aspect-ratio:776 / 436 !important;
+  overflow:hidden !important;
+  border:1px solid rgba(173,226,247,.38) !important;
+  border-radius:20px !important;
+  background:#061321 !important;
+}
+.journal-map-figure::after { opacity:.42; }
+.journal-map-art { display:block !important; width:100% !important; height:100% !important; aspect-ratio:776 / 436 !important; }
+
+.journal-map-zone,
+.journal-map-zone-top,
+.journal-map-zone-bottom,
+.journal-map-zone-boss {
+  position:absolute !important;
+  z-index:4 !important;
+  width:78px !important;
+  height:78px !important;
+  padding:0 !important;
+  display:grid !important;
+  place-items:center !important;
+  pointer-events:auto !important;
+  border:2px solid currentColor !important;
+  border-radius:50% !important;
+  transform:translate(-50%,-50%) !important;
+  -webkit-transform:translate(-50%,-50%) !important;
+  box-shadow:0 0 0 3px rgba(3,10,17,.55),inset 0 0 18px rgba(255,255,255,.13),0 6px 16px rgba(0,0,0,.38) !important;
+}
+.journal-map-zone-top { top:29% !important; left:39% !important; color:#63d2ff !important; background:rgba(18,116,169,.54) !important; }
+.journal-map-zone-bottom { top:72% !important; left:58% !important; color:#ffad68 !important; background:rgba(169,78,21,.54) !important; }
+.journal-map-zone-boss { top:49% !important; left:50% !important; color:#8ef0a8 !important; background:rgba(24,126,65,.56) !important; border-style:solid !important; }
+.journal-map-zone span { padding:4px 8px !important; border-radius:999px !important; background:rgba(2,8,15,.78) !important; font-size:10px !important; }
+.journal-map-zone:hover,
+.journal-map-zone:focus-visible,
+.journal-map-zone.is-active {
+  transform:translate(-50%,-50%) scale(1.07) !important;
+  -webkit-transform:translate(-50%,-50%) scale(1.07) !important;
+  box-shadow:0 0 0 3px rgba(255,255,255,.86),inset 0 0 22px rgba(255,255,255,.25),0 0 24px currentColor !important;
+}
+.journal-map-legend { align-content:center !important; gap:8px !important; }
+.journal-map-legend > div { min-height:54px !important; padding:10px 11px !important; background:linear-gradient(145deg,rgba(255,255,255,.075),rgba(255,255,255,.035)) !important; }
+
+@media (max-width:700px) {
+  body.tracker-view:not(.vault-view) #checklistPage { padding-inline:4px !important; }
+  body.tracker-view:not(.vault-view) .variant-row { padding-inline:16px !important; scroll-padding-inline:16px !important; }
+  .journal-map-layout { grid-template-columns:1fr !important; gap:10px !important; }
+  .journal-map-zone,
+  .journal-map-zone-top,
+  .journal-map-zone-bottom,
+  .journal-map-zone-boss { width:62px !important; height:62px !important; }
+  .journal-map-zone span { padding:3px 6px !important; font-size:8px !important; }
+  .journal-map-legend { grid-template-columns:repeat(3,minmax(0,1fr)) !important; }
+  .journal-map-legend > div { min-height:68px !important; padding:8px 6px !important; }
+}
 .page-backdrop {
   position:fixed !important;
   inset:0 !important;

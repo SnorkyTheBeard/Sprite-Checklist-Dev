@@ -283,7 +283,7 @@
       }
     })();
   </script>
-<link rel="stylesheet" href="styles.css?v=124">
+<link rel="stylesheet" href="styles.css?v=125">
 <link rel="stylesheet" href="vault-v105.css?v=112">
 <link rel="stylesheet" href="viewport-v106.css?v=107">
 <link rel="stylesheet" href="scene-v113.css?v=114">
@@ -483,17 +483,34 @@
         </div>
         <div class="journal-map-layout">
           <figure class="journal-map-figure" aria-labelledby="journalMapInstructions">
-            <svg class="journal-map-art" viewBox="0 0 776 436" role="img" aria-label="Stylized island map divided into top, boss fight, and bottom areas">
+            <svg class="journal-map-art" viewBox="0 0 776 436" role="img" aria-label="Illustrated island map with tappable top, boss fight, and bottom areas">
               <defs>
-                <linearGradient id="journalSea" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#071a2e"></stop><stop offset="1" stop-color="#092c43"></stop></linearGradient>
-                <linearGradient id="journalIsland" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#90d7c2"></stop><stop offset=".5" stop-color="#5fa887"></stop><stop offset="1" stop-color="#d19a62"></stop></linearGradient>
-                <filter id="journalGlow"><feDropShadow dx="0" dy="7" stdDeviation="9" flood-color="#000" flood-opacity=".55"></feDropShadow></filter>
+                <radialGradient id="journalSea" cx="50%" cy="42%" r="72%"><stop stop-color="#173b56"></stop><stop offset="1" stop-color="#061321"></stop></radialGradient>
+                <linearGradient id="journalIsland" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#9bcaa3"></stop><stop offset=".54" stop-color="#69a37e"></stop><stop offset="1" stop-color="#d5a267"></stop></linearGradient>
+                <linearGradient id="journalRiver" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#b9eff8"></stop><stop offset="1" stop-color="#58b8d8"></stop></linearGradient>
+                <filter id="journalIslandShadow" x="-20%" y="-20%" width="140%" height="150%"><feDropShadow dx="0" dy="10" stdDeviation="10" flood-color="#01060b" flood-opacity=".65"></feDropShadow></filter>
               </defs>
               <rect width="776" height="436" rx="26" fill="url(#journalSea)"></rect>
-              <g opacity=".32" fill="none" stroke="#7bcce8" stroke-width="2"><path d="M0 80c130 40 190-35 310 8s210 25 466-20"></path><path d="M0 355c165-50 251 33 391-5s250-23 385 9"></path></g>
-              <path filter="url(#journalGlow)" fill="url(#journalIsland)" stroke="#c9efe1" stroke-width="5" d="M198 58c74-39 156-26 217-2 48 19 100 17 143 58 35 33 42 75 21 106 35 35 20 89-19 111-35 20-72 18-111 38-53 27-96 20-135-5-48 15-100-3-122-41-55-2-87-42-69-83-37-35-27-80 10-108 21-17 38-30 65-42Z"></path>
-              <g fill="#dffaf2" opacity=".55"><circle cx="279" cy="117" r="8"></circle><circle cx="454" cy="104" r="6"></circle><circle cx="231" cy="273" r="7"></circle><circle cx="502" cy="294" r="9"></circle><circle cx="376" cy="339" r="6"></circle></g>
-              <path d="M214 205c67-34 121 31 179 3s112-35 170-1" fill="none" stroke="#e2f4dc" stroke-width="8" stroke-linecap="round" opacity=".6"></path>
+              <g class="journal-map-waves" fill="none" stroke="#66b6d2" stroke-linecap="round">
+                <path d="M33 76c48-19 86-16 129 1M612 77c44-17 86-16 127 2M24 349c53-17 95-15 140 3M608 352c48-19 87-17 133 2"></path>
+                <path d="M60 104c29-10 55-9 82 1M635 106c26-10 52-9 78 1M52 323c31-10 60-9 91 2M638 325c27-9 53-8 80 1"></path>
+              </g>
+              <path class="journal-map-island" filter="url(#journalIslandShadow)" fill="url(#journalIsland)" stroke="#d4eee2" stroke-width="5" d="M217 50c55-29 115-32 163-13 39 15 69 15 106 8 55-10 110 23 119 70 5 25-5 45-24 61 29 24 37 61 17 87-17 22-43 32-76 35-19 38-57 57-103 56-37 35-91 42-131 17-36-22-48-56-41-87-45-3-78-28-83-64-4-31 11-57 37-75-19-37-11-75 16-99Z"></path>
+              <g class="journal-map-terrain" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                <path class="journal-map-river" d="M357 52c-15 42 35 58 8 93-26 33-7 57 25 75 28 15 7 50 27 82 10 17 6 35-5 49"></path>
+                <path class="journal-map-road" d="M215 190c68-37 118-19 168 15 54 36 104 43 175 10"></path>
+                <path class="journal-map-road" d="M297 78c3 72-13 120-53 177M489 76c-21 62-11 124 43 190"></path>
+              </g>
+              <g class="journal-map-contours" fill="none" stroke="#294e3e" stroke-width="2" opacity=".3">
+                <path d="M239 101c35-28 83-33 119-16M474 91c44-17 89 0 100 32M200 244c28 31 62 41 103 34M463 305c34 6 67-4 88-31"></path>
+                <path d="M254 119c30-22 65-25 91-11M481 111c31-10 61 0 74 20M217 255c25 21 50 28 79 23M472 320c27 2 49-7 64-25"></path>
+              </g>
+              <g class="journal-map-pois" fill="#f4fff9" stroke="#173529" stroke-width="3">
+                <circle cx="294" cy="105" r="7"></circle><circle cx="466" cy="103" r="7"></circle>
+                <circle cx="250" cy="239" r="7"></circle><circle cx="513" cy="250" r="7"></circle>
+                <circle cx="337" cy="320" r="7"></circle><circle cx="474" cy="313" r="7"></circle>
+              </g>
+              <g class="journal-map-boss-mark" transform="translate(387 211)"><path d="m0-15 4 10 11-1-8 7 3 11-10-6-10 6 3-11-8-7 11 1Z"></path></g>
             </svg>
             <button class="journal-map-zone journal-map-zone-top" type="button" data-journal-map-zone="Top of Map" aria-label="Show Top of Map activity"><span>Top</span></button>
             <button class="journal-map-zone journal-map-zone-bottom" type="button" data-journal-map-zone="Bottom of Map" aria-label="Show Bottom of Map activity"><span>Bottom</span></button>
@@ -892,6 +909,6 @@
   <noscript>This checklist needs JavaScript enabled to save progress.</noscript>
 
   <script src="data.js?v=82"></script>
-  <script src="app.js?v=124"></script>
+  <script src="app.js?v=125"></script>
 </body>
 </html>
