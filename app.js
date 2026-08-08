@@ -41,6 +41,7 @@
   const HUNT_HISTORY_KEY = `galaxy_sprite_tracker_hunt_history_v1_${STORAGE_SCOPE}`;
   const DUST_LEDGER_KEY = `galaxy_sprite_tracker_dust_ledger_v1_${STORAGE_SCOPE}`;
   const JOURNAL_FALLBACK_KEY = `galaxy_sprite_tracker_collection_journal_v1_${STORAGE_SCOPE}`;
+  const FUTURE_STATE_KEY = `galaxy_sprite_tracker_state_v1_${STORAGE_SCOPE}`;
   const JOURNAL_DB_NAME = `galaxy-sprite-tracker-journal-${STORAGE_SCOPE}`;
   const JOURNAL_DB_STORE = 'entries';
   const MAX_JOURNAL_ENTRIES = 500;
@@ -719,6 +720,7 @@
   function saveProgress() {
     try {
       localStorage.setItem(PROGRESS_KEY,JSON.stringify(state));
+      queueFutureStateSync();
       return true;
     } catch {
       showToast('Progress could not be saved in this browser.');
@@ -727,19 +729,31 @@
   }
 
   function saveHuntMode() {
-    try { localStorage.setItem(HUNT_MODE_KEY,JSON.stringify(huntMode)); } catch { /* Hunt Mode can continue for this visit. */ }
+    try {
+      localStorage.setItem(HUNT_MODE_KEY,JSON.stringify(huntMode));
+      queueFutureStateSync();
+    } catch { /* Hunt Mode can continue for this visit. */ }
   }
 
   function saveHuntCart() {
-    try { localStorage.setItem(HUNT_CART_KEY,JSON.stringify(huntCart)); } catch { showToast('The Sprite Run cart could not be saved.'); }
+    try {
+      localStorage.setItem(HUNT_CART_KEY,JSON.stringify(huntCart));
+      queueFutureStateSync();
+    } catch { showToast('The Sprite Run cart could not be saved.'); }
   }
 
   function saveHuntHistory() {
-    try { localStorage.setItem(HUNT_HISTORY_KEY,JSON.stringify(huntHistory)); } catch { showToast('Sprite Run History could not be saved.'); }
+    try {
+      localStorage.setItem(HUNT_HISTORY_KEY,JSON.stringify(huntHistory));
+      queueFutureStateSync();
+    } catch { showToast('Sprite Run History could not be saved.'); }
   }
 
   function saveDustLedger() {
-    try { localStorage.setItem(DUST_LEDGER_KEY,JSON.stringify(dustLedger)); } catch { showToast('The Sprite Dust account could not be saved.'); }
+    try {
+      localStorage.setItem(DUST_LEDGER_KEY,JSON.stringify(dustLedger));
+      queueFutureStateSync();
+    } catch { showToast('The Sprite Dust account could not be saved.'); }
   }
 
   function huntElapsedMs() {
@@ -1060,6 +1074,7 @@
   function setSpriteViewMode(mode) {
     spriteViewModes[activeRarity] = mode === 'list' ? 'list' : 'card';
     try { localStorage.setItem(VIEW_MODES_KEY,JSON.stringify(spriteViewModes)); } catch { /* The choice can remain active for this visit. */ }
+    queueFutureStateSync();
     applySpriteViewMode();
     renderCollections();
     updateCounters();
@@ -1231,6 +1246,7 @@
     seasonView = next;
     if (appView === APP_VIEW_VAULT) vaultSeasonView = next;
     try { localStorage.setItem(SEASON_VIEW_KEY,vaultSeasonView); } catch { /* The view can remain active for this visit. */ }
+    queueFutureStateSync();
     renderAll();
     if (announce && changed) showToast(seasonViewLabel());
   }
@@ -1238,6 +1254,7 @@
   function saveSpriteCardEdits() {
     try {
       localStorage.setItem(SPRITE_CARD_EDITS_KEY,JSON.stringify(spriteCardEdits));
+      queueFutureStateSync();
       updatePublishButton();
       return true;
     } catch {
@@ -1372,6 +1389,93 @@
 
   function spriteSeasonId(family,variant) {
     return variantView(family,variant).seasonId || familyView(family).seasonId || CURRENT_SEASON_ID;
+  }
+
+  let futureStateSyncQueued = false;
+
+  function futureCatalogFamilies() {
+    const builtInFamilyIds = new Set(baseData.map((family) => family?.id).filter(Boolean));
+    return allFamilies().map((family,familyIndex) => {
+      const familyInfo = familyView(family);
+      return {
+        id:family.id,
+        name:familyInfo.name || family.name || family.id,
+        rarity:familyRarity(family),
+        seasonId:familyInfo.seasonId || CURRENT_SEASON_ID,
+        visible:familyInfo.visible,
+        deleted:familyInfo.deleted,
+        custom:!builtInFamilyIds.has(family.id),
+        sortOrder:familyIndex,
+        variants:orderedVariants(family).map((variant,variantIndex) => {
+          const variantInfo = variantView(family,variant);
+          return {
+            id:variant.id,
+            name:variantInfo.name || variant.name || variant.id,
+            image:variantInfo.image || '',
+            rarityPercentage:variantInfo.rarityPercentage || '',
+            seasonId:spriteSeasonId(family,variant),
+            visible:variantInfo.visible,
+            deleted:variantInfo.deleted,
+            sortOrder:variantIndex
+          };
+        })
+      };
+    });
+  }
+
+  function futureStateInput() {
+    return {
+      scope:STORAGE_SCOPE,
+      currentSeasonId:CURRENT_SEASON_ID,
+      seasons:seasonCatalog,
+      families:futureCatalogFamilies(),
+      progress:state,
+      editor:{
+        localFamilyIds:(spriteCardEdits.customFamilies || []).map((family) => family?.id).filter(Boolean),
+        editedFamilyIds:Object.keys(spriteCardEdits.families || {}),
+        hasUnpublishedChanges:Boolean((spriteCardEdits.customFamilies || []).length || Object.keys(spriteCardEdits.families || {}).length)
+      },
+      viewModes:spriteViewModes,
+      missingView,
+      seasonView:vaultSeasonView,
+      journalReady,
+      journalEntries,
+      huntMode,
+      huntCart,
+      huntHistory,
+      dustLedger
+    };
+  }
+
+  function syncFutureState() {
+    const schema = window.SPRITE_STATE_SCHEMA;
+    if (!schema?.buildShadowState || !schema?.validate) return false;
+    try {
+      const previous = readJson(FUTURE_STATE_KEY);
+      const snapshot = schema.buildShadowState(futureStateInput(),previous);
+      const report = schema.validate(snapshot);
+      if (!report.valid) return false;
+      localStorage.setItem(FUTURE_STATE_KEY,JSON.stringify(snapshot));
+      window.SPRITE_STATE_STATUS = Object.freeze({
+        key:FUTURE_STATE_KEY,
+        schemaVersion:snapshot.schemaVersion,
+        updatedAt:snapshot.updatedAt,
+        stats:Object.freeze({ ...report.stats })
+      });
+      return true;
+    } catch {
+      /* V127 is a non-destructive shadow migration. Legacy saves remain authoritative. */
+      return false;
+    }
+  }
+
+  function queueFutureStateSync() {
+    if (futureStateSyncQueued) return;
+    futureStateSyncQueued = true;
+    Promise.resolve().then(() => {
+      futureStateSyncQueued = false;
+      syncFutureState();
+    });
   }
 
   function variantsForSeason(family,mode = seasonView) {
@@ -1687,6 +1791,7 @@
     journalReady = true;
     if (pending.length) scheduleJournalSave();
     renderJournal();
+    queueFutureStateSync();
   }
 
   function scheduleJournalSave() {
@@ -1700,6 +1805,7 @@
       } catch {
         try { localStorage.setItem(JOURNAL_FALLBACK_KEY,JSON.stringify(clean)); } catch { /* Keep the in-memory journal. */ }
       }
+      queueFutureStateSync();
     });
     return journalWriteQueue;
   }
@@ -3876,6 +3982,7 @@
     renderHuntHistory();
     renderDustAccount();
     applyHuntMode();
+    queueFutureStateSync();
   }
 
   function switchRarity(rarity,options = {}) {
@@ -3904,6 +4011,7 @@
     const changed = missingView !== next || !isUnownedPage();
     missingView = next;
     try { localStorage.setItem(MISSING_VIEW_KEY,missingView); } catch { /* The choice can remain active for this visit. */ }
+    queueFutureStateSync();
     switchRarity(UNOWNED_PAGE,{
       historyMode:options.historyMode,
       focusTab:options.focusTab,
@@ -5245,7 +5353,7 @@
                 : (isUnownedPage() ? `#${missingView}` : `#${activeRarity.toLowerCase()}`))));
   if (location.hash !== activeHash) history.replaceState({ rarity:activeRarity },'',activeHash);
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./service-worker.js?v=126',{ updateViaCache:'none' }).then((registration) => registration.update()).catch(() => {});
+    navigator.serviceWorker.register('./service-worker.js?v=127',{ updateViaCache:'none' }).then((registration) => registration.update()).catch(() => {});
   }
   const signalAppRendered = () => window.dispatchEvent(new Event('sprite-app-rendered'));
   if (document.fonts?.ready) {

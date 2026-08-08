@@ -1,4 +1,4 @@
-const CACHE = 'galaxy-sprite-checklist-v126';
+const CACHE = 'galaxy-sprite-checklist-v127';
 const CORE = [
   './',
   './index.html',
@@ -9,7 +9,8 @@ const CORE = [
   './published-design.js',
   './art-config.js?v=67',
   './data.js?v=82',
-  './app.js?v=126',
+  './state-schema-v127.js?v=127',
+  './app.js?v=127',
   './manifest.webmanifest?v=101',
   './fonts/Burbank Big Condensed Black.otf',
   './fonts/Fredoka-Regular.woff2',
@@ -47,7 +48,7 @@ const CORE = [
   './assets/page-backgrounds/page-bg-sprite-vault-v100.webp',
   './assets/header/main-header.webp?v=3'
 ];
-const FRESH_CODE_FILES = new Set(['styles.css','vault-v105.css','viewport-v106.css','scene-v126.css','art-config.js','data.js','app.js','manifest.webmanifest']);
+const FRESH_CODE_FILES = new Set(['styles.css','vault-v105.css','viewport-v106.css','scene-v126.css','art-config.js','data.js','state-schema-v127.js','app.js','manifest.webmanifest']);
 const FRESH_ASSET_PATHS = ['/assets/header/','/assets/page-backgrounds/','/assets/social/','/icons/'];
 
 async function freshOrCached(networkRequest, cachedResponse) {
