@@ -1,0 +1,211 @@
+/* V126: Safari/Edge-safe animated location backgrounds for the DEV Current Tracker only. */
+
+body:not(.vault-view)[data-page="rare"] .page-backdrop,
+body:not(.vault-view)[data-page="epic"] .page-backdrop {
+  overflow:hidden;
+}
+
+body:not(.vault-view)[data-page="rare"] .page-backdrop {
+  background-color:#0752c7 !important;
+  background-image:
+    linear-gradient(180deg,rgba(0,13,50,.14) 0%,rgba(0,12,48,.24) 52%,rgba(1,8,31,.48) 100%),
+    url("assets/page-backgrounds/page-bg-rare-lifty-lodge-v113.webp") !important;
+  background-position:center center !important;
+  background-size:cover !important;
+  background-repeat:no-repeat !important;
+}
+
+body:not(.vault-view)[data-page="epic"] .page-backdrop {
+  background-color:#43128d !important;
+  background-image:
+    linear-gradient(180deg,rgba(24,2,65,.16) 0%,rgba(31,3,69,.25) 52%,rgba(13,2,38,.5) 100%),
+    url("assets/page-backgrounds/page-bg-epic-wonkeeland-v113.webp") !important;
+  background-position:center center !important;
+  background-size:cover !important;
+  background-repeat:no-repeat !important;
+}
+
+/*
+  Real DOM layers replace animated pseudo-elements. iPhone Safari and Edge both
+  use WebKit, which can stop compositing pseudo-elements attached to a fixed,
+  isolated background after viewport changes or app restoration.
+*/
+.page-motion-layer {
+  position:fixed;
+  inset:0;
+  z-index:0;
+  width:100vw;
+  height:100vh;
+  height:100dvh;
+  overflow:hidden;
+  pointer-events:none;
+  contain:layout paint;
+  transform:translateZ(0);
+  -webkit-transform:translateZ(0);
+  backface-visibility:hidden;
+  -webkit-backface-visibility:hidden;
+}
+
+.page-motion-effect {
+  position:absolute;
+  display:block;
+  visibility:hidden;
+  pointer-events:none;
+  animation-play-state:paused;
+  transform:translate3d(0,0,0);
+  -webkit-transform:translate3d(0,0,0);
+  backface-visibility:hidden;
+  -webkit-backface-visibility:hidden;
+  will-change:transform,opacity;
+}
+
+/* Rare — two seamless snow depths plus a restrained lodge glow. */
+.motion-rare-snow {
+  top:-340px;
+  right:-10vw;
+  bottom:-340px;
+  left:-10vw;
+  background-repeat:repeat;
+}
+
+.motion-rare-snow-far {
+  opacity:.5;
+  background-image:
+    radial-gradient(circle at 12% 14%,rgba(255,255,255,.7) 0 .75px,transparent 1.55px),
+    radial-gradient(circle at 61% 27%,rgba(216,246,255,.68) 0 1px,transparent 1.8px),
+    radial-gradient(circle at 83% 58%,rgba(255,255,255,.54) 0 .65px,transparent 1.4px),
+    radial-gradient(circle at 34% 72%,rgba(234,249,255,.58) 0 .85px,transparent 1.6px),
+    radial-gradient(circle at 73% 89%,rgba(255,255,255,.46) 0 .6px,transparent 1.3px);
+  background-size:260px 320px;
+  animation:rare-snow-far-v126 19s linear infinite;
+}
+
+.motion-rare-snow-near {
+  opacity:.76;
+  background-image:
+    radial-gradient(circle at 15% 20%,rgba(255,255,255,.96) 0 1.25px,transparent 2.1px),
+    radial-gradient(circle at 58% 35%,rgba(226,248,255,.9) 0 1.55px,transparent 2.45px),
+    radial-gradient(circle at 86% 67%,rgba(255,255,255,.8) 0 1px,transparent 1.85px),
+    radial-gradient(circle at 39% 82%,rgba(239,251,255,.82) 0 1.2px,transparent 2px);
+  background-size:180px 240px;
+  animation:rare-snow-near-v126 11s linear infinite;
+}
+
+.motion-rare-glow {
+  inset:-5%;
+  opacity:.25;
+  background:
+    radial-gradient(ellipse at 24% 11%,rgba(78,232,255,.3),transparent 34%),
+    radial-gradient(ellipse at 80% 79%,rgba(255,189,83,.16),transparent 22%);
+  animation:rare-scene-glow-v126 8s ease-in-out infinite alternate;
+}
+
+body:not(.vault-view)[data-page="rare"] .motion-rare-snow,
+body:not(.vault-view)[data-page="rare"] .motion-rare-glow {
+  visibility:visible;
+  animation-play-state:running;
+}
+
+/* Epic — two independent star fields. Only opacity and transform animate. */
+.motion-epic-stars {
+  inset:-8%;
+  background-repeat:repeat;
+}
+
+.motion-epic-stars-a {
+  opacity:.2;
+  background-image:
+    radial-gradient(circle at 14% 19%,rgba(255,255,255,1) 0 1.15px,rgba(245,203,255,.42) 1.9px,transparent 3.5px),
+    radial-gradient(circle at 69% 37%,rgba(135,235,255,.95) 0 1px,transparent 2.7px),
+    radial-gradient(circle at 39% 78%,rgba(255,220,148,.88) 0 1.1px,transparent 2.8px),
+    radial-gradient(circle at 88% 87%,rgba(255,255,255,.82) 0 .8px,transparent 2.1px);
+  background-size:218px 246px;
+  animation:epic-stars-a-v126 3.4s ease-in-out infinite;
+}
+
+.motion-epic-stars-b {
+  opacity:.24;
+  background-image:
+    radial-gradient(circle at 22% 31%,rgba(255,255,255,.94) 0 1px,rgba(255,143,241,.36) 1.8px,transparent 3.2px),
+    radial-gradient(circle at 77% 66%,rgba(126,229,255,.88) 0 .9px,transparent 2.5px),
+    radial-gradient(ellipse at 21% 78%,rgba(255,106,223,.25),transparent 28%),
+    radial-gradient(ellipse at 74% 84%,rgba(255,196,99,.18),transparent 25%),
+    radial-gradient(ellipse at 50% 30%,rgba(105,223,255,.12),transparent 38%);
+  background-position:0 0,73px 41px,center,center,center;
+  background-size:286px 318px,337px 371px,100% 100%,100% 100%,100% 100%;
+  background-repeat:repeat,repeat,no-repeat,no-repeat,no-repeat;
+  animation:epic-stars-b-v126 4.7s ease-in-out -1.6s infinite;
+}
+
+body:not(.vault-view)[data-page="epic"] .motion-epic-stars {
+  visibility:visible;
+  animation-play-state:running;
+}
+
+html.background-motion-paused .page-motion-effect {
+  animation-play-state:paused !important;
+}
+
+/* Briefly removing the animation makes WebKit rebuild its compositor on return. */
+html.background-motion-reset .page-motion-effect {
+  animation-name:none !important;
+}
+
+@keyframes rare-snow-far-v126 {
+  from { transform:translate3d(-10px,-320px,0); -webkit-transform:translate3d(-10px,-320px,0); }
+  to { transform:translate3d(10px,0,0); -webkit-transform:translate3d(10px,0,0); }
+}
+
+@keyframes rare-snow-near-v126 {
+  from { transform:translate3d(9px,-240px,0); -webkit-transform:translate3d(9px,-240px,0); }
+  to { transform:translate3d(-9px,0,0); -webkit-transform:translate3d(-9px,0,0); }
+}
+
+@keyframes rare-scene-glow-v126 {
+  from { opacity:.2; transform:translate3d(0,0,0) scale(1); -webkit-transform:translate3d(0,0,0) scale(1); }
+  to { opacity:.36; transform:translate3d(0,0,0) scale(1.02); -webkit-transform:translate3d(0,0,0) scale(1.02); }
+}
+
+@keyframes epic-stars-a-v126 {
+  0%,100% { opacity:.14; transform:translate3d(0,0,0) scale(.996); -webkit-transform:translate3d(0,0,0) scale(.996); }
+  46% { opacity:.74; transform:translate3d(0,-3px,0) scale(1.01); -webkit-transform:translate3d(0,-3px,0) scale(1.01); }
+  68% { opacity:.3; transform:translate3d(0,0,0) scale(1); -webkit-transform:translate3d(0,0,0) scale(1); }
+}
+
+@keyframes epic-stars-b-v126 {
+  0%,100% { opacity:.17; transform:translate3d(0,0,0) scale(1); -webkit-transform:translate3d(0,0,0) scale(1); }
+  54% { opacity:.58; transform:translate3d(0,-2px,0) scale(1.008); -webkit-transform:translate3d(0,-2px,0) scale(1.008); }
+}
+
+@media (max-width:760px) and (orientation:portrait) {
+  body:not(.vault-view)[data-page="rare"] .page-backdrop {
+    background-image:
+      linear-gradient(180deg,rgba(0,13,50,.12) 0%,rgba(0,12,48,.22) 48%,rgba(1,8,31,.46) 100%),
+      url("assets/page-backgrounds/page-bg-rare-lifty-lodge-mobile-v113.webp") !important;
+    background-position:center center !important;
+  }
+
+  body:not(.vault-view)[data-page="epic"] .page-backdrop {
+    background-image:
+      linear-gradient(180deg,rgba(24,2,65,.14) 0%,rgba(31,3,69,.23) 48%,rgba(13,2,38,.48) 100%),
+      url("assets/page-backgrounds/page-bg-epic-wonkeeland-mobile-v113.webp") !important;
+    background-position:center center !important;
+  }
+
+  .motion-rare-snow-near { animation-duration:10s; }
+  .motion-rare-snow-far { animation-duration:17s; }
+}
+
+@media (prefers-reduced-motion:reduce) {
+  .page-motion-effect {
+    animation:none !important;
+    transform:none !important;
+    -webkit-transform:none !important;
+  }
+
+  body:not(.vault-view)[data-page="rare"] .motion-rare-snow-far { opacity:.22; }
+  body:not(.vault-view)[data-page="rare"] .motion-rare-snow-near { opacity:.3; }
+  body:not(.vault-view)[data-page="rare"] .motion-rare-glow { opacity:.22; }
+  body:not(.vault-view)[data-page="epic"] .motion-epic-stars-a,
+  body:not(.vault-view)[data-page="epic"] .motion-epic-stars-b { opacity:.28; }
+}

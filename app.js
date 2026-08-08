@@ -5038,6 +5038,25 @@
   document.addEventListener('visibilitychange',() => {
     if (!document.hidden && huntMode.active) updateHuntTimer();
   });
+  let backgroundMotionFrame = 0;
+  function wakeBackgroundMotion() {
+    const root = document.documentElement;
+    root.classList.toggle('background-motion-paused',document.hidden);
+    if (document.hidden || window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches) return;
+    root.classList.remove('background-motion-reset');
+    root.classList.add('background-motion-reset');
+    if (backgroundMotionFrame) cancelAnimationFrame(backgroundMotionFrame);
+    backgroundMotionFrame = requestAnimationFrame(() => {
+      backgroundMotionFrame = requestAnimationFrame(() => {
+        root.classList.remove('background-motion-reset');
+        backgroundMotionFrame = 0;
+      });
+    });
+  }
+  document.addEventListener('visibilitychange',wakeBackgroundMotion);
+  window.addEventListener('pageshow',wakeBackgroundMotion,{ passive:true });
+  window.addEventListener('orientationchange',() => window.setTimeout(wakeBackgroundMotion,220),{ passive:true });
+  wakeBackgroundMotion();
   locationFoundForm.addEventListener('submit',saveLocationDetails);
   document.getElementById('skipLocationFoundBtn').addEventListener('click',closeLocationDetails);
   locationFoundDialog.addEventListener('close',() => {
@@ -5226,7 +5245,7 @@
                 : (isUnownedPage() ? `#${missingView}` : `#${activeRarity.toLowerCase()}`))));
   if (location.hash !== activeHash) history.replaceState({ rarity:activeRarity },'',activeHash);
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./service-worker.js?v=125',{ updateViaCache:'none' }).then((registration) => registration.update()).catch(() => {});
+    navigator.serviceWorker.register('./service-worker.js?v=126',{ updateViaCache:'none' }).then((registration) => registration.update()).catch(() => {});
   }
   const signalAppRendered = () => window.dispatchEvent(new Event('sprite-app-rendered'));
   if (document.fonts?.ready) {
