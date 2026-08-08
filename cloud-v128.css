@@ -1,0 +1,483 @@
+/* V128 isolated Account & Cloud interface. */
+html.cloud-dialog-open,
+body.cloud-dialog-open {
+  overflow:hidden !important;
+  overscroll-behavior:none;
+}
+
+body.cloud-dialog-open {
+  position:static !important;
+  inset:auto !important;
+  width:auto !important;
+}
+
+.cloud-menu-item span {
+  min-width:0;
+}
+
+.cloud-menu-item small[data-state="synced"] {
+  color:#79f2b1;
+}
+
+.cloud-menu-item small[data-state="pending"],
+.cloud-menu-item small[data-state="attention"] {
+  color:#ffd676;
+}
+
+.cloud-menu-item small[data-state="error"],
+.cloud-menu-item small[data-state="offline"] {
+  color:#ffaaa4;
+}
+
+.cloud-account-dialog,
+.cloud-choice-dialog {
+  position:fixed;
+  inset:0;
+  width:100%;
+  max-width:none;
+  height:100%;
+  max-height:none;
+  margin:0;
+  padding:0;
+  overflow:hidden;
+  color:#f7fbff;
+  border:0;
+  background:transparent;
+}
+
+.cloud-account-dialog::backdrop,
+.cloud-choice-dialog::backdrop {
+  background:rgba(0,3,10,.82);
+  -webkit-backdrop-filter:none;
+  backdrop-filter:none;
+}
+
+.cloud-account-panel {
+  width:min(100%,620px);
+  height:100%;
+  margin-left:auto;
+  padding:calc(env(safe-area-inset-top,0px) + 22px) 22px calc(env(safe-area-inset-bottom,0px) + 30px);
+  overflow-y:auto;
+  overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch;
+  border-left:1px solid rgba(135,215,255,.3);
+  background:
+    radial-gradient(circle at 85% 0%,rgba(111,92,255,.24),transparent 33%),
+    radial-gradient(circle at 10% 18%,rgba(62,193,255,.18),transparent 29%),
+    linear-gradient(165deg,#111c34 0%,#080d1b 50%,#050711 100%);
+  box-shadow:-24px 0 70px rgba(0,0,0,.55);
+}
+
+.cloud-account-head {
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:18px;
+  padding-bottom:20px;
+  border-bottom:1px solid rgba(255,255,255,.12);
+}
+
+.cloud-account-head span,
+.cloud-choice-panel > span {
+  display:block;
+  color:#8ddfff;
+  font-size:10px;
+  font-weight:900;
+  letter-spacing:.14em;
+}
+
+.cloud-account-head h2,
+.cloud-choice-panel h2 {
+  margin:4px 0 0;
+  color:#fff;
+  font-family:var(--font-heading,"Arial Black",sans-serif);
+  font-size:clamp(32px,9vw,48px);
+  line-height:.94;
+  letter-spacing:-.02em;
+  text-shadow:0 4px 0 rgba(0,0,0,.42),0 0 22px rgba(93,202,255,.18);
+}
+
+.cloud-close-button {
+  flex:0 0 auto;
+  width:44px;
+  height:44px;
+  padding:0;
+  color:#fff;
+  border:1px solid rgba(255,255,255,.25);
+  border-radius:50%;
+  background:rgba(255,255,255,.07);
+  font:300 30px/1 Arial,sans-serif;
+}
+
+.cloud-close-button:hover,
+.cloud-close-button:focus-visible {
+  border-color:#8ddfff;
+  box-shadow:0 0 0 3px rgba(87,201,255,.16);
+}
+
+.cloud-setup-panel,
+.cloud-state-card,
+.cloud-profile-card {
+  margin-top:20px;
+  border:1px solid rgba(141,223,255,.27);
+  border-radius:20px;
+  background:linear-gradient(145deg,rgba(255,255,255,.09),rgba(255,255,255,.035));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 15px 35px rgba(0,0,0,.18);
+}
+
+.cloud-setup-panel {
+  padding:20px;
+}
+
+.cloud-setup-panel strong {
+  display:block;
+  color:#ffd676;
+  font-size:17px;
+}
+
+.cloud-setup-panel p,
+.cloud-local-note {
+  margin:8px 0 0;
+  color:#b9c8dc;
+  font-size:12px;
+  line-height:1.55;
+}
+
+.cloud-setup-panel code {
+  color:#fff;
+  font-size:.92em;
+}
+
+.cloud-auth-tabs {
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:8px;
+  margin-top:22px;
+  padding:5px;
+  border:1px solid rgba(255,255,255,.14);
+  border-radius:16px;
+  background:rgba(0,0,0,.24);
+}
+
+.cloud-auth-tabs button {
+  min-height:44px;
+  color:#aebdd2;
+  border:0;
+  border-radius:12px;
+  background:transparent;
+  font-size:13px;
+  font-weight:900;
+}
+
+.cloud-auth-tabs button.is-active {
+  color:#fff;
+  background:linear-gradient(135deg,#158cd3,#6857db);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.24),0 8px 20px rgba(36,118,220,.23);
+}
+
+.cloud-auth-form {
+  display:grid;
+  gap:15px;
+  margin-top:20px;
+}
+
+.cloud-auth-form[hidden],
+.cloud-signed-out[hidden],
+.cloud-signed-in[hidden],
+.cloud-setup-panel[hidden] {
+  display:none !important;
+}
+
+.cloud-auth-form label {
+  display:grid;
+  gap:7px;
+  color:#e7f1ff;
+  font-size:12px;
+  font-weight:900;
+}
+
+.cloud-auth-form input {
+  box-sizing:border-box;
+  width:100%;
+  min-height:50px;
+  padding:11px 14px;
+  color:#fff;
+  border:1px solid rgba(151,191,232,.32);
+  border-radius:14px;
+  outline:0;
+  background:rgba(2,7,18,.72);
+  font:600 16px/1.2 var(--font-body,system-ui,sans-serif);
+}
+
+.cloud-auth-form input:focus {
+  border-color:#8ddfff;
+  box-shadow:0 0 0 3px rgba(87,201,255,.14),0 0 22px rgba(87,201,255,.09);
+}
+
+.cloud-auth-form > small {
+  margin-top:-5px;
+  color:#91a1b7;
+  font-size:10px;
+  line-height:1.45;
+}
+
+.cloud-primary-button,
+.cloud-account-actions > button,
+.cloud-choice-grid button,
+.cloud-choice-cancel {
+  min-height:48px;
+  padding:11px 16px;
+  border-radius:14px;
+  font-size:13px;
+  font-weight:900;
+  cursor:pointer;
+}
+
+.cloud-primary-button,
+.cloud-choice-grid button {
+  color:#06101e;
+  border:1px solid rgba(255,255,255,.55);
+  background:linear-gradient(180deg,#c8f4ff,#6acbff 48%,#3698dd);
+  box-shadow:inset 0 1px 0 #fff,0 9px 24px rgba(41,153,224,.22);
+}
+
+.cloud-primary-button:disabled,
+.cloud-account-actions button:disabled,
+.cloud-auth-form input:disabled {
+  cursor:wait;
+  opacity:.58;
+}
+
+.cloud-profile-card {
+  display:flex;
+  align-items:center;
+  gap:14px;
+  padding:17px;
+}
+
+.cloud-profile-icon {
+  display:grid;
+  flex:0 0 auto;
+  width:44px;
+  height:44px;
+  place-items:center;
+  color:#06140d;
+  border:1px solid rgba(255,255,255,.62);
+  border-radius:50%;
+  background:linear-gradient(145deg,#c8ffe1,#57dc99);
+  box-shadow:0 0 22px rgba(83,228,154,.23);
+  font-size:21px;
+  font-weight:1000;
+}
+
+.cloud-profile-card strong,
+.cloud-profile-card small,
+.cloud-state-card strong,
+.cloud-state-card span,
+.cloud-state-card small {
+  display:block;
+}
+
+.cloud-profile-card strong {
+  font-size:15px;
+}
+
+.cloud-profile-card small {
+  margin-top:3px;
+  color:#9eb0c7;
+  font-size:11px;
+}
+
+.cloud-state-card {
+  display:grid;
+  gap:14px;
+  padding:18px;
+}
+
+.cloud-state-card strong {
+  color:#8ddfff;
+  font-size:17px;
+}
+
+.cloud-state-card strong[data-state="synced"] {
+  color:#79f2b1;
+}
+
+.cloud-state-card strong[data-state="attention"],
+.cloud-state-card strong[data-state="pending"] {
+  color:#ffd676;
+}
+
+.cloud-state-card strong[data-state="error"],
+.cloud-state-card strong[data-state="offline"] {
+  color:#ffaaa4;
+}
+
+.cloud-state-card span {
+  margin-top:4px;
+  color:#d8e4f2;
+  font-size:12px;
+  line-height:1.45;
+}
+
+.cloud-state-card small {
+  padding-top:12px;
+  color:#8799b1;
+  border-top:1px solid rgba(255,255,255,.1);
+  font-size:10px;
+}
+
+.cloud-account-actions {
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+  margin-top:16px;
+}
+
+.cloud-account-actions > button:not(.cloud-primary-button) {
+  color:#f2f7ff;
+  border:1px solid rgba(255,255,255,.2);
+  background:rgba(255,255,255,.07);
+}
+
+.cloud-account-actions .cloud-sign-out-button {
+  grid-column:1/-1;
+  min-height:42px;
+  color:#c5d0df;
+  border-color:transparent;
+  background:transparent;
+  font-size:11px;
+}
+
+.cloud-account-status {
+  min-height:20px;
+  margin:15px 2px 0;
+  color:#aebdd2;
+  font-size:11px;
+  line-height:1.45;
+  text-align:center;
+}
+
+.cloud-account-status[data-state="success"] {
+  color:#79f2b1;
+}
+
+.cloud-account-status[data-state="error"] {
+  color:#ffaaa4;
+}
+
+.cloud-choice-dialog {
+  display:none;
+  place-items:center;
+  padding:18px;
+}
+
+.cloud-choice-dialog[open] {
+  display:grid;
+}
+
+.cloud-choice-panel {
+  box-sizing:border-box;
+  width:min(100%,680px);
+  max-height:calc(100vh - 36px);
+  max-height:calc(100dvh - 36px);
+  padding:24px;
+  overflow-y:auto;
+  overscroll-behavior:contain;
+  border:1px solid rgba(142,218,255,.34);
+  border-radius:24px;
+  background:
+    radial-gradient(circle at 80% 0%,rgba(109,88,255,.23),transparent 36%),
+    linear-gradient(155deg,#14223c,#080d1b 62%,#050711);
+  box-shadow:0 28px 90px rgba(0,0,0,.68),inset 0 1px 0 rgba(255,255,255,.12);
+}
+
+.cloud-choice-panel > p {
+  margin:10px 0 0;
+  color:#b9c8dc;
+  font-size:12px;
+}
+
+.cloud-choice-grid {
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+  margin-top:20px;
+}
+
+.cloud-choice-grid article {
+  display:flex;
+  min-width:0;
+  padding:17px;
+  flex-direction:column;
+  border:1px solid rgba(255,255,255,.16);
+  border-radius:18px;
+  background:rgba(255,255,255,.055);
+}
+
+.cloud-choice-grid strong,
+.cloud-choice-grid span,
+.cloud-choice-grid small {
+  display:block;
+}
+
+.cloud-choice-grid strong {
+  color:#fff;
+  font-size:16px;
+}
+
+.cloud-choice-grid span {
+  margin-top:8px;
+  color:#c9d7e8;
+  font-size:11px;
+  line-height:1.45;
+}
+
+.cloud-choice-grid small {
+  margin-top:5px;
+  color:#8395ad;
+  font-size:9px;
+}
+
+.cloud-choice-grid button {
+  width:100%;
+  margin-top:auto;
+  padding-top:11px;
+}
+
+.cloud-choice-grid article:first-child button {
+  margin-top:18px;
+}
+
+.cloud-choice-cancel {
+  display:block;
+  margin:13px auto 0;
+  color:#c3cfdd;
+  border:0;
+  background:transparent;
+  font-size:11px;
+}
+
+@media (max-width:620px) {
+  .cloud-account-panel {
+    width:100%;
+    padding-right:17px;
+    padding-left:17px;
+    border-left:0;
+  }
+
+  .cloud-choice-grid {
+    grid-template-columns:1fr;
+  }
+
+  .cloud-choice-grid article:first-child button {
+    margin-top:18px;
+  }
+}
+
+@media (prefers-reduced-motion:reduce) {
+  .cloud-account-dialog,
+  .cloud-choice-dialog {
+    scroll-behavior:auto;
+  }
+}

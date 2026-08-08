@@ -720,7 +720,7 @@
   function saveProgress() {
     try {
       localStorage.setItem(PROGRESS_KEY,JSON.stringify(state));
-      queueFutureStateSync();
+      noteLocalSaveChange('progress');
       return true;
     } catch {
       showToast('Progress could not be saved in this browser.');
@@ -731,28 +731,28 @@
   function saveHuntMode() {
     try {
       localStorage.setItem(HUNT_MODE_KEY,JSON.stringify(huntMode));
-      queueFutureStateSync();
+      noteLocalSaveChange('sprite-run');
     } catch { /* Hunt Mode can continue for this visit. */ }
   }
 
   function saveHuntCart() {
     try {
       localStorage.setItem(HUNT_CART_KEY,JSON.stringify(huntCart));
-      queueFutureStateSync();
+      noteLocalSaveChange('sprite-run');
     } catch { showToast('The Sprite Run cart could not be saved.'); }
   }
 
   function saveHuntHistory() {
     try {
       localStorage.setItem(HUNT_HISTORY_KEY,JSON.stringify(huntHistory));
-      queueFutureStateSync();
+      noteLocalSaveChange('sprite-run-history');
     } catch { showToast('Sprite Run History could not be saved.'); }
   }
 
   function saveDustLedger() {
     try {
       localStorage.setItem(DUST_LEDGER_KEY,JSON.stringify(dustLedger));
-      queueFutureStateSync();
+      noteLocalSaveChange('sprite-dust');
     } catch { showToast('The Sprite Dust account could not be saved.'); }
   }
 
@@ -1074,7 +1074,7 @@
   function setSpriteViewMode(mode) {
     spriteViewModes[activeRarity] = mode === 'list' ? 'list' : 'card';
     try { localStorage.setItem(VIEW_MODES_KEY,JSON.stringify(spriteViewModes)); } catch { /* The choice can remain active for this visit. */ }
-    queueFutureStateSync();
+    noteLocalSaveChange('preferences');
     applySpriteViewMode();
     renderCollections();
     updateCounters();
@@ -1246,7 +1246,7 @@
     seasonView = next;
     if (appView === APP_VIEW_VAULT) vaultSeasonView = next;
     try { localStorage.setItem(SEASON_VIEW_KEY,vaultSeasonView); } catch { /* The view can remain active for this visit. */ }
-    queueFutureStateSync();
+    noteLocalSaveChange('preferences');
     renderAll();
     if (announce && changed) showToast(seasonViewLabel());
   }
@@ -1476,6 +1476,17 @@
       futureStateSyncQueued = false;
       syncFutureState();
     });
+  }
+
+  function noteLocalSaveChange(area) {
+    queueFutureStateSync();
+    try {
+      window.dispatchEvent(new CustomEvent('sprite-local-save-changed',{
+        detail:{ area:String(area || 'progress'), changedAt:new Date().toISOString() }
+      }));
+    } catch {
+      /* Cloud sync is optional; local saving never depends on this event. */
+    }
   }
 
   function variantsForSeason(family,mode = seasonView) {
@@ -1805,7 +1816,7 @@
       } catch {
         try { localStorage.setItem(JOURNAL_FALLBACK_KEY,JSON.stringify(clean)); } catch { /* Keep the in-memory journal. */ }
       }
-      queueFutureStateSync();
+      noteLocalSaveChange('journal');
     });
     return journalWriteQueue;
   }
@@ -4361,8 +4372,8 @@
     backupDialog.showModal();
   }
 
-  async function restoreSelectedBackup() {
-    if (!pendingRestore) return;
+  async function applyParsedBackup(restored,{ closeBackup = false, message = 'Progress restored' } = {}) {
+    if (!restored) throw new Error('No saved progress was supplied.');
     if (journalInitialization) await journalInitialization;
     const safetyCopy = {
       progress:sanitizeProgress(state),
@@ -4377,17 +4388,15 @@
     try {
       localStorage.setItem(PRE_RESTORE_PROGRESS_KEY,JSON.stringify(safetyCopy));
     } catch {
-      backupRestoreStatus.dataset.state = 'error';
-      backupRestoreStatus.textContent = 'This browser could not create the safety copy, so nothing was restored.';
-      return;
+      throw new Error('This browser could not create a safety copy, so nothing was restored.');
     }
-    state = pendingRestore.progress;
-    spriteViewModes = pendingRestore.viewModes;
-    vaultSeasonView = pendingRestore.seasonView;
-    huntMode = pendingRestore.huntMode;
-    huntCart = pendingRestore.huntCart;
-    huntHistory = pendingRestore.huntHistory;
-    dustLedger = pendingRestore.dustLedger;
+    state = restored.progress;
+    spriteViewModes = restored.viewModes;
+    vaultSeasonView = restored.seasonView;
+    huntMode = restored.huntMode;
+    huntCart = restored.huntCart;
+    huntHistory = restored.huntHistory;
+    dustLedger = restored.dustLedger;
     seasonView = appView === APP_VIEW_VAULT ? vaultSeasonView : CURRENT_SEASON_ID;
     if (!saveProgress()) {
       state = safetyCopy.progress;
@@ -4397,7 +4406,7 @@
       huntCart = safetyCopy.huntCart;
       huntHistory = safetyCopy.huntHistory;
       dustLedger = safetyCopy.dustLedger;
-      return;
+      throw new Error('Progress could not be saved in this browser.');
     }
     try { localStorage.setItem(VIEW_MODES_KEY,JSON.stringify(spriteViewModes)); } catch { /* Progress is still safely restored. */ }
     try { localStorage.setItem(SEASON_VIEW_KEY,vaultSeasonView); } catch { /* The restored view remains active for this visit. */ }
@@ -4405,12 +4414,44 @@
     saveHuntCart();
     saveHuntHistory();
     saveDustLedger();
-    await replaceJournalEntries(pendingRestore.journal);
-    pendingRestore = null;
-    backupDialog.close();
+    await replaceJournalEntries(restored.journal);
+    if (closeBackup && backupDialog.open) backupDialog.close();
     renderAll();
-    showToast('Progress restored from backup');
+    showToast(message);
+    return progressSnapshotStats(restored.progress);
   }
+
+  async function restoreSelectedBackup() {
+    if (!pendingRestore) return;
+    try {
+      await applyParsedBackup(pendingRestore,{ closeBackup:true, message:'Progress restored from backup' });
+      pendingRestore = null;
+    } catch (error) {
+      backupRestoreStatus.dataset.state = 'error';
+      backupRestoreStatus.textContent = error?.message || 'That backup could not be restored.';
+    }
+  }
+
+  function cloudBackupStats(backup) {
+    const progress = progressSnapshotStats(backup?.progress || {});
+    return {
+      ...progress,
+      journal:Array.isArray(backup?.journal) ? backup.journal.length : 0,
+      runs:Array.isArray(backup?.huntHistory) ? backup.huntHistory.length : 0,
+      dustReceipts:Array.isArray(backup?.dustLedger) ? backup.dustLedger.length : 0
+    };
+  }
+
+  window.SPRITE_CLOUD_BRIDGE = Object.freeze({
+    version:1,
+    scope:STORAGE_SCOPE,
+    createBackup:() => backupPayload(),
+    restoreBackup:async (backup) => applyParsedBackup(parsedBackup(backup),{
+      closeBackup:false,
+      message:'Cloud progress restored'
+    }),
+    backupStats:cloudBackupStats
+  });
 
   async function undoLastRestore() {
     const raw = safeStorageGet(PRE_RESTORE_PROGRESS_KEY);
@@ -5353,7 +5394,7 @@
                 : (isUnownedPage() ? `#${missingView}` : `#${activeRarity.toLowerCase()}`))));
   if (location.hash !== activeHash) history.replaceState({ rarity:activeRarity },'',activeHash);
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./service-worker.js?v=127',{ updateViaCache:'none' }).then((registration) => registration.update()).catch(() => {});
+    navigator.serviceWorker.register('./service-worker.js?v=128',{ updateViaCache:'none' }).then((registration) => registration.update()).catch(() => {});
   }
   const signalAppRendered = () => window.dispatchEvent(new Event('sprite-app-rendered'));
   if (document.fonts?.ready) {
