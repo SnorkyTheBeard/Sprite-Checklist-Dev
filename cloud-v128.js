@@ -83,6 +83,9 @@
     if (session) writeJson(SESSION_KEY,session);
     else removeStored(SESSION_KEY);
     renderAccount();
+    window.dispatchEvent(new CustomEvent('sprite-cloud-session-changed',{
+      detail:{ signedIn:Boolean(session),userId:String(session?.user?.id || '') }
+    }));
     return session;
   }
 
@@ -545,6 +548,7 @@
           <small id="cloudLastSync">First cloud sync not completed</small>
         </article>
         <div class="cloud-account-actions">
+          <button id="openSpriteProfileBtn" type="button">Open profile</button>
           <button class="cloud-primary-button" id="syncCloudNowBtn" type="button">Sync now</button>
           <button id="restoreCloudBtn" type="button">Compare progress</button>
           <button class="cloud-sign-out-button" id="cloudSignOutBtn" type="button">Sign out</button>
@@ -606,6 +610,10 @@
   signUpForm.addEventListener('submit',signUp);
   document.getElementById('syncCloudNowBtn').addEventListener('click',() => reconcile({ interactive:true }));
   document.getElementById('restoreCloudBtn').addEventListener('click',() => reconcile({ interactive:true }));
+  document.getElementById('openSpriteProfileBtn').addEventListener('click',() => {
+    closeCloudDialog();
+    location.hash = '#profile';
+  });
   document.getElementById('cloudSignOutBtn').addEventListener('click',signOut);
   document.getElementById('chooseDeviceProgressBtn').addEventListener('click',() => resolveChoice('device'));
   document.getElementById('chooseCloudProgressBtn').addEventListener('click',() => resolveChoice('cloud'));
@@ -624,6 +632,16 @@
     if (session) setSyncStatus('offline','Changes remain saved in this browser until you reconnect.');
   });
 
+  window.SPRITE_ACCOUNT_BRIDGE = Object.freeze({
+    version:1,
+    configured:() => configured,
+    session:() => session ? JSON.parse(JSON.stringify(session)) : null,
+    accessToken,
+    request:api,
+    openAccount:openCloudDialog
+  });
+
+  window.dispatchEvent(new Event('sprite-account-bridge-ready'));
   renderAccount();
   if (session && configured) {
     window.setTimeout(() => reconcile({ interactive:false }),250);

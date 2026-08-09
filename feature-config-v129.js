@@ -53,11 +53,10 @@ window.SPRITE_FEATURE_CONFIG = Object.freeze({
       implemented:false
     }),
     profiles:Object.freeze({
-      state:'hidden',
+      state:'public',
       label:'Profiles',
-      eyebrow:'Share your collection',
-      message:'Profiles, Meadow Codes and saved friends are in development.',
-      implemented:false
+      route:'profile',
+      implemented:true
     }),
     topFiveFavorites:Object.freeze({
       state:'hidden',

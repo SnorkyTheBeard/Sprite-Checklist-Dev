@@ -22,6 +22,7 @@
   const APP_VIEW_JOURNAL = 'journal';
   const APP_VIEW_HUNTS = 'hunts';
   const APP_VIEW_DUST = 'dust';
+  const APP_VIEW_PROFILE = 'profile';
   const APP_VIEW_COMING_SOON = 'coming-soon';
   const FEATURE_STATES = new Set(['hidden','coming-soon','preview','public']);
   const featureConfig = window.SPRITE_FEATURE_CONFIG && typeof window.SPRITE_FEATURE_CONFIG === 'object'
@@ -32,6 +33,7 @@
     collectionJournal:{ state:'public',label:'Collection Journal',implemented:true },
     spriteRunHistory:{ state:'public',label:'Sprite Compass',implemented:true },
     spriteDust:{ state:'public',label:'Sprite Dust',implemented:true },
+    profiles:{ state:'public',label:'Profiles',implemented:true },
     sheetView:{ state:'hidden',label:'Sheet View',implemented:true }
   };
   const featureDefinitions = {
@@ -42,7 +44,8 @@
     [APP_VIEW_VAULT]:'spriteVault',
     [APP_VIEW_JOURNAL]:'collectionJournal',
     [APP_VIEW_HUNTS]:'spriteRunHistory',
-    [APP_VIEW_DUST]:'spriteDust'
+    [APP_VIEW_DUST]:'spriteDust',
+    [APP_VIEW_PROFILE]:'profiles'
   });
 
   function appStorageScope() {
@@ -228,6 +231,7 @@
     if (hashView === APP_VIEW_JOURNAL && ['public','preview'].includes(featureAccess('collectionJournal'))) return APP_VIEW_JOURNAL;
     if (hashView === APP_VIEW_HUNTS && ['public','preview'].includes(featureAccess('spriteRunHistory'))) return APP_VIEW_HUNTS;
     if (hashView === APP_VIEW_DUST && ['public','preview'].includes(featureAccess('spriteDust'))) return APP_VIEW_DUST;
+    if ((hashView === APP_VIEW_PROFILE || hashView.startsWith(`${APP_VIEW_PROFILE}/`)) && ['public','preview'].includes(featureAccess('profiles'))) return APP_VIEW_PROFILE;
     return APP_VIEW_TRACKER;
   }
 
@@ -704,6 +708,7 @@
   const collectionJournalPage = document.getElementById('collectionJournalPage');
   const huntHistoryPage = document.getElementById('huntHistoryPage');
   const spriteDustPage = document.getElementById('spriteDustPage');
+  const spriteProfilePage = document.getElementById('spriteProfilePage');
   const comingSoonPage = document.getElementById('comingSoonPage');
   const comingSoonEyebrow = document.getElementById('comingSoonEyebrow');
   const comingSoonFeatureName = document.getElementById('comingSoonFeatureName');
@@ -1406,13 +1411,15 @@
     const journalOpen = appView === APP_VIEW_JOURNAL;
     const huntsOpen = appView === APP_VIEW_HUNTS;
     const dustOpen = appView === APP_VIEW_DUST;
+    const profileOpen = appView === APP_VIEW_PROFILE;
     const comingSoonOpen = appView === APP_VIEW_COMING_SOON;
-    const featureOpen = journalOpen || huntsOpen || dustOpen || comingSoonOpen;
+    const featureOpen = journalOpen || huntsOpen || dustOpen || profileOpen || comingSoonOpen;
     document.body.classList.toggle('vault-view',vaultOpen);
     document.body.classList.toggle('tracker-view',!vaultOpen && !featureOpen);
     document.body.classList.toggle('journal-view',journalOpen);
     document.body.classList.toggle('hunt-history-view',huntsOpen);
     document.body.classList.toggle('dust-account-view',dustOpen);
+    document.body.classList.toggle('sprite-profile-view',profileOpen);
     document.body.classList.toggle('coming-soon-view',comingSoonOpen);
     document.querySelectorAll('.tracker-primary-view').forEach((element) => {
       element.hidden = vaultOpen || featureOpen;
@@ -1421,7 +1428,9 @@
     collectionJournalPage.hidden = !journalOpen;
     huntHistoryPage.hidden = !huntsOpen;
     spriteDustPage.hidden = !dustOpen;
+    spriteProfilePage.hidden = !profileOpen;
     comingSoonPage.hidden = !comingSoonOpen;
+    if (profileOpen) window.dispatchEvent(new Event('sprite-profile-view-opened'));
     if (comingSoonOpen) renderComingSoonPage();
     tabsEl.hidden = featureOpen;
     document.getElementById('mainContent').hidden = featureOpen;
@@ -1446,7 +1455,7 @@
     }
     const next = view === APP_VIEW_VAULT && SEASON_FEATURE_VISIBLE
       ? APP_VIEW_VAULT
-      : ([APP_VIEW_JOURNAL,APP_VIEW_HUNTS,APP_VIEW_DUST].includes(view) ? view : APP_VIEW_TRACKER);
+      : ([APP_VIEW_JOURNAL,APP_VIEW_HUNTS,APP_VIEW_DUST,APP_VIEW_PROFILE].includes(view) ? view : APP_VIEW_TRACKER);
     const changed = appView !== next;
     if (next === APP_VIEW_VAULT && season !== null) vaultSeasonView = sanitizeSeasonView(season);
     appView = next;
@@ -1465,7 +1474,9 @@
               ? '#hunts'
               : (appView === APP_VIEW_DUST
                   ? '#dust'
-                  : (isUnownedPage() ? `#${missingView}` : `#${activeRarity.toLowerCase()}`))));
+                  : (appView === APP_VIEW_PROFILE
+                      ? (location.hash.toLowerCase().startsWith('#profile/') ? location.hash : '#profile')
+                      : (isUnownedPage() ? `#${missingView}` : `#${activeRarity.toLowerCase()}`)))));
     if (location.hash !== viewHash) history.replaceState({ appView, rarity:activeRarity },'',viewHash);
     if (changed) window.scrollTo({ top:0, behavior:'auto' });
     closeAppMenu();
@@ -1475,7 +1486,9 @@
         ? 'Sprite Vault'
         : (appView === APP_VIEW_JOURNAL
             ? 'Collection Journal'
-            : (appView === APP_VIEW_HUNTS ? 'Sprite Compass' : (appView === APP_VIEW_DUST ? 'Sprite Dust' : 'Current Tracker')));
+            : (appView === APP_VIEW_HUNTS
+                ? 'Sprite Compass'
+                : (appView === APP_VIEW_DUST ? 'Sprite Dust' : (appView === APP_VIEW_PROFILE ? 'Profiles' : 'Current Tracker'))));
       showToast(label);
     }
   }
@@ -5053,6 +5066,48 @@
     backupStats:cloudBackupStats
   });
 
+  function profileFavoriteInfo(reference) {
+    const familyId = String(reference?.familyId || '').slice(0,200);
+    const variantId = String(reference?.variantId || '').slice(0,200);
+    const family = allFamilies().find((entry) => entry.id === familyId);
+    const variant = family && orderedVariants(family).find((entry) => entry.id === variantId);
+    if (!family || !variant) return null;
+    const familyInfo = familyView(family);
+    const variantInfo = variantView(family,variant);
+    const current = variantState(familyId,variantId);
+    return {
+      familyId,
+      variantId,
+      familyName:String(familyInfo.name || family.name || 'Sprite').slice(0,80),
+      variantName:String(variantInfo.name || variant.name || 'Variant').slice(0,80),
+      rarity:familyRarity(family),
+      seasonId:spriteSeasonId(family,variant),
+      image:displayImageSource(variantInfo.image),
+      collected:current.collected === true,
+      mastered:current.mastered === true
+    };
+  }
+
+  function profileStatsSnapshot() {
+    const overall = overallStats(CURRENT_SEASON_ID);
+    return {
+      seasonId:CURRENT_SEASON_ID,
+      seasonLabel:seasonCatalog.find((season) => season.id === CURRENT_SEASON_ID)?.label || 'Current season',
+      total:overall.total,
+      collected:overall.collected,
+      mastered:overall.mastered,
+      rarities:rarities.map((rarity) => ({ rarity,...rarityStats(rarity,CURRENT_SEASON_ID) })),
+      updatedAt:new Date().toISOString()
+    };
+  }
+
+  window.SPRITE_PROFILE_DATA_BRIDGE = Object.freeze({
+    version:1,
+    stats:profileStatsSnapshot,
+    search:(query) => findSpriteMatches(query).map((entry) => profileFavoriteInfo(entry)).filter(Boolean),
+    resolveFavorite:profileFavoriteInfo
+  });
+
   async function undoLastRestore() {
     const raw = safeStorageGet(PRE_RESTORE_PROGRESS_KEY);
     if (!raw) return;
@@ -6235,6 +6290,10 @@
       setAppView(APP_VIEW_DUST,{ announce:false });
       return;
     }
+    if (hashView === APP_VIEW_PROFILE || hashView.startsWith(`${APP_VIEW_PROFILE}/`)) {
+      setAppView(APP_VIEW_PROFILE,{ announce:false });
+      return;
+    }
     if (appView !== APP_VIEW_TRACKER) setAppView(APP_VIEW_TRACKER,{ announce:false });
     if (hashView === 'unowned' || hashView === 'unmastered') missingView = hashView;
     switchRarity(rarityFromHash() || defaultRarity);
@@ -6254,12 +6313,14 @@
             ? '#hunts'
             : (appView === APP_VIEW_DUST
                 ? '#dust'
-                : (appView === APP_VIEW_COMING_SOON
-                    ? `#coming-soon-${featureSlug(comingSoonFeatureId)}`
-                    : (isUnownedPage() ? `#${missingView}` : `#${activeRarity.toLowerCase()}`)))));
+                : (appView === APP_VIEW_PROFILE
+                    ? (location.hash.toLowerCase().startsWith('#profile/') ? location.hash : '#profile')
+                    : (appView === APP_VIEW_COMING_SOON
+                        ? `#coming-soon-${featureSlug(comingSoonFeatureId)}`
+                        : (isUnownedPage() ? `#${missingView}` : `#${activeRarity.toLowerCase()}`))))));
   if (location.hash !== activeHash) history.replaceState({ rarity:activeRarity },'',activeHash);
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./service-worker.js?v=131',{ updateViaCache:'none' }).then((registration) => registration.update()).catch(() => {});
+    navigator.serviceWorker.register('./service-worker.js?v=132',{ updateViaCache:'none' }).then((registration) => registration.update()).catch(() => {});
   }
   const signalAppRendered = () => window.dispatchEvent(new Event('sprite-app-rendered'));
   if (document.fonts?.ready) {
