@@ -290,8 +290,8 @@
 <link rel="stylesheet" href="vault-v105.css?v=112">
 <link rel="stylesheet" href="viewport-v106.css?v=107">
 <link rel="stylesheet" href="scene-v126.css?v=126">
-<link rel="stylesheet" href="cloud-v128.css?v=132">
-<link rel="stylesheet" href="profile-v132.css?v=132">
+<link rel="stylesheet" href="cloud-v128.css?v=133">
+<link rel="stylesheet" href="profile-v133.css?v=133">
 </head>
 <body>
   <div class="app-launch-screen" aria-hidden="true">
@@ -315,6 +315,13 @@
       <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
         <path d="M4 6h16M4 12h16M4 18h16"></path>
       </svg>
+    </button>
+
+    <button class="profile-quick-button" id="profileQuickBtn" type="button" aria-label="Open Profile and Cloud" title="Profile and Cloud">
+      <span class="profile-quick-avatar" id="profileQuickAvatar" data-avatar="sprite" aria-hidden="true">
+        <svg viewBox="0 0 64 64" focusable="false"><path d="M20 8c8-5 22-4 28 5 6 8 3 19 5 27 2 6 7 9 4 14-2 5-9 5-14 2-3 6-8 7-13 3-6 3-12 0-12-7-6 2-11 0-12-5-1-5 4-8 6-12 3-7 1-16 8-27Z"></path><path d="m23 35 7 7 13-15"></path></svg>
+      </span>
+      <i class="profile-cloud-indicator" id="profileQuickCloudIndicator" aria-hidden="true"></i>
     </button>
 
     <dialog class="app-menu-dialog" id="appMenuDialog" aria-labelledby="appMenuTitle">
@@ -678,16 +685,13 @@
 
     <section class="sprite-profile-page" id="spriteProfilePage" aria-labelledby="spriteProfilePageTitle" hidden>
       <header class="feature-page-head sprite-profile-page-head">
-        <span>Meadow identity</span>
-        <h2 id="spriteProfilePageTitle">Sprite Profile</h2>
-        <p>Choose your favorites, share your collection, or visit another collector with their Meadow Code.</p>
+        <span>Collector identity</span>
+        <h2 id="spriteProfilePageTitle">My Sprite Profile</h2>
+        <p>Your public-facing collection card, Meadow Code, favorites, and protected cloud account in one place.</p>
       </header>
 
       <section class="profile-lookup-panel" aria-labelledby="profileLookupTitle">
-        <div>
-          <span>Visit a collector</span>
-          <h3 id="profileLookupTitle">Enter a Meadow Code</h3>
-        </div>
+        <div><span>Visit another collector</span><h3 id="profileLookupTitle">Meadow Code</h3></div>
         <form class="profile-lookup-form" id="profileLookupForm">
           <label class="visually-hidden" for="profileLookupCode">Meadow Code</label>
           <input id="profileLookupCode" type="text" inputmode="text" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="8" placeholder="AB12CD34" required>
@@ -704,80 +708,121 @@
 
       <section class="profile-signed-out" id="profileSignedOut">
         <span class="profile-lock-icon" aria-hidden="true">✦</span>
-        <div><strong>Sign in to create your Sprite Profile.</strong><p>You can still visit a shared Meadow Code without an account.</p></div>
-        <button id="profileOpenAccountBtn" type="button">Open Account &amp; Cloud</button>
+        <div><strong>Sign in to create your Sprite Profile.</strong><p>You can still visit someone else with their Meadow Code.</p></div>
+        <button id="profileOpenAccountBtn" type="button">Sign in or create account</button>
       </section>
 
       <section class="profile-owner-panel" id="profileOwnerPanel" hidden>
-        <article class="profile-identity-card">
+        <section class="profile-account-rail" id="profileAccountRail" aria-label="Account and cloud status">
+          <i id="profileCloudStateDot" aria-hidden="true"></i>
+          <div><strong id="profileAccountEmail">Signed-in account</strong><span id="profileCloudStateText">Checking cloud protection…</span></div>
+          <button id="profileSyncNowBtn" type="button">Sync now</button>
+          <button id="profileManageAccountBtn" type="button">Manage account</button>
+        </section>
+
+        <article class="profile-display profile-owner-display">
           <div class="profile-avatar" id="profileOwnerAvatar" data-avatar="sprite" aria-hidden="true"></div>
           <div class="profile-identity-copy">
-            <span>Your Sprite Profile</span>
+            <span>Your public profile</span>
             <h3 id="profileOwnerName">Sprite Collector</h3>
-            <p id="profileOwnerBio">Choose a name, emblem, and favorite Sprites.</p>
-            <div class="profile-code-row" id="profileOwnerCodeRow" hidden>
-              <span>Meadow Code</span><strong id="profileOwnerCode">—</strong>
-            </div>
+            <p id="profileOwnerBio">Choose a name, profile picture, and favorite Sprites.</p>
           </div>
-          <div class="profile-share-actions" id="profileShareActions" hidden>
-            <button id="profileShareBtn" type="button">Share profile</button>
-            <button id="profileCopyCodeBtn" type="button">Copy code</button>
+          <div class="profile-owner-actions">
+            <button class="profile-edit-button" id="profileEditBtn" type="button">Edit profile</button>
+            <button id="profileShareBtn" type="button" hidden>Share profile</button>
           </div>
+          <button class="profile-code-chip" id="profileOwnerCodeRow" type="button" hidden aria-label="Copy Meadow Code">
+            <span>Meadow Code</span><strong id="profileOwnerCode">—</strong><small>Tap to copy</small>
+          </button>
         </article>
 
-        <div class="profile-stats-grid" id="profileOwnerStats" aria-label="Your collection statistics"></div>
+        <section class="profile-stat-section" aria-labelledby="profileOwnerStatsTitle">
+          <div class="profile-section-title"><span>Collection snapshot</span><h3 id="profileOwnerStatsTitle">Stats</h3></div>
+          <div class="profile-stats-strip" id="profileOwnerStats" aria-label="Your selected collection statistics"></div>
+        </section>
 
-        <form class="profile-edit-form" id="profileEditForm">
-          <div class="profile-form-heading"><span>Make it yours</span><h3>Profile details</h3></div>
-          <label>Display name<input id="profileDisplayName" type="text" maxlength="40" autocomplete="nickname" required></label>
-          <label>Short bio<textarea id="profileBio" maxlength="160" rows="3" placeholder="Tell other collectors a little about you."></textarea><small><span id="profileBioCount">0</span>/160</small></label>
-          <fieldset class="profile-avatar-picker">
-            <legend>Profile emblem</legend>
-            <label><input type="radio" name="profileAvatar" value="sprite" checked><span data-avatar-choice="sprite">Sprite</span></label>
-            <label><input type="radio" name="profileAvatar" value="crown"><span data-avatar-choice="crown">Crown</span></label>
-            <label><input type="radio" name="profileAvatar" value="compass"><span data-avatar-choice="compass">Compass</span></label>
-            <label><input type="radio" name="profileAvatar" value="star"><span data-avatar-choice="star">Star</span></label>
-            <label><input type="radio" name="profileAvatar" value="meadow"><span data-avatar-choice="meadow">Meadow</span></label>
-          </fieldset>
-          <label>Who can visit?
-            <select id="profilePrivacy">
-              <option value="code">Anyone with my Meadow Code</option>
-              <option value="public">Public profile</option>
-              <option value="private">Private — only me</option>
-            </select>
-          </label>
-
-          <section class="profile-favorites-editor" aria-labelledby="profileFavoritesTitle">
-            <div><span>Up to five</span><h3 id="profileFavoritesTitle">Favorite Sprites</h3></div>
-            <label class="visually-hidden" for="profileFavoriteSearch">Find a favorite Sprite</label>
-            <input id="profileFavoriteSearch" type="search" autocomplete="off" placeholder="Find a Sprite or variant…" aria-controls="profileFavoriteResults" aria-expanded="false">
-            <div class="profile-favorite-results" id="profileFavoriteResults" role="listbox" hidden></div>
-            <div class="profile-selected-favorites" id="profileSelectedFavorites"></div>
-            <p id="profileFavoritesEmpty">No favorites selected yet.</p>
-          </section>
-
-          <button class="profile-save-button" id="profileSaveBtn" type="submit">Save Sprite Profile</button>
-        </form>
+        <section class="profile-public-favorites" aria-labelledby="profileOwnerFavoritesTitle">
+          <div class="profile-section-title"><span>Personal picks</span><h3 id="profileOwnerFavoritesTitle">Favorite Sprites</h3></div>
+          <div class="profile-favorite-showcase" id="profileOwnerFavorites"></div>
+          <p id="profileOwnerFavoritesEmpty">No favorite Sprites selected yet.</p>
+        </section>
       </section>
 
       <section class="profile-visitor-panel" id="profileVisitorPanel" hidden>
-        <article class="profile-identity-card profile-visitor-identity">
+        <article class="profile-display profile-visitor-display">
           <div class="profile-avatar" id="profileVisitorAvatar" data-avatar="sprite" aria-hidden="true"></div>
           <div class="profile-identity-copy">
             <span>Sprite Collector</span>
             <h3 id="profileVisitorName">Sprite Profile</h3>
             <p id="profileVisitorBio"></p>
-            <div class="profile-code-row"><span>Meadow Code</span><strong id="profileVisitorCode">—</strong></div>
           </div>
+          <div class="profile-code-chip profile-visitor-code"><span>Meadow Code</span><strong id="profileVisitorCode">—</strong></div>
         </article>
-        <div class="profile-stats-grid" id="profileVisitorStats" aria-label="Collector statistics"></div>
+        <section class="profile-stat-section" aria-labelledby="profileVisitorStatsTitle">
+          <div class="profile-section-title"><span>Collection snapshot</span><h3 id="profileVisitorStatsTitle">Stats</h3></div>
+          <div class="profile-stats-strip" id="profileVisitorStats" aria-label="Collector statistics"></div>
+        </section>
         <section class="profile-public-favorites" aria-labelledby="profileVisitorFavoritesTitle">
-          <div class="profile-form-heading"><span>Top picks</span><h3 id="profileVisitorFavoritesTitle">Favorite Sprites</h3></div>
+          <div class="profile-section-title"><span>Personal picks</span><h3 id="profileVisitorFavoritesTitle">Favorite Sprites</h3></div>
           <div class="profile-favorite-showcase" id="profileVisitorFavorites"></div>
           <p id="profileVisitorFavoritesEmpty">No favorite Sprites shared yet.</p>
         </section>
       </section>
     </section>
+
+    <dialog class="profile-edit-dialog" id="profileEditDialog" aria-labelledby="profileEditTitle">
+      <form class="profile-edit-panel" id="profileEditForm">
+        <header class="profile-edit-head">
+          <div><span>Profile settings</span><h2 id="profileEditTitle" tabindex="-1">Edit Profile</h2></div>
+          <button id="profileEditCloseBtn" type="button" aria-label="Close profile editor">×</button>
+        </header>
+
+        <section class="profile-picture-editor" aria-labelledby="profilePictureTitle">
+          <div class="profile-edit-avatar" id="profileEditAvatar" data-avatar="sprite" aria-hidden="true"></div>
+          <div><h3 id="profilePictureTitle">Profile picture</h3><p>Upload a square picture or keep one of the app emblems.</p></div>
+          <label class="profile-picture-upload">Upload picture<input id="profilePictureInput" type="file" accept="image/png,image/jpeg,image/webp"></label>
+          <button id="profileRemovePictureBtn" type="button" hidden>Remove picture</button>
+        </section>
+
+        <label class="profile-edit-field">Display name<input id="profileDisplayName" type="text" maxlength="40" autocomplete="nickname" required></label>
+        <label class="profile-edit-field">Short bio<textarea id="profileBio" maxlength="160" rows="3" placeholder="Tell other collectors a little about you."></textarea><small><span id="profileBioCount">0</span>/160</small></label>
+
+        <fieldset class="profile-avatar-picker">
+          <legend>App emblem</legend>
+          <label><input type="radio" name="profileAvatar" value="sprite" checked><span>Sprite</span></label>
+          <label><input type="radio" name="profileAvatar" value="crown"><span>Crown</span></label>
+          <label><input type="radio" name="profileAvatar" value="compass"><span>Compass</span></label>
+          <label><input type="radio" name="profileAvatar" value="star"><span>Star</span></label>
+          <label><input type="radio" name="profileAvatar" value="meadow"><span>Meadow</span></label>
+        </fieldset>
+
+        <label class="profile-edit-field">Who can visit?
+          <select id="profilePrivacy">
+            <option value="code">Anyone with my Meadow Code</option>
+            <option value="public">Public profile</option>
+            <option value="private">Private — only me</option>
+          </select>
+        </label>
+
+        <section class="profile-stat-editor" aria-labelledby="profileStatEditorTitle">
+          <div class="profile-editor-heading"><span>Choose 3–6</span><h3 id="profileStatEditorTitle">Profile Stats</h3><p>Pick what visitors see and move your selected stats into the order you want.</p></div>
+          <div class="profile-stat-selected" id="profileStatSelected"></div>
+          <div class="profile-stat-available" id="profileStatAvailable"></div>
+        </section>
+
+        <section class="profile-favorites-editor" aria-labelledby="profileFavoritesTitle">
+          <div class="profile-editor-heading"><span>Maximum three</span><h3 id="profileFavoritesTitle">Favorite Sprites</h3></div>
+          <label class="visually-hidden" for="profileFavoriteSearch">Find a favorite Sprite</label>
+          <input id="profileFavoriteSearch" type="search" autocomplete="off" placeholder="Find a Sprite or variant…" aria-controls="profileFavoriteResults" aria-expanded="false">
+          <div class="profile-favorite-results" id="profileFavoriteResults" role="listbox" hidden></div>
+          <div class="profile-selected-favorites" id="profileSelectedFavorites"></div>
+          <p id="profileFavoritesEmpty">No favorites selected yet.</p>
+        </section>
+
+        <p class="profile-edit-status" id="profileEditStatus" role="status" aria-live="polite"></p>
+        <button class="profile-save-button" id="profileSaveBtn" type="submit">Save profile</button>
+      </form>
+    </dialog>
 
     <section class="coming-soon-page" id="comingSoonPage" aria-labelledby="comingSoonTitle" hidden>
       <div class="coming-soon-card">
@@ -1137,10 +1182,10 @@
 
   <script src="data.js?v=82"></script>
   <script src="state-schema-v127.js?v=127"></script>
-  <script src="feature-config-v129.js?v=132"></script>
-  <script src="app.js?v=132"></script>
+  <script src="feature-config-v129.js?v=133"></script>
+  <script src="app.js?v=133"></script>
   <script src="cloud-config-v128.js?v=128"></script>
-  <script src="cloud-v128.js?v=132"></script>
-  <script src="profile-v132.js?v=132"></script>
+  <script src="cloud-v128.js?v=133"></script>
+  <script src="profile-v133.js?v=133"></script>
 </body>
 </html>

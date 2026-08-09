@@ -107,7 +107,7 @@
     return meta;
   }
 
-  async function api(path,{ method = 'GET', body = null, token = '', headers = {} } = {}) {
+  async function api(path,{ method = 'GET', body = null, rawBody, token = '', headers = {} } = {}) {
     if (!configured) throw new Error('Cloud setup is not complete.');
     if (navigator.onLine === false) throw new Error('You are offline. Your browser progress is still safe.');
     const response = await fetch(`${baseUrl}${path}`,{
@@ -115,10 +115,10 @@
       headers:{
         apikey:anonKey,
         ...(token ? { Authorization:`Bearer ${token}` } : {}),
-        ...(body !== null ? { 'Content-Type':'application/json' } : {}),
+        ...(body !== null && rawBody === undefined ? { 'Content-Type':'application/json' } : {}),
         ...headers
       },
-      body:body === null ? undefined : JSON.stringify(body)
+      body:rawBody !== undefined ? rawBody : (body === null ? undefined : JSON.stringify(body))
     });
     if (!response.ok) {
       let message = '';
@@ -243,6 +243,25 @@
     syncState = state;
     syncDetail = detail;
     renderAccount();
+    window.dispatchEvent(new CustomEvent('sprite-cloud-status-changed',{ detail:cloudStatus() }));
+  }
+
+  function cloudStatus() {
+    const meta = session ? syncMeta() : null;
+    return {
+      state:syncState,
+      detail:syncDetail,
+      signedIn:Boolean(session),
+      email:String(session?.user?.email || ''),
+      lastSyncedAt:String(meta?.lastSyncedAt || '')
+    };
+  }
+
+  function publicStorageUrl(bucket,path) {
+    if (!configured || !bucket || !path) return '';
+    const cleanBucket = String(bucket).split('/').filter(Boolean).map(encodeURIComponent).join('/');
+    const cleanPath = String(path).split('/').filter(Boolean).map(encodeURIComponent).join('/');
+    return `${baseUrl}/storage/v1/object/public/${cleanBucket}/${cleanPath}`;
   }
 
   function accountMessage(message,state = '') {
@@ -498,6 +517,8 @@
   menuButton.className = 'app-menu-item cloud-menu-item';
   menuButton.id = 'accountCloudMenuBtn';
   menuButton.type = 'button';
+  menuButton.hidden = true;
+  menuButton.setAttribute('aria-hidden','true');
   menuButton.innerHTML = `
     <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
       <path d="M17.7 18.5H8.1a5.6 5.6 0 0 1-.7-11.2A6.5 6.5 0 0 1 19.7 9.7a4.5 4.5 0 0 1-2 8.8Z"></path>
@@ -633,12 +654,16 @@
   });
 
   window.SPRITE_ACCOUNT_BRIDGE = Object.freeze({
-    version:1,
+    version:2,
     configured:() => configured,
     session:() => session ? JSON.parse(JSON.stringify(session)) : null,
+    status:cloudStatus,
     accessToken,
     request:api,
-    openAccount:openCloudDialog
+    publicStorageUrl,
+    openAccount:openCloudDialog,
+    sync:() => reconcile({ interactive:true }),
+    signOut
   });
 
   window.dispatchEvent(new Event('sprite-account-bridge-ready'));
