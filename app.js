@@ -22,6 +22,28 @@
   const APP_VIEW_JOURNAL = 'journal';
   const APP_VIEW_HUNTS = 'hunts';
   const APP_VIEW_DUST = 'dust';
+  const APP_VIEW_COMING_SOON = 'coming-soon';
+  const FEATURE_STATES = new Set(['hidden','coming-soon','preview','public']);
+  const featureConfig = window.SPRITE_FEATURE_CONFIG && typeof window.SPRITE_FEATURE_CONFIG === 'object'
+    ? window.SPRITE_FEATURE_CONFIG
+    : { ownerUserIds:[],features:{} };
+  const defaultFeatureDefinitions = {
+    spriteVault:{ state:'public',label:'Sprite Vault',implemented:true },
+    collectionJournal:{ state:'public',label:'Collection Journal',implemented:true },
+    spriteRunHistory:{ state:'public',label:'Sprite Run History',implemented:true },
+    spriteDust:{ state:'public',label:'Sprite Dust',implemented:true },
+    sheetView:{ state:'hidden',label:'Sheet View',implemented:true }
+  };
+  const featureDefinitions = {
+    ...defaultFeatureDefinitions,
+    ...(featureConfig.features && typeof featureConfig.features === 'object' ? featureConfig.features : {})
+  };
+  const APP_VIEW_FEATURES = Object.freeze({
+    [APP_VIEW_VAULT]:'spriteVault',
+    [APP_VIEW_JOURNAL]:'collectionJournal',
+    [APP_VIEW_HUNTS]:'spriteRunHistory',
+    [APP_VIEW_DUST]:'spriteDust'
+  });
 
   function appStorageScope() {
     const firstPathPart = decodeURIComponent(location.pathname.split('/').filter(Boolean)[0] || 'root');
@@ -29,6 +51,7 @@
   }
 
   const STORAGE_SCOPE = appStorageScope();
+  const CLOUD_SESSION_KEY = `galaxy_sprite_tracker_cloud_session_v1_${STORAGE_SCOPE}`;
   const PROGRESS_KEY = `galaxy_sprite_tracker_progress_v2_${STORAGE_SCOPE}`;
   const VIEW_MODES_KEY = `galaxy_sprite_tracker_view_modes_v1_${STORAGE_SCOPE}`;
   const MISSING_VIEW_KEY = `galaxy_sprite_tracker_missing_view_v1_${STORAGE_SCOPE}`;
@@ -78,6 +101,54 @@
     repo:'Sprite-Checklist-Dev',
     branch:'main'
   };
+
+  function featureDefinition(featureId) {
+    const value = featureDefinitions[featureId];
+    if (!value || typeof value !== 'object') return null;
+    return {
+      ...value,
+      state:FEATURE_STATES.has(value.state) ? value.state : 'hidden',
+      label:String(value.label || featureId || 'New feature').slice(0,80)
+    };
+  }
+
+  function signedInCloudUserId() {
+    try {
+      const saved = JSON.parse(localStorage.getItem(CLOUD_SESSION_KEY) || 'null');
+      return String(saved?.user?.id || '');
+    } catch {
+      return '';
+    }
+  }
+
+  function ownerPreviewActive() {
+    const userId = signedInCloudUserId();
+    const allowed = Array.isArray(featureConfig.ownerUserIds) ? featureConfig.ownerUserIds.map(String) : [];
+    return Boolean(userId && allowed.includes(userId));
+  }
+
+  function featureAccess(featureId) {
+    const feature = featureDefinition(featureId);
+    if (!feature) return 'hidden';
+    const owner = ownerPreviewActive();
+    if (feature.state === 'public') return 'public';
+    if (feature.state === 'coming-soon') return owner && feature.implemented ? 'preview' : 'coming-soon';
+    if (feature.state === 'preview' || feature.state === 'hidden') return owner ? 'preview' : 'hidden';
+    return 'hidden';
+  }
+
+  function featureSlug(featureId) {
+    return String(featureId || '')
+      .replace(/([a-z0-9])([A-Z])/g,'$1-$2')
+      .replace(/[^a-z0-9]+/gi,'-')
+      .replace(/^-|-$/g,'')
+      .toLowerCase();
+  }
+
+  function featureIdFromComingSoonHash(hash = location.hash) {
+    const slug = decodeURIComponent(String(hash || '').replace(/^#/,'')).toLowerCase().replace(/^coming-soon-?/,'');
+    return Object.keys(featureDefinitions).find((featureId) => featureSlug(featureId) === slug) || '';
+  }
 
   function clearRetiredEditorStorage(storage) {
     if (!storage) return;
@@ -142,12 +213,19 @@
     }
   }
 
+  let comingSoonFeatureId = '';
+
   function loadAppView() {
     const hashView = decodeURIComponent(location.hash.slice(1)).toLowerCase();
-    if (hashView === APP_VIEW_VAULT && SEASON_FEATURE_VISIBLE) return APP_VIEW_VAULT;
-    if (hashView === APP_VIEW_JOURNAL) return APP_VIEW_JOURNAL;
-    if (hashView === APP_VIEW_HUNTS) return APP_VIEW_HUNTS;
-    if (hashView === APP_VIEW_DUST) return APP_VIEW_DUST;
+    const comingSoon = featureIdFromComingSoonHash();
+    if (hashView.startsWith('coming-soon') && comingSoon && featureAccess(comingSoon) !== 'hidden') {
+      comingSoonFeatureId = comingSoon;
+      return APP_VIEW_COMING_SOON;
+    }
+    if (hashView === APP_VIEW_VAULT && SEASON_FEATURE_VISIBLE && ['public','preview'].includes(featureAccess('spriteVault'))) return APP_VIEW_VAULT;
+    if (hashView === APP_VIEW_JOURNAL && ['public','preview'].includes(featureAccess('collectionJournal'))) return APP_VIEW_JOURNAL;
+    if (hashView === APP_VIEW_HUNTS && ['public','preview'].includes(featureAccess('spriteRunHistory'))) return APP_VIEW_HUNTS;
+    if (hashView === APP_VIEW_DUST && ['public','preview'].includes(featureAccess('spriteDust'))) return APP_VIEW_DUST;
     return APP_VIEW_TRACKER;
   }
 
@@ -601,6 +679,10 @@
   const collectionJournalPage = document.getElementById('collectionJournalPage');
   const huntHistoryPage = document.getElementById('huntHistoryPage');
   const spriteDustPage = document.getElementById('spriteDustPage');
+  const comingSoonPage = document.getElementById('comingSoonPage');
+  const comingSoonEyebrow = document.getElementById('comingSoonEyebrow');
+  const comingSoonFeatureName = document.getElementById('comingSoonFeatureName');
+  const comingSoonMessage = document.getElementById('comingSoonMessage');
   const journalTopLocation = document.getElementById('journalTopLocation');
   const journalTopLocationCount = document.getElementById('journalTopLocationCount');
   const journalLocationsLogged = document.getElementById('journalLocationsLogged');
@@ -676,6 +758,7 @@
   const clearSpriteSearchBtn = document.getElementById('clearSpriteSearchBtn');
   const spriteEditorToggle = document.getElementById('spriteEditorToggle');
   const spriteViewToggle = document.getElementById('spriteViewToggle');
+  const shareSheetBtn = document.getElementById('shareSheetBtn');
   const addSpriteDialog = document.getElementById('addSpriteDialog');
   const addSpriteForm = document.getElementById('addSpriteForm');
   const addSpriteFamilyId = document.getElementById('addSpriteFamilyId');
@@ -1059,26 +1142,36 @@
   }
 
   function currentSpriteViewMode() {
-    if (appView === APP_VIEW_VAULT) return 'card';
-    return spriteViewModes[activeRarity] === 'list' ? 'list' : 'card';
+    if (appView === APP_VIEW_VAULT || huntMode.active) return 'card';
+    const saved = spriteViewModes[activeRarity];
+    const sheetAvailable = !isUnownedPage() && ['public','preview'].includes(featureAccess('sheetView'));
+    if (saved === 'sheet' && sheetAvailable) return 'sheet';
+    return saved === 'list' ? 'list' : 'card';
   }
 
   function applySpriteViewMode() {
-    const listView = currentSpriteViewMode() === 'list';
+    const mode = currentSpriteViewMode();
+    const listView = mode === 'list';
+    const sheetView = mode === 'sheet';
     document.body.classList.toggle('sprite-list-view',listView);
-    spriteViewToggle.setAttribute('aria-pressed',String(listView));
-    spriteViewToggle.textContent = listView ? 'Card view' : 'List view';
-    spriteViewToggle.setAttribute('aria-label',`Use ${listView ? 'card' : 'list'} view on the ${activeRarity} page`);
+    document.body.classList.toggle('sprite-sheet-view',sheetView);
+    const nextMode = mode === 'card' ? 'list' : (mode === 'list' && !isUnownedPage() && ['public','preview'].includes(featureAccess('sheetView')) ? 'sheet' : 'card');
+    const label = { card:'Card',list:'List',sheet:'Sheet' }[nextMode];
+    spriteViewToggle.setAttribute('aria-pressed',String(mode !== 'card'));
+    spriteViewToggle.textContent = `${label} view`;
+    spriteViewToggle.setAttribute('aria-label',`Use ${label.toLowerCase()} view on the ${activeRarity} page`);
+    shareSheetBtn.hidden = !sheetView || appView !== APP_VIEW_TRACKER;
   }
 
   function setSpriteViewMode(mode) {
-    spriteViewModes[activeRarity] = mode === 'list' ? 'list' : 'card';
+    const sheetAvailable = !isUnownedPage() && ['public','preview'].includes(featureAccess('sheetView'));
+    spriteViewModes[activeRarity] = mode === 'list' ? 'list' : (mode === 'sheet' && sheetAvailable ? 'sheet' : 'card');
     try { localStorage.setItem(VIEW_MODES_KEY,JSON.stringify(spriteViewModes)); } catch { /* The choice can remain active for this visit. */ }
     noteLocalSaveChange('preferences');
     applySpriteViewMode();
     renderCollections();
     updateCounters();
-    showToast(`${activeRarity}: ${currentSpriteViewMode() === 'list' ? 'list' : 'card'} view`);
+    showToast(`${activeRarity}: ${currentSpriteViewMode()} view`);
   }
 
   function lockPageForAppMenu() {
@@ -1092,8 +1185,23 @@
     document.body.classList.remove('app-menu-open');
   }
 
+  function applyFeatureVisibility() {
+    document.querySelectorAll('[data-feature-id]').forEach((button) => {
+      const featureId = button.dataset.featureId || '';
+      const access = featureAccess(featureId);
+      button.hidden = access === 'hidden';
+      button.dataset.featureAccess = access;
+      button.classList.toggle('is-coming-soon',access === 'coming-soon');
+      button.classList.toggle('is-preview-feature',access === 'preview');
+      const badge = button.querySelector('[data-feature-badge]');
+      if (badge) badge.textContent = access === 'preview' ? 'Preview' : 'Coming Soon';
+    });
+    document.body.classList.toggle('owner-preview-active',ownerPreviewActive());
+  }
+
   function openAppMenu() {
     if (appMenuDialog.open) return;
+    applyFeatureVisibility();
     lockPageForAppMenu();
     appMenuBtn.setAttribute('aria-expanded','true');
     appMenuDialog.showModal();
@@ -1113,17 +1221,50 @@
     },320);
   }
 
+  function renderComingSoonPage() {
+    const feature = featureDefinition(comingSoonFeatureId) || {
+      label:'New Sprite Feature',
+      eyebrow:'Something new is on the way',
+      message:'More is growing behind the scenes.'
+    };
+    comingSoonEyebrow.textContent = String(feature.eyebrow || 'A new Sprite feature');
+    comingSoonFeatureName.textContent = feature.label;
+    comingSoonMessage.textContent = String(feature.message || 'Something special is growing behind the scenes.');
+  }
+
+  function openComingSoonFeature(featureId,{ announce = true } = {}) {
+    const access = featureAccess(featureId);
+    if (access === 'hidden') {
+      closeAppMenu();
+      if (announce) showToast('That feature is not available yet.');
+      return;
+    }
+    comingSoonFeatureId = featureId;
+    const changed = appView !== APP_VIEW_COMING_SOON;
+    appView = APP_VIEW_COMING_SOON;
+    seasonView = CURRENT_SEASON_ID;
+    renderAll();
+    const hash = `#coming-soon-${featureSlug(featureId)}`;
+    if (location.hash !== hash) history.replaceState({ appView,featureId },'',hash);
+    if (changed) window.scrollTo({ top:0,behavior:'auto' });
+    closeAppMenu();
+    if (changed) playAppViewTransition();
+    if (announce) showToast(`${featureDefinition(featureId)?.label || 'Feature'} · Coming Soon`);
+  }
+
   function applyAppView() {
     const vaultOpen = appView === APP_VIEW_VAULT;
     const journalOpen = appView === APP_VIEW_JOURNAL;
     const huntsOpen = appView === APP_VIEW_HUNTS;
     const dustOpen = appView === APP_VIEW_DUST;
-    const featureOpen = journalOpen || huntsOpen || dustOpen;
+    const comingSoonOpen = appView === APP_VIEW_COMING_SOON;
+    const featureOpen = journalOpen || huntsOpen || dustOpen || comingSoonOpen;
     document.body.classList.toggle('vault-view',vaultOpen);
     document.body.classList.toggle('tracker-view',!vaultOpen && !featureOpen);
     document.body.classList.toggle('journal-view',journalOpen);
     document.body.classList.toggle('hunt-history-view',huntsOpen);
     document.body.classList.toggle('dust-account-view',dustOpen);
+    document.body.classList.toggle('coming-soon-view',comingSoonOpen);
     document.querySelectorAll('.tracker-primary-view').forEach((element) => {
       element.hidden = vaultOpen || featureOpen;
     });
@@ -1131,11 +1272,14 @@
     collectionJournalPage.hidden = !journalOpen;
     huntHistoryPage.hidden = !huntsOpen;
     spriteDustPage.hidden = !dustOpen;
+    comingSoonPage.hidden = !comingSoonOpen;
+    if (comingSoonOpen) renderComingSoonPage();
     tabsEl.hidden = featureOpen;
     document.getElementById('mainContent').hidden = featureOpen;
     document.querySelector('.app-shell > footer').hidden = featureOpen;
     document.querySelectorAll('[data-app-view]').forEach((button) => {
-      const selected = button.dataset.appView === appView;
+      const selected = button.dataset.appView === appView
+        || (comingSoonOpen && button.dataset.featureId === comingSoonFeatureId);
       button.classList.toggle('is-active',selected);
       if (selected) button.setAttribute('aria-current','page');
       else button.removeAttribute('aria-current');
@@ -1143,6 +1287,14 @@
   }
 
   function setAppView(view,{ announce = true, season = null } = {}) {
+    const featureId = APP_VIEW_FEATURES[view] || '';
+    const access = featureId ? featureAccess(featureId) : 'public';
+    if (featureId && access === 'coming-soon') return openComingSoonFeature(featureId,{ announce });
+    if (featureId && access === 'hidden') {
+      closeAppMenu();
+      if (announce) showToast('That feature is not available yet.');
+      return;
+    }
     const next = view === APP_VIEW_VAULT && SEASON_FEATURE_VISIBLE
       ? APP_VIEW_VAULT
       : ([APP_VIEW_JOURNAL,APP_VIEW_HUNTS,APP_VIEW_DUST].includes(view) ? view : APP_VIEW_TRACKER);
@@ -3343,6 +3495,125 @@
       : event.clientX > rect.left + rect.width / 2;
   }
 
+  function commitSheetStateChange(family,variant,type) {
+    const current = variantState(family.id,variant.id);
+    const before = snapshotVariantState(current);
+    const changedAt = new Date().toISOString();
+    if (type === 'collected') {
+      current.collected = !current.collected;
+      if (current.collected) current.collectedAt ||= changedAt;
+      else {
+        current.mastered = false;
+        delete current.collectedAt;
+        delete current.masteredAt;
+        delete current.locationFound;
+      }
+      recordJournalEntry(current.collected ? 'collected' : 'uncollected',family,variant,before,current);
+    } else {
+      current.mastered = !current.mastered;
+      if (current.mastered) {
+        current.collected = true;
+        current.collectedAt ||= changedAt;
+        current.masteredAt = changedAt;
+      } else {
+        delete current.masteredAt;
+      }
+      recordJournalEntry(current.mastered ? 'mastered' : 'unmastered',family,variant,before,current);
+    }
+    saveProgress();
+    renderTabs();
+    renderCollections();
+    updateCounters();
+    queueFutureStateSync();
+    const label = variantView(family,variant).name || 'Sprite';
+    showToast(type === 'collected'
+      ? `${label}: ${current.collected ? 'added to collection' : 'removed from collection'}`
+      : `${label}: ${current.mastered ? 'mastered' : 'mastery removed'}`);
+  }
+
+  function sheetStateControls(family,variant) {
+    const current = variantState(family.id,variant.id);
+    const view = variantView(family,variant);
+    const familyName = familyView(family).name || 'Sprite';
+    const controls = document.createElement('div');
+    controls.className = 'sheet-state-controls';
+
+    const collected = document.createElement('button');
+    collected.type = 'button';
+    collected.className = 'sheet-check-button';
+    collected.setAttribute('aria-pressed',String(Boolean(current.collected)));
+    collected.setAttribute('aria-label',`${current.collected ? 'Remove' : 'Mark'} ${view.name || 'variant'} ${familyName} ${current.collected ? 'from collection' : 'as collected'}`);
+    collected.innerHTML = '<span aria-hidden="true">✓</span>';
+    collected.addEventListener('click',() => commitSheetStateChange(family,variant,'collected'));
+
+    const mastered = document.createElement('button');
+    mastered.type = 'button';
+    mastered.className = 'sheet-crown-button';
+    mastered.setAttribute('aria-pressed',String(Boolean(current.mastered)));
+    mastered.setAttribute('aria-label',`${current.mastered ? 'Remove mastery from' : 'Mark'} ${view.name || 'variant'} ${familyName}${current.mastered ? '' : ' as mastered'}`);
+    mastered.innerHTML = crownSvg();
+    mastered.addEventListener('click',() => commitSheetStateChange(family,variant,'mastered'));
+    controls.append(collected,mastered);
+    return controls;
+  }
+
+  function makeSheetCollection(family,rowVariants) {
+    const group = familyView(family);
+    const section = document.createElement('section');
+    section.className = 'sheet-collection';
+    section.dataset.familyId = family.id;
+    section.dataset.rarity = familyRarity(family);
+
+    const title = document.createElement('h3');
+    title.textContent = group.name || 'Sprite';
+    const content = document.createElement('div');
+    content.className = 'sheet-collection-row';
+    const baseVariant = rowVariants.find((variant) => variant.id === 'base' || /^base$/i.test(variantView(family,variant).name || '')) || rowVariants[0];
+    const base = document.createElement('div');
+    base.className = 'sheet-base-sprite';
+    const thumb = document.createElement('span');
+    thumb.className = 'sheet-base-thumb';
+    const baseSource = displayImageSource(variantView(family,baseVariant).image);
+    if (baseSource) {
+      const image = document.createElement('img');
+      image.src = baseSource;
+      image.alt = `${group.name || 'Sprite'} Base artwork`;
+      image.width = 78;
+      image.height = 78;
+      image.loading = 'lazy';
+      image.decoding = 'async';
+      thumb.appendChild(image);
+    } else {
+      thumb.textContent = (group.name || 'S').slice(0,1).toUpperCase();
+    }
+    const baseInfo = document.createElement('div');
+    baseInfo.className = 'sheet-base-info';
+    const baseName = document.createElement('strong');
+    baseName.textContent = variantView(family,baseVariant).name || 'Base';
+    baseInfo.append(baseName,sheetStateControls(family,baseVariant));
+    base.append(thumb,baseInfo);
+
+    const variants = document.createElement('div');
+    variants.className = 'sheet-variant-list';
+    rowVariants.filter((variant) => variant !== baseVariant).forEach((variant) => {
+      const item = document.createElement('div');
+      item.className = 'sheet-variant-item';
+      const name = document.createElement('span');
+      name.textContent = variantView(family,variant).name || 'Variant';
+      item.append(name,sheetStateControls(family,variant));
+      variants.appendChild(item);
+    });
+    if (!variants.childElementCount) {
+      const onlyBase = document.createElement('p');
+      onlyBase.className = 'sheet-only-base';
+      onlyBase.textContent = 'Base edition only';
+      variants.appendChild(onlyBase);
+    }
+    content.append(base,variants);
+    section.append(title,content);
+    return section;
+  }
+
   function makeCard(family,variant,{ eager = false } = {}) {
     const current = variantState(family.id,variant.id);
     const view = variantView(family,variant);
@@ -3825,6 +4096,12 @@
           (variant) => !variantFilter || variantFilter(family,variant)
         );
         if (!rowVariants.length && !spriteEditMode) return;
+        if (currentSpriteViewMode() === 'sheet') {
+          if (!rowVariants.length) return;
+          collectionsEl.appendChild(makeSheetCollection(family,rowVariants));
+          appended += 1;
+          return;
+        }
         const stats = familyStats(family);
         const section = document.createElement('section');
         section.className = 'collection';
@@ -3979,6 +4256,7 @@
   }
 
   function renderAll() {
+    applyFeatureVisibility();
     applyTheme();
     renderHeader();
     applyAppView();
@@ -4227,7 +4505,7 @@
   function sanitizeViewModes(value) {
     if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
     return Object.fromEntries(pageTabs.flatMap((page) => (
-      value[page] === 'list' || value[page] === 'card' ? [[page,value[page]]] : []
+      ['list','card','sheet'].includes(value[page]) ? [[page,value[page]]] : []
     )));
   }
 
@@ -4877,6 +5155,217 @@
     });
   }
 
+  function drawSheetCheck(context,x,y,active) {
+    context.save();
+    context.lineWidth = 3;
+    context.strokeStyle = active ? '#286044' : '#665439';
+    context.fillStyle = active ? '#dcebd8' : 'rgba(255,255,255,.18)';
+    roundedPath(context,x,y,27,27,6);
+    context.fill();
+    context.stroke();
+    if (active) {
+      context.strokeStyle = '#24583e';
+      context.lineWidth = 4;
+      context.lineCap = 'round';
+      context.lineJoin = 'round';
+      context.beginPath();
+      context.moveTo(x + 6,y + 14);
+      context.lineTo(x + 12,y + 20);
+      context.lineTo(x + 22,y + 8);
+      context.stroke();
+    }
+    context.restore();
+  }
+
+  function drawSheetCrown(context,x,y,active) {
+    context.save();
+    context.lineWidth = 3;
+    context.lineJoin = 'round';
+    context.strokeStyle = active ? '#8a5d0a' : '#665439';
+    context.fillStyle = active ? '#e5b83d' : 'rgba(255,255,255,.12)';
+    context.beginPath();
+    context.moveTo(x,y + 9);
+    context.lineTo(x + 8,y + 16);
+    context.lineTo(x + 15,y + 3);
+    context.lineTo(x + 22,y + 16);
+    context.lineTo(x + 30,y + 9);
+    context.lineTo(x + 27,y + 25);
+    context.lineTo(x + 3,y + 25);
+    context.closePath();
+    context.fill();
+    context.stroke();
+    context.beginPath();
+    context.moveTo(x + 4,y + 29);
+    context.lineTo(x + 26,y + 29);
+    context.stroke();
+    context.restore();
+  }
+
+  function drawSheetPaper(context,width,height,rarity) {
+    context.fillStyle = '#253042';
+    context.fillRect(0,0,width,height);
+    const paper = context.createLinearGradient(0,0,width,height);
+    paper.addColorStop(0,'#ead39d');
+    paper.addColorStop(.34,'#f4e4bb');
+    paper.addColorStop(.72,'#ead3a0');
+    paper.addColorStop(1,'#d7b77a');
+    context.fillStyle = paper;
+    context.fillRect(42,36,width - 84,height - 72);
+    context.strokeStyle = rarityColor(rarity);
+    context.globalAlpha = .58;
+    context.lineWidth = 7;
+    context.strokeRect(49,43,width - 98,height - 86);
+    context.globalAlpha = 1;
+    for (let index = 0; index < Math.min(1400,Math.floor(width * height / 6200)); index += 1) {
+      const x = 55 + ((index * 193) % Math.max(1,width - 110));
+      const y = 52 + ((index * 317) % Math.max(1,height - 104));
+      context.globalAlpha = index % 4 === 0 ? .045 : .022;
+      context.fillStyle = index % 3 === 0 ? '#5d4529' : '#fff8df';
+      context.fillRect(x,y,index % 7 === 0 ? 2 : 1,1);
+    }
+    context.globalAlpha = 1;
+  }
+
+  function sheetExportGroups() {
+    if (!rarities.includes(activeRarity)) return [];
+    return allFamilies()
+      .filter((family) => familyRarity(family) === activeRarity && familyMatchesSeason(family,CURRENT_SEASON_ID))
+      .flatMap((family) => {
+        const group = familyView(family);
+        const variants = variantsForSeason(family,CURRENT_SEASON_ID);
+        return group.visible && !group.deleted && variants.length ? [{ family,group,variants }] : [];
+      });
+  }
+
+  async function createSheetImage() {
+    const groups = sheetExportGroups();
+    if (!groups.length) throw new Error('This rarity does not have any Sprites to place on a sheet.');
+    if (document.fonts?.ready) {
+      try { await document.fonts.ready; } catch { /* Canvas fallbacks remain available. */ }
+    }
+    const width = 1080;
+    const rowHeights = groups.map(({ variants }) => Math.max(142,76 + Math.ceil(Math.max(0,variants.length - 1) / 3) * 52));
+    const contentHeight = rowHeights.reduce((sum,value) => sum + value,0) + Math.max(0,groups.length - 1) * 18;
+    const height = Math.max(1350,250 + contentHeight + 190);
+    if (height > 15000 || width * height > 14_000_000) throw new Error('This rarity sheet is too long for this phone to create safely.');
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const context = canvas.getContext('2d');
+    if (!context) throw new Error('This browser could not open the Sheet image creator.');
+
+    try {
+      drawSheetPaper(context,width,height,activeRarity);
+      context.textAlign = 'center';
+      context.fillStyle = '#342817';
+      context.font = '76px "Sprite Display","Arial Black",sans-serif';
+      context.fillText(`${activeRarity} Sprites`,width / 2,126);
+      context.strokeStyle = rarityColor(activeRarity);
+      context.lineWidth = 5;
+      context.beginPath();
+      context.moveTo(286,153);
+      context.lineTo(width - 286,153);
+      context.stroke();
+      context.fillStyle = '#675237';
+      context.font = '600 19px "Fredoka","Avenir Next Rounded","Segoe UI",sans-serif';
+      context.fillText('MY SPRITE TRACKER COLLECTION SHEET',width / 2,188);
+
+      let y = 230;
+      for (let index = 0; index < groups.length; index += 1) {
+        const { family,group,variants } = groups[index];
+        const rowHeight = rowHeights[index];
+        const rowX = 82;
+        const rowWidth = width - 164;
+        fillRounded(context,rowX,y,rowWidth,rowHeight,18,index % 2 ? 'rgba(115,79,34,.075)' : 'rgba(255,255,255,.12)');
+        context.strokeStyle = 'rgba(93,69,37,.28)';
+        context.lineWidth = 2;
+        roundedPath(context,rowX,y,rowWidth,rowHeight,18);
+        context.stroke();
+
+        const baseVariant = variants.find((variant) => variant.id === 'base' || /^base$/i.test(variantView(family,variant).name || '')) || variants[0];
+        const baseImage = await canvasImage(displayImageSource(variantView(family,baseVariant).image));
+        fillRounded(context,rowX + 16,y + 18,92,92,14,'rgba(255,251,231,.55)');
+        if (baseImage) drawImageContain(context,baseImage,rowX + 16,y + 18,92,92,6);
+        else {
+          context.fillStyle = '#8a7350';
+          context.font = '54px "Sprite Display","Arial Black",sans-serif';
+          context.textAlign = 'center';
+          context.fillText((group.name || 'S').slice(0,1).toUpperCase(),rowX + 62,y + 80);
+        }
+        releaseCanvasImage(baseImage);
+
+        context.textAlign = 'left';
+        context.fillStyle = '#302414';
+        context.font = '31px "Sprite Display","Arial Black",sans-serif';
+        context.fillText(fitCanvasText(context,group.name || 'Sprite',220),rowX + 124,y + 37);
+        context.font = '700 20px "Fredoka","Avenir Next Rounded","Segoe UI",sans-serif';
+        context.fillText(fitCanvasText(context,variantView(family,baseVariant).name || 'Base',128),rowX + 124,y + 72);
+        const baseState = variantState(family.id,baseVariant.id);
+        drawSheetCheck(context,rowX + 124,y + 84,baseState.collected);
+        drawSheetCrown(context,rowX + 168,y + 82,baseState.mastered);
+
+        const remaining = variants.filter((variant) => variant !== baseVariant);
+        const variantStartX = rowX + 382;
+        const columnWidth = 168;
+        remaining.forEach((variant,variantIndex) => {
+          const column = variantIndex % 3;
+          const row = Math.floor(variantIndex / 3);
+          const itemX = variantStartX + column * columnWidth;
+          const itemY = y + 25 + row * 52;
+          const current = variantState(family.id,variant.id);
+          context.fillStyle = '#3f321f';
+          context.font = '700 18px "Fredoka","Avenir Next Rounded","Segoe UI",sans-serif';
+          context.fillText(fitCanvasText(context,variantView(family,variant).name || 'Variant',150),itemX,itemY);
+          drawSheetCheck(context,itemX,itemY + 9,current.collected);
+          drawSheetCrown(context,itemX + 43,itemY + 7,current.mastered);
+        });
+        y += rowHeight + 18;
+        if ((index + 1) % 4 === 0) await new Promise((resolve) => requestAnimationFrame(resolve));
+      }
+
+      const footerY = height - 108;
+      context.textAlign = 'center';
+      context.fillStyle = '#4f3d24';
+      context.font = '700 17px "Fredoka","Avenir Next Rounded","Segoe UI",sans-serif';
+      context.fillText('snorkythebeard.github.io/Real-Sprite-Checklist',width / 2,footerY);
+      context.fillStyle = '#776245';
+      context.font = '500 12px "Fredoka","Avenir Next Rounded","Segoe UI",sans-serif';
+      const disclaimer = document.querySelector('.fan-content-disclaimer')?.textContent?.trim() || '';
+      wrappedCanvasLines(context,disclaimer,width - 210,2).forEach((line,lineIndex) => {
+        context.fillText(line,width / 2,footerY + 28 + lineIndex * 17);
+      });
+      return await canvasToBlob(canvas,'image/jpeg',.9);
+    } finally {
+      canvas.width = 1;
+      canvas.height = 1;
+    }
+  }
+
+  async function shareCurrentSheet() {
+    if (currentSpriteViewMode() !== 'sheet') return;
+    const originalText = shareSheetBtn.textContent;
+    shareSheetBtn.disabled = true;
+    shareSheetBtn.textContent = 'Preparing…';
+    try {
+      const blob = await createSheetImage();
+      const file = new File([blob],`my-sprite-tracker-${activeRarity.toLowerCase()}-sheet.jpg`,{ type:'image/jpeg' });
+      let canShare = false;
+      try { canShare = Boolean(navigator.share && navigator.canShare?.({ files:[file] })); } catch { canShare = false; }
+      if (canShare) {
+        await navigator.share({ title:`My ${activeRarity} Sprite Sheet`,text:`My ${activeRarity} Sprite collection`,files:[file] });
+        showToast('Sheet shared');
+      } else {
+        downloadableFile(blob,file.name);
+        showToast('Sheet image saved');
+      }
+    } catch (error) {
+      if (error?.name !== 'AbortError') showToast(error?.message || 'The Sheet image could not be created.');
+    } finally {
+      shareSheetBtn.disabled = false;
+      shareSheetBtn.textContent = originalText;
+    }
+  }
+
   function ensureShowcaseGenerationActive(generationToken) {
     if (generationToken === showcaseGenerationToken) return;
     const error = new Error('Image creation canceled.');
@@ -5064,6 +5553,12 @@
 
   function setSpriteEditMode(enabled) {
     if (isUnownedPage() || appView === APP_VIEW_VAULT) return showToast('Open a rarity page in Current Tracker to edit Sprite cards.');
+    if (enabled && currentSpriteViewMode() === 'sheet') {
+      spriteViewModes[activeRarity] = 'card';
+      try { localStorage.setItem(VIEW_MODES_KEY,JSON.stringify(spriteViewModes)); } catch { /* Editing can continue in card view. */ }
+      applySpriteViewMode();
+      renderCollections();
+    }
     spriteEditMode = Boolean(enabled);
     document.body.classList.toggle('sprite-edit-mode',spriteEditMode);
     spriteEditorToggle.setAttribute('aria-pressed',String(spriteEditMode));
@@ -5102,6 +5597,10 @@
   document.querySelectorAll('[data-app-view]').forEach((button) => {
     button.addEventListener('click',() => setAppView(button.dataset.appView));
   });
+  document.querySelectorAll('[data-feature-id]:not([data-app-view])').forEach((button) => {
+    button.addEventListener('click',() => openComingSoonFeature(button.dataset.featureId));
+  });
+  document.getElementById('comingSoonHomeBtn').addEventListener('click',() => goHomeToRare());
   journalActionFilter.addEventListener('change',renderJournal);
   clearJournalActivityBtn.addEventListener('click',clearJournalActivity);
   journalMapZones.forEach((button) => {
@@ -5215,6 +5714,7 @@
   });
   seasonViewSelect.addEventListener('change',() => setSeasonView(seasonViewSelect.value));
   showcaseBtn.addEventListener('click',openShowcaseDialog);
+  shareSheetBtn.addEventListener('click',shareCurrentSheet);
   showcaseForm.addEventListener('submit',generateShowcaseImage);
   [showcaseStatusSelect,showcaseRaritySelect,showcaseSeasonSelect,showcaseSortSelect].forEach((select) => {
     select.addEventListener('change',() => {
@@ -5292,7 +5792,11 @@
     if (!event.target.closest('.sprite-search')) closeSpriteSearchResults();
   });
   spriteEditorToggle.addEventListener('click',() => setSpriteEditMode(!spriteEditMode));
-  spriteViewToggle.addEventListener('click',() => setSpriteViewMode(currentSpriteViewMode() === 'list' ? 'card' : 'list'));
+  spriteViewToggle.addEventListener('click',() => {
+    const current = currentSpriteViewMode();
+    const sheetAvailable = !isUnownedPage() && ['public','preview'].includes(featureAccess('sheetView'));
+    setSpriteViewMode(current === 'card' ? 'list' : (current === 'list' && sheetAvailable ? 'sheet' : 'card'));
+  });
   addSpriteGroupBtn.addEventListener('click',openAddSpriteGroupDialog);
   publishSpritesBtn.addEventListener('click',openPublishSpritesDialog);
   publishSpritesForm.addEventListener('submit',async (event) => {
@@ -5356,6 +5860,11 @@
   document.getElementById('cancelAddSpriteGroupBtn').addEventListener('click',() => addSpriteGroupDialog.close());
   window.addEventListener('hashchange',() => {
     const hashView = decodeURIComponent(location.hash.slice(1)).toLowerCase();
+    const comingSoon = featureIdFromComingSoonHash();
+    if (hashView.startsWith('coming-soon') && comingSoon) {
+      openComingSoonFeature(comingSoon,{ announce:false });
+      return;
+    }
     if (hashView === APP_VIEW_VAULT) {
       setAppView(APP_VIEW_VAULT,{ announce:false });
       return;
@@ -5391,10 +5900,12 @@
             ? '#hunts'
             : (appView === APP_VIEW_DUST
                 ? '#dust'
-                : (isUnownedPage() ? `#${missingView}` : `#${activeRarity.toLowerCase()}`))));
+                : (appView === APP_VIEW_COMING_SOON
+                    ? `#coming-soon-${featureSlug(comingSoonFeatureId)}`
+                    : (isUnownedPage() ? `#${missingView}` : `#${activeRarity.toLowerCase()}`)))));
   if (location.hash !== activeHash) history.replaceState({ rarity:activeRarity },'',activeHash);
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./service-worker.js?v=128',{ updateViaCache:'none' }).then((registration) => registration.update()).catch(() => {});
+    navigator.serviceWorker.register('./service-worker.js?v=129',{ updateViaCache:'none' }).then((registration) => registration.update()).catch(() => {});
   }
   const signalAppRendered = () => window.dispatchEvent(new Event('sprite-app-rendered'));
   if (document.fonts?.ready) {

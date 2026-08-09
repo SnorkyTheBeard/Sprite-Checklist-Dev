@@ -286,7 +286,7 @@
       }
     })();
   </script>
-<link rel="stylesheet" href="styles.css?v=125">
+<link rel="stylesheet" href="styles.css?v=129">
 <link rel="stylesheet" href="vault-v105.css?v=112">
 <link rel="stylesheet" href="viewport-v106.css?v=107">
 <link rel="stylesheet" href="scene-v126.css?v=126">
@@ -330,7 +330,7 @@
             </svg>
             <span>Current Tracker</span>
           </button>
-          <button class="app-menu-item" type="button" data-app-view="vault">
+          <button class="app-menu-item" type="button" data-app-view="vault" data-feature-id="spriteVault">
             <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
               <rect x="3" y="3" width="18" height="18" rx="3"></rect>
               <rect x="6" y="6" width="12" height="12" rx="2"></rect>
@@ -339,7 +339,7 @@
             </svg>
             <span>Sprite Vault</span>
           </button>
-          <button class="app-menu-item" type="button" data-app-view="journal">
+          <button class="app-menu-item" type="button" data-app-view="journal" data-feature-id="collectionJournal">
             <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
               <path d="M5 4.5A2.5 2.5 0 0 1 7.5 2H20v17H7.5A2.5 2.5 0 0 0 5 21.5Z"></path>
               <path d="M5 4.5v17M9 7h7M9 11h5"></path>
@@ -348,12 +348,36 @@
             </svg>
             <span>Collection Journal</span>
           </button>
-          <button class="app-menu-item" type="button" data-app-view="hunts">
+          <button class="app-menu-item" type="button" data-app-view="hunts" data-feature-id="spriteRunHistory">
             <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
               <circle cx="10" cy="10" r="6.5"></circle>
               <path d="M10 6.5V10l2.5 1.7M15.2 15.2 20 20M17 4l2 2"></path>
             </svg>
             <span>Sprite Run History</span>
+          </button>
+          <button class="app-menu-item" type="button" data-feature-id="spriteMeadow">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M4 20c0-4.8 2.1-8.1 6.2-10.1M20 20c0-4.5-1.8-7.8-5.5-9.8"></path>
+              <path d="M12 20V8M8.5 11.5C6.3 11.5 5 10 5 8c2.2 0 3.5 1.4 3.5 3.5ZM15.5 11.5C17.7 11.5 19 10 19 8c-2.2 0-3.5 1.4-3.5 3.5Z"></path>
+              <path d="M3 20h18"></path>
+            </svg>
+            <span>Sprite Meadow</span>
+            <small class="app-menu-feature-badge" data-feature-badge>Coming Soon</small>
+          </button>
+          <button class="app-menu-item" type="button" data-feature-id="profiles" hidden>
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <circle cx="12" cy="8" r="3.5"></circle>
+              <path d="M5 20c.6-4 3-6 7-6s6.4 2 7 6"></path>
+            </svg>
+            <span>Profiles</span>
+            <small class="app-menu-feature-badge" data-feature-badge>Preview</small>
+          </button>
+          <button class="app-menu-item" type="button" data-feature-id="topFiveFavorites" hidden>
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 9.6l6.2-.9Z"></path>
+            </svg>
+            <span>Top 5 Favorites</span>
+            <small class="app-menu-feature-badge" data-feature-badge>Preview</small>
           </button>
         </nav>
       </div>
@@ -622,6 +646,27 @@
       </section>
     </section>
 
+    <section class="coming-soon-page" id="comingSoonPage" aria-labelledby="comingSoonTitle" hidden>
+      <div class="coming-soon-card">
+        <div class="coming-soon-art" aria-hidden="true">
+          <span class="coming-soon-sprite">
+            <svg viewBox="0 0 90 96" focusable="false">
+              <path d="M26 9C38 1 59 3 68 16c8 12 5 28 7 39 2 10 9 14 6 22-3 7-12 8-19 5-4 10-10 13-18 8-9 5-17 1-18-9-9 3-17 0-18-7-2-7 5-12 8-18 5-10 1-22 10-31Z"></path>
+              <path d="m31 53 9 9 20-21"></path>
+            </svg>
+          </span>
+          <span class="coming-soon-star star-one">✦</span>
+          <span class="coming-soon-star star-two">✧</span>
+          <span class="coming-soon-star star-three">✦</span>
+        </div>
+        <p id="comingSoonEyebrow">A new Sprite feature</p>
+        <h2 id="comingSoonTitle">Coming Soon</h2>
+        <strong id="comingSoonFeatureName">Sprite Meadow</strong>
+        <p id="comingSoonMessage">Something special is growing behind the scenes.</p>
+        <button class="primary-btn" id="comingSoonHomeBtn" type="button">Back to Current Tracker</button>
+      </div>
+    </section>
+
     <nav class="rarity-tabs" id="rarityTabs" aria-label="Sprite rarity pages" role="tablist"></nav>
 
     <main id="mainContent">
@@ -639,6 +684,7 @@
           <div class="page-head-actions">
             <span class="page-count" id="pageCount" aria-label="Collected on this page">0 / 0</span>
             <button class="sprite-view-toggle" id="spriteViewToggle" type="button" aria-pressed="false">List view</button>
+            <button class="share-sheet-button" id="shareSheetBtn" type="button" hidden>Share sheet</button>
             <button class="sprite-editor-toggle" id="spriteEditorToggle" type="button" aria-pressed="false">Edit sprites</button>
             <button class="add-sprite-group-button" id="addSpriteGroupBtn" type="button">+ Add sprite group</button>
             <button class="publish-sprites-button" id="publishSpritesBtn" type="button">No changes to publish</button>
@@ -921,7 +967,8 @@
 
   <script src="data.js?v=82"></script>
   <script src="state-schema-v127.js?v=127"></script>
-  <script src="app.js?v=128"></script>
+  <script src="feature-config-v129.js?v=129"></script>
+  <script src="app.js?v=129"></script>
   <script src="cloud-config-v128.js?v=128"></script>
   <script src="cloud-v128.js?v=128"></script>
 </body>
