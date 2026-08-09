@@ -22,9 +22,9 @@
   let autoSyncTimer = 0;
   let ignoreLocalChanges = false;
   let busy = false;
+  let lastBackgroundCheck = 0;
   let syncState = configured ? (session ? 'checking' : 'signed-out') : 'setup';
   let syncDetail = configured ? (session ? 'Checking cloud save…' : 'Sign in to protect progress') : 'Cloud setup needed';
-  let choiceResolver = null;
 
   function readJson(key) {
     try {
@@ -107,7 +107,17 @@
     return meta;
   }
 
-  async function api(path,{ method = 'GET', body = null, rawBody, token = '', headers = {} } = {}) {
+  function wait(milliseconds) {
+    return new Promise((resolve) => window.setTimeout(resolve,Math.max(0,Number(milliseconds) || 0)));
+  }
+
+  function isRetryableJwtError(status,message,path) {
+    return status === 401
+      && !String(path).startsWith('/auth/v1/token')
+      && /jwt|token|issued at future|expired/i.test(String(message || ''));
+  }
+
+  async function api(path,{ method = 'GET', body = null, rawBody, token = '', headers = {}, retryAuth = true } = {}) {
     if (!configured) throw new Error('Cloud setup is not complete.');
     if (navigator.onLine === false) throw new Error('You are offline. Your browser progress is still safe.');
     const response = await fetch(`${baseUrl}${path}`,{
@@ -127,6 +137,13 @@
         message = payload?.msg || payload?.message || payload?.error_description || payload?.error || '';
       } catch {
         try { message = await response.text(); } catch { /* Use the status fallback. */ }
+      }
+      if (retryAuth && token && isRetryableJwtError(response.status,message,path)) {
+        if (/issued at future/i.test(message)) await wait(1400);
+        const refreshed = await refreshSession(true);
+        if (refreshed?.access_token) {
+          return api(path,{ method,body,rawBody,token:refreshed.access_token,headers,retryAuth:false });
+        }
       }
       const error = new Error(String(message || `Cloud request failed (${response.status}).`).slice(0,240));
       error.status = response.status;
@@ -190,7 +207,7 @@
         body:record
       });
       if (!Array.isArray(rows) || !rows.length) {
-        const error = new Error('The cloud save changed on another device. Choose which progress to keep.');
+        const error = new Error('Newer account progress is available.');
         error.code = 'CLOUD_CONFLICT';
         throw error;
       }
@@ -291,13 +308,13 @@
     signedInPanel.hidden = !configured || !session;
     const labels = {
       setup:'Setup needed',
-      'signed-out':'Local only',
+      'signed-out':'Sign in',
       checking:'Checking…',
       syncing:'Saving…',
-      synced:'Cloud protected',
+      synced:'Saved automatically',
       pending:'Save pending',
-      attention:'Choose progress',
-      offline:'Offline · local safe',
+      attention:'Updating account',
+      offline:'Offline',
       error:'Cloud needs attention'
     };
     menuCloudStatus.textContent = labels[syncState] || 'Account & Cloud';
@@ -326,35 +343,19 @@
     accountMessage('');
   }
 
-  function resolveChoice(value) {
-    if (!choiceResolver) return;
-    const resolve = choiceResolver;
-    choiceResolver = null;
-    if (choiceDialog.open) choiceDialog.close();
-    resolve(value);
-  }
-
-  function chooseProgress(localBackup,remoteRow) {
-    choiceDeviceStats.textContent = statsText(localBackup);
-    choiceCloudStats.textContent = statsText(remoteRow?.save_data);
-    choiceCloudDate.textContent = `Cloud save: ${formatDate(remoteRow?.updated_at)}`;
-    if (!choiceDialog.open) choiceDialog.showModal();
-    return new Promise((resolve) => { choiceResolver = resolve; });
-  }
-
   async function uploadLocalBackup(localBackup,row = currentCloudRow) {
-    setSyncStatus('syncing','Protecting this device’s progress…');
+    setSyncStatus('syncing','Saving changes to your account…');
     const localFingerprint = await backupFingerprint(localBackup);
     const saved = await writeCloudBackup(localBackup,row);
     saveSyncMeta(saved,localFingerprint);
-    setSyncStatus('synced',`Cloud save current · revision ${Number(saved.revision) || 1}`);
-    accountMessage('This device’s progress is protected in the cloud.','success');
+    setSyncStatus('synced','Progress saves automatically to your account.');
+    accountMessage('Your progress is saved automatically.','success');
     return saved;
   }
 
   async function restoreCloudBackup(row = currentCloudRow) {
     if (!row?.save_data) throw new Error('No cloud save is available for this account.');
-    setSyncStatus('syncing','Restoring cloud progress safely…');
+    setSyncStatus('syncing','Loading your account progress…');
     ignoreLocalChanges = true;
     try {
       await bridge.restoreBackup(row.save_data);
@@ -364,18 +365,19 @@
     const localBackup = await bridge.createBackup();
     const localFingerprint = await backupFingerprint(localBackup);
     saveSyncMeta(row,localFingerprint);
-    setSyncStatus('synced',`Cloud progress restored · revision ${Number(row.revision) || 1}`);
-    accountMessage('Cloud progress restored. An undo copy was saved on this device.','success');
+    setSyncStatus('synced','Your account progress is current on this device.');
+    accountMessage('Your saved progress is ready.','success');
   }
 
-  async function reconcile({ interactive = false } = {}) {
+  async function reconcile() {
     if (!session || busy) return;
     if (navigator.onLine === false) {
-      setSyncStatus('offline','Changes remain saved in this browser until you reconnect.');
+      setSyncStatus('offline','Changes will save to your account when you reconnect.');
       return;
     }
+    lastBackgroundCheck = Date.now();
     setBusy(true);
-    setSyncStatus('checking','Comparing this device with the cloud…');
+    setSyncStatus('checking','Checking your account progress…');
     try {
       const localBackup = await bridge.createBackup();
       const localFingerprint = await backupFingerprint(localBackup);
@@ -387,33 +389,36 @@
       const remoteFingerprint = await backupFingerprint(row.save_data);
       if (localFingerprint === remoteFingerprint) {
         saveSyncMeta(row,localFingerprint);
-        setSyncStatus('synced',`Cloud save current · revision ${Number(row.revision) || 1}`);
+        setSyncStatus('synced','Progress saves automatically to your account.');
         return;
       }
       const meta = syncMeta();
       const cloudUnchanged = Boolean(meta && Number(meta.cloudRevision) === Number(row.revision));
       const localUnchanged = Boolean(meta && meta.localFingerprint === localFingerprint);
+      if (!meta || !cloudUnchanged) {
+        await restoreCloudBackup(row);
+        return;
+      }
       if (cloudUnchanged && !localUnchanged) {
         await uploadLocalBackup(localBackup,row);
         return;
       }
-      if (!interactive) {
-        setSyncStatus('attention',localUnchanged ? 'New cloud progress is available.' : 'This device and the cloud both have progress.');
-        return;
-      }
-      setBusy(false);
-      const choice = await chooseProgress(localBackup,row);
-      setBusy(true);
-      if (choice === 'device') await uploadLocalBackup(localBackup,row);
-      else if (choice === 'cloud') await restoreCloudBackup(row);
-      else setSyncStatus('attention','No progress was replaced. Choose when you are ready.');
+      saveSyncMeta(row,localFingerprint);
+      setSyncStatus('synced','Progress saves automatically to your account.');
     } catch (error) {
       if (error?.code === 'CLOUD_CONFLICT') {
-        setSyncStatus('attention',error.message);
+        try {
+          const newestRow = await cloudRow();
+          if (newestRow?.save_data) await restoreCloudBackup(newestRow);
+          else throw error;
+        } catch {
+          setSyncStatus('attention','Newer account progress will load automatically.');
+          window.setTimeout(() => reconcile(),1200);
+        }
       } else if (navigator.onLine === false) {
-        setSyncStatus('offline','Changes remain saved in this browser until you reconnect.');
+        setSyncStatus('offline','Changes will save to your account when you reconnect.');
       } else {
-        setSyncStatus('error',error?.message || 'Cloud saving could not be completed.');
+        setSyncStatus('error','Automatic account saving will retry.');
         accountMessage(error?.message || 'Cloud saving could not be completed.','error');
       }
     } finally {
@@ -435,7 +440,7 @@
       signInForm.reset();
       accountMessage('Signed in. Checking your saved progress…','success');
       setBusy(false);
-      await reconcile({ interactive:true });
+      await reconcile();
     } catch (error) {
       accountMessage(error?.message || 'Sign in failed.','error');
       setSyncStatus('signed-out','Sign in to protect progress');
@@ -462,7 +467,7 @@
         signUpForm.reset();
         accountMessage('Account created. Checking your progress…','success');
         setBusy(false);
-        await reconcile({ interactive:true });
+        await reconcile();
       } else {
         accountMessage('Account created. Check your email, then return here to sign in.','success');
         showAuthMode('signin');
@@ -485,8 +490,8 @@
     }
     saveSession(null);
     currentCloudRow = null;
-    setSyncStatus('signed-out','Browser progress remains on this device');
-    accountMessage('Signed out. Nothing was deleted from this browser.','success');
+    setSyncStatus('signed-out','Sign in to access your saved progress anywhere.');
+    accountMessage('Signed out. Your account progress remains protected.','success');
     setBusy(false);
   }
 
@@ -497,7 +502,7 @@
     accountMessage('');
     renderAccount();
     if (!cloudDialog.open) cloudDialog.showModal();
-    if (session && configured) reconcile({ interactive:false });
+    if (session && configured) reconcile();
   }
 
   function closeCloudDialog() {
@@ -508,9 +513,9 @@
     window.clearTimeout(autoSyncTimer);
     if (!session || !configured || ignoreLocalChanges) return;
     setSyncStatus(navigator.onLine === false ? 'offline' : 'pending',navigator.onLine === false
-      ? 'Saved in this browser · waiting for internet'
-      : 'Browser progress saved · cloud update pending');
-    autoSyncTimer = window.setTimeout(() => reconcile({ interactive:false }),AUTO_SYNC_DELAY);
+      ? 'Waiting to save changes to your account'
+      : 'Saving changes automatically…');
+    autoSyncTimer = window.setTimeout(() => reconcile(),AUTO_SYNC_DELAY);
   }
 
   const menuButton = document.createElement('button');
@@ -534,12 +539,12 @@
   cloudDialog.innerHTML = `
     <div class="cloud-account-panel">
       <header class="cloud-account-head">
-        <div><span>PRIVATE SYNC</span><h2 id="cloudAccountTitle" tabindex="-1">Account &amp; Cloud</h2></div>
+        <div><span>YOUR ACCOUNT</span><h2 id="cloudAccountTitle" tabindex="-1">Account &amp; Progress</h2></div>
         <button class="cloud-close-button" id="closeCloudAccountBtn" type="button" aria-label="Close Account and Cloud">×</button>
       </header>
       <section class="cloud-setup-panel" id="cloudSetupPanel" hidden>
         <strong>Cloud setup needed</strong>
-        <p>Add your Supabase Project URL and publishable anon key to <code>cloud-config-v128.js</code>. The tracker will keep saving normally in this browser until setup is finished.</p>
+        <p>Add your Supabase Project URL and publishable anon key to <code>cloud-config-v128.js</code>. Account saving will begin automatically after setup.</p>
       </section>
       <section class="cloud-signed-out" id="cloudSignedOut">
         <div class="cloud-auth-tabs" role="group" aria-label="Account action">
@@ -555,7 +560,7 @@
           <label>Display name<input id="cloudSignUpName" type="text" autocomplete="name" maxlength="50" placeholder="Optional"></label>
           <label>Email<input id="cloudSignUpEmail" type="email" autocomplete="email" required></label>
           <label>Password<input id="cloudSignUpPassword" type="password" autocomplete="new-password" minlength="8" required></label>
-          <small>Use at least 8 characters. Your existing browser progress will not be replaced without asking.</small>
+          <small>Use at least 8 characters. Progress will save automatically to this account.</small>
           <button class="cloud-primary-button" type="submit">Create account</button>
         </form>
       </section>
@@ -570,32 +575,13 @@
         </article>
         <div class="cloud-account-actions">
           <button id="openSpriteProfileBtn" type="button">Open profile</button>
-          <button class="cloud-primary-button" id="syncCloudNowBtn" type="button">Sync now</button>
-          <button id="restoreCloudBtn" type="button">Compare progress</button>
           <button class="cloud-sign-out-button" id="cloudSignOutBtn" type="button">Sign out</button>
         </div>
-        <p class="cloud-local-note">Browser saving and manual backups stay active even while signed in.</p>
+        <p class="cloud-local-note">Progress saves automatically to this account and follows you to other devices.</p>
       </section>
       <p class="cloud-account-status" id="cloudAccountStatus" role="status" aria-live="polite"></p>
     </div>`;
   document.body.appendChild(cloudDialog);
-
-  const choiceDialog = document.createElement('dialog');
-  choiceDialog.className = 'cloud-choice-dialog';
-  choiceDialog.id = 'cloudChoiceDialog';
-  choiceDialog.setAttribute('aria-labelledby','cloudChoiceTitle');
-  choiceDialog.innerHTML = `
-    <div class="cloud-choice-panel">
-      <span>SAFE FIRST SYNC</span>
-      <h2 id="cloudChoiceTitle" tabindex="-1">Choose your progress</h2>
-      <p>Nothing will be overwritten until you choose.</p>
-      <div class="cloud-choice-grid">
-        <article><strong>This device</strong><span id="choiceDeviceStats"></span><button id="chooseDeviceProgressBtn" type="button">Keep this device</button></article>
-        <article><strong>Cloud save</strong><span id="choiceCloudStats"></span><small id="choiceCloudDate"></small><button id="chooseCloudProgressBtn" type="button">Use cloud save</button></article>
-      </div>
-      <button class="cloud-choice-cancel" id="cancelCloudChoiceBtn" type="button">Cancel</button>
-    </div>`;
-  document.body.appendChild(choiceDialog);
 
   const setupPanel = document.getElementById('cloudSetupPanel');
   const signedOutPanel = document.getElementById('cloudSignedOut');
@@ -615,9 +601,6 @@
   const signUpEmail = document.getElementById('cloudSignUpEmail');
   const signUpPassword = document.getElementById('cloudSignUpPassword');
   const authModeButtons = [...cloudDialog.querySelectorAll('[data-cloud-auth-mode]')];
-  const choiceDeviceStats = document.getElementById('choiceDeviceStats');
-  const choiceCloudStats = document.getElementById('choiceCloudStats');
-  const choiceCloudDate = document.getElementById('choiceCloudDate');
 
   menuButton.addEventListener('click',openCloudDialog);
   document.getElementById('closeCloudAccountBtn').addEventListener('click',closeCloudDialog);
@@ -629,20 +612,11 @@
   authModeButtons.forEach((button) => button.addEventListener('click',() => showAuthMode(button.dataset.cloudAuthMode)));
   signInForm.addEventListener('submit',signIn);
   signUpForm.addEventListener('submit',signUp);
-  document.getElementById('syncCloudNowBtn').addEventListener('click',() => reconcile({ interactive:true }));
-  document.getElementById('restoreCloudBtn').addEventListener('click',() => reconcile({ interactive:true }));
   document.getElementById('openSpriteProfileBtn').addEventListener('click',() => {
     closeCloudDialog();
     location.hash = '#profile';
   });
   document.getElementById('cloudSignOutBtn').addEventListener('click',signOut);
-  document.getElementById('chooseDeviceProgressBtn').addEventListener('click',() => resolveChoice('device'));
-  document.getElementById('chooseCloudProgressBtn').addEventListener('click',() => resolveChoice('cloud'));
-  document.getElementById('cancelCloudChoiceBtn').addEventListener('click',() => resolveChoice('cancel'));
-  choiceDialog.addEventListener('cancel',(event) => { event.preventDefault();resolveChoice('cancel'); });
-  choiceDialog.addEventListener('close',() => {
-    if (choiceResolver) resolveChoice('cancel');
-  });
   window.addEventListener('sprite-local-save-changed',() => {
     if (!ignoreLocalChanges) scheduleAutoSync();
   });
@@ -650,8 +624,15 @@
     if (session) scheduleAutoSync();
   });
   window.addEventListener('offline',() => {
-    if (session) setSyncStatus('offline','Changes remain saved in this browser until you reconnect.');
+    if (session) setSyncStatus('offline','Offline · account saving resumes when you reconnect.');
   });
+  function checkAccountProgress() {
+    if (!session || !configured || document.hidden || busy) return;
+    if ((Date.now() - lastBackgroundCheck) < 5000) return;
+    reconcile();
+  }
+  document.addEventListener('visibilitychange',checkAccountProgress);
+  window.addEventListener('focus',checkAccountProgress);
 
   window.SPRITE_ACCOUNT_BRIDGE = Object.freeze({
     version:2,
@@ -662,13 +643,13 @@
     request:api,
     publicStorageUrl,
     openAccount:openCloudDialog,
-    sync:() => reconcile({ interactive:true }),
+    sync:() => reconcile(),
     signOut
   });
 
   window.dispatchEvent(new Event('sprite-account-bridge-ready'));
   renderAccount();
   if (session && configured) {
-    window.setTimeout(() => reconcile({ interactive:false }),250);
+    window.setTimeout(() => reconcile(),250);
   }
 })();

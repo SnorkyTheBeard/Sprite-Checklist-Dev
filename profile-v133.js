@@ -42,7 +42,6 @@
   const accountEmail = document.getElementById('profileAccountEmail');
   const cloudStateDot = document.getElementById('profileCloudStateDot');
   const cloudStateText = document.getElementById('profileCloudStateText');
-  const syncNowButton = document.getElementById('profileSyncNowBtn');
   const manageAccountButton = document.getElementById('profileManageAccountBtn');
   const ownerAvatar = document.getElementById('profileOwnerAvatar');
   const ownerName = document.getElementById('profileOwnerName');
@@ -303,7 +302,20 @@
     });
   }
 
-  function cloudState() { return account?.status?.() || { state:session() ? 'checking' : 'signed-out',detail:session() ? 'Checking cloud protection…' : 'Local only' }; }
+  function cloudState() { return account?.status?.() || { state:session() ? 'checking' : 'signed-out',detail:session() ? 'Checking account progress…' : 'Sign in to save across devices' }; }
+  function friendlyCloudDetail(state) {
+    if (state === 'synced') return 'Progress saves automatically';
+    if (['checking','syncing','pending','attention','error'].includes(state)) return 'Saving automatically…';
+    if (state === 'offline') return 'Offline · saving resumes when connected';
+    if (state === 'setup') return 'Account saving needs setup';
+    return 'Sign in to save across devices';
+  }
+  function friendlyProfileError(error) {
+    const message = String(error?.message || '');
+    if (/profile_image_path|column .* does not exist/i.test(message)) return 'Profile setup needs the V134 Supabase update.';
+    if (/jwt|issued at future|token.*expired/i.test(message)) return 'Refreshing your account session. Please try again.';
+    return message;
+  }
   function renderCloudState() {
     const currentSession = session();
     const cloud = cloudState();
@@ -311,7 +323,7 @@
     quickCloudIndicator.dataset.state = state;
     cloudStateDot.dataset.state = state;
     accountEmail.textContent = currentSession?.user?.email || 'Signed-out account';
-    cloudStateText.textContent = cleanText(cloud.detail || (currentSession ? 'Checking cloud protection…' : 'Sign in to protect progress'),180);
+    cloudStateText.textContent = friendlyCloudDetail(state);
   }
 
   function fallbackProfile() {
@@ -412,7 +424,7 @@
       ownProfileUserId = '';
       if (!page.hidden && !routeCode()) {
         showOwnerMode();
-        if (pageStatus) setStatus(error?.message || 'Your profile could not be loaded.','error');
+        if (pageStatus) setStatus(friendlyProfileError(error) || 'Your profile could not be loaded.','error');
       }
     } finally {
       if (loadingOwnUserId === currentSession.user.id) loadingOwnUserId = '';
@@ -443,7 +455,7 @@
     } catch (error) {
       if (requestId !== loadSequence) return;
       showOwnerMode();
-      setStatus(error?.message || 'That profile could not be opened.','error');
+      setStatus(friendlyProfileError(error) || 'That profile could not be opened.','error');
     } finally {
       if (loadingCode === clean) loadingCode = '';
     }
@@ -675,7 +687,7 @@
       setStatus(`Profile saved · Meadow Code ${ownProfile.meadowCode}`,'success');
       closeEditor();
     } catch (error) {
-      setEditStatus(error?.message || 'Your profile could not be saved.','error');
+      setEditStatus(friendlyProfileError(error) || 'Your profile could not be saved.','error');
     } finally {
       saving = false;
       saveButton.disabled = false;
@@ -722,11 +734,6 @@
   showMineButton.addEventListener('click',() => { location.hash = '#profile'; });
   openAccountButton.addEventListener('click',() => account?.openAccount?.());
   manageAccountButton.addEventListener('click',() => account?.openAccount?.());
-  syncNowButton.addEventListener('click',async () => {
-    syncNowButton.disabled = true;
-    try { await account?.sync?.(); }
-    finally { syncNowButton.disabled = false;renderCloudState(); }
-  });
   editButton.addEventListener('click',openEditor);
   shareButton.addEventListener('click',shareProfile);
   ownerCodeRow.addEventListener('click',() => { if (ownProfile?.meadowCode) copyText(ownProfile.meadowCode,'Meadow Code copied.'); });

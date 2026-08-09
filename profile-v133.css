@@ -217,7 +217,7 @@
 
 .profile-account-rail {
   display:grid;
-  grid-template-columns:auto minmax(0,1fr) auto auto;
+  grid-template-columns:auto minmax(0,1fr) auto;
   gap:10px;
   align-items:center;
   margin-bottom:12px;
@@ -399,7 +399,6 @@ html.profile-edit-open,body.profile-edit-open { overflow:hidden !important;overs
   .profile-signed-out { grid-template-columns:auto 1fr; }
   .profile-signed-out button { grid-column:1/-1; }
   .profile-account-rail { grid-template-columns:auto minmax(0,1fr) auto; }
-  .profile-account-rail #profileManageAccountBtn { grid-column:2/4;justify-self:end; }
   .profile-display { grid-template-columns:auto minmax(0,1fr);padding-bottom:64px; }
   .profile-owner-actions { grid-column:1/-1;grid-template-columns:1fr 1fr; }
   .profile-code-chip { right:18px;bottom:15px; }
