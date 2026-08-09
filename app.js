@@ -5244,7 +5244,7 @@
       try { await document.fonts.ready; } catch { /* Canvas fallbacks remain available. */ }
     }
     const width = 1080;
-    const rowHeights = groups.map(({ variants }) => Math.max(142,76 + Math.ceil(Math.max(0,variants.length - 1) / 3) * 52));
+    const rowHeights = groups.map(({ variants }) => Math.max(136,40 + Math.ceil(Math.max(0,variants.length - 1) / 3) * 40));
     const contentHeight = rowHeights.reduce((sum,value) => sum + value,0) + Math.max(0,groups.length - 1) * 18;
     const height = Math.max(1350,250 + contentHeight + 190);
     if (height > 15000 || width * height > 14_000_000) throw new Error('This rarity sheet is too long for this phone to create safely.');
@@ -5284,40 +5284,40 @@
 
         const baseVariant = variants.find((variant) => variant.id === 'base' || /^base$/i.test(variantView(family,variant).name || '')) || variants[0];
         const baseImage = await canvasImage(displayImageSource(variantView(family,baseVariant).image));
-        fillRounded(context,rowX + 16,y + 18,92,92,14,'rgba(255,251,231,.55)');
-        if (baseImage) drawImageContain(context,baseImage,rowX + 16,y + 18,92,92,6);
+        fillRounded(context,rowX + 14,y + 12,112,112,14,'rgba(255,251,231,.55)');
+        if (baseImage) drawImageContain(context,baseImage,rowX + 14,y + 12,112,112,6);
         else {
           context.fillStyle = '#8a7350';
-          context.font = '54px "Sprite Display","Arial Black",sans-serif';
+          context.font = '62px "Sprite Display","Arial Black",sans-serif';
           context.textAlign = 'center';
-          context.fillText((group.name || 'S').slice(0,1).toUpperCase(),rowX + 62,y + 80);
+          context.fillText((group.name || 'S').slice(0,1).toUpperCase(),rowX + 70,y + 84);
         }
         releaseCanvasImage(baseImage);
 
         context.textAlign = 'left';
         context.fillStyle = '#302414';
         context.font = '31px "Sprite Display","Arial Black",sans-serif';
-        context.fillText(fitCanvasText(context,group.name || 'Sprite',220),rowX + 124,y + 37);
-        context.font = '700 20px "Fredoka","Avenir Next Rounded","Segoe UI",sans-serif';
-        context.fillText(fitCanvasText(context,variantView(family,baseVariant).name || 'Base',128),rowX + 124,y + 72);
+        context.fillText(fitCanvasText(context,group.name || 'Sprite',198),rowX + 140,y + 39);
+        context.font = '700 18px "Fredoka","Avenir Next Rounded","Segoe UI",sans-serif';
+        context.fillText(fitCanvasText(context,variantView(family,baseVariant).name || 'Base',88),rowX + 140,y + 88);
         const baseState = variantState(family.id,baseVariant.id);
-        drawSheetCheck(context,rowX + 124,y + 84,baseState.collected);
-        drawSheetCrown(context,rowX + 168,y + 82,baseState.mastered);
+        drawSheetCheck(context,rowX + 239,y + 68,baseState.collected);
+        drawSheetCrown(context,rowX + 276,y + 66,baseState.mastered);
 
         const remaining = variants.filter((variant) => variant !== baseVariant);
-        const variantStartX = rowX + 382;
-        const columnWidth = 168;
+        const variantStartX = rowX + 360;
+        const columnWidth = 174;
         remaining.forEach((variant,variantIndex) => {
           const column = variantIndex % 3;
           const row = Math.floor(variantIndex / 3);
           const itemX = variantStartX + column * columnWidth;
-          const itemY = y + 25 + row * 52;
+          const itemY = y + 18 + row * 40;
           const current = variantState(family.id,variant.id);
           context.fillStyle = '#3f321f';
-          context.font = '700 18px "Fredoka","Avenir Next Rounded","Segoe UI",sans-serif';
-          context.fillText(fitCanvasText(context,variantView(family,variant).name || 'Variant',150),itemX,itemY);
-          drawSheetCheck(context,itemX,itemY + 9,current.collected);
-          drawSheetCrown(context,itemX + 43,itemY + 7,current.mastered);
+          context.font = '700 16px "Fredoka","Avenir Next Rounded","Segoe UI",sans-serif';
+          context.fillText(fitCanvasText(context,variantView(family,variant).name || 'Variant',84),itemX,itemY + 23);
+          drawSheetCheck(context,itemX + 92,itemY + 5,current.collected);
+          drawSheetCrown(context,itemX + 129,itemY + 3,current.mastered);
         });
         y += rowHeight + 18;
         if ((index + 1) % 4 === 0) await new Promise((resolve) => requestAnimationFrame(resolve));
@@ -5905,7 +5905,7 @@
                     : (isUnownedPage() ? `#${missingView}` : `#${activeRarity.toLowerCase()}`)))));
   if (location.hash !== activeHash) history.replaceState({ rarity:activeRarity },'',activeHash);
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./service-worker.js?v=129',{ updateViaCache:'none' }).then((registration) => registration.update()).catch(() => {});
+    navigator.serviceWorker.register('./service-worker.js?v=130',{ updateViaCache:'none' }).then((registration) => registration.update()).catch(() => {});
   }
   const signalAppRendered = () => window.dispatchEvent(new Event('sprite-app-rendered'));
   if (document.fonts?.ready) {
