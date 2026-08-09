@@ -286,7 +286,7 @@
       }
     })();
   </script>
-<link rel="stylesheet" href="styles.css?v=130">
+<link rel="stylesheet" href="styles.css?v=131">
 <link rel="stylesheet" href="vault-v105.css?v=112">
 <link rel="stylesheet" href="viewport-v106.css?v=107">
 <link rel="stylesheet" href="scene-v126.css?v=126">
@@ -350,10 +350,11 @@
           </button>
           <button class="app-menu-item" type="button" data-app-view="hunts" data-feature-id="spriteRunHistory">
             <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-              <circle cx="10" cy="10" r="6.5"></circle>
-              <path d="M10 6.5V10l2.5 1.7M15.2 15.2 20 20M17 4l2 2"></path>
+              <circle cx="12" cy="12" r="8.5"></circle>
+              <path d="m15.8 8.2-2.1 5.5-5.5 2.1 2.1-5.5Z"></path>
+              <path d="M12 2v2M12 20v2M2 12h2M20 12h2"></path>
             </svg>
-            <span>Sprite Run History</span>
+            <span>Sprite Compass</span>
           </button>
           <button class="app-menu-item" type="button" data-feature-id="spriteMeadow">
             <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -415,7 +416,7 @@
 
     <section class="tracker-tools tracker-primary-view" aria-label="Collection tools">
       <div class="hunt-mode-control">
-        <button id="huntModeBtn" type="button" aria-label="Start Sprite Run" aria-pressed="false" title="Start Sprite Run">
+        <button id="huntModeBtn" type="button" aria-label="Start Sprite Search" aria-pressed="false" title="Start Sprite Search">
           <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
             <path d="M8 7V5.8A4 4 0 0 1 12 2a4 4 0 0 1 4 3.8V7"></path>
             <rect x="5" y="7" width="14" height="14" rx="3"></rect>
@@ -447,7 +448,7 @@
 
     <section class="hunt-cart-tray tracker-primary-view" id="huntCartTray" aria-live="polite" hidden>
       <div>
-        <span>Sprite Run cart</span>
+        <span>Sprite Search cart</span>
         <strong id="huntCartSummary">0 Sprites · 0 Dust</strong>
       </div>
       <button id="huntCheckoutBtn" type="button">Checkout</button>
@@ -558,7 +559,7 @@
           </div>
         </div>
         <p class="journal-map-instructions" id="journalMapInstructions">Tap a map area to filter your activity. Tap it again to show every area.</p>
-        <p class="journal-empty-copy" id="journalLocationEmpty">Start a Sprite Run to begin tracking where Sprites are found.</p>
+        <p class="journal-empty-copy" id="journalLocationEmpty">Start a Sprite Search to begin tracking where Sprites are found.</p>
       </section>
 
       <section class="journal-memories" aria-labelledby="journalMemoriesTitle">
@@ -600,24 +601,53 @@
       </section>
     </section>
 
-    <section class="hunt-history-page" id="huntHistoryPage" aria-labelledby="huntHistoryTitle" hidden>
+    <section class="hunt-history-page sprite-compass-page" id="huntHistoryPage" aria-labelledby="huntHistoryTitle" hidden>
       <header class="feature-page-head">
-        <span>Completed runs</span>
-        <h2 id="huntHistoryTitle">Sprite Run History</h2>
-        <p>Every completed Sprite Run is saved on this device and in your downloaded backup.</p>
+        <span>Plan your next search</span>
+        <h2 id="huntHistoryTitle">Sprite Compass</h2>
+        <p>Keep your targets together, start a search with one location, and review every completed trip.</p>
       </header>
-      <section class="hunt-history-summary" aria-label="Sprite Run totals">
-        <article><span>Runs</span><strong id="huntHistoryTotal">0</strong></article>
-        <article><span>Sprites</span><strong id="huntHistorySpriteTotal">0</strong></article>
+      <section class="sprite-compass-overview" aria-label="Sprite Compass overview">
+        <article class="sprite-compass-next-target">
+          <span>Next target</span>
+          <strong id="compassNextTarget">No target yet</strong>
+          <small id="compassNextReason">Add a Sprite to your Search List.</small>
+          <button class="primary-btn" id="compassStartSearchBtn" type="button">Start Search</button>
+        </article>
+        <article><span>Search List</span><strong id="compassTargetTotal">0</strong></article>
+        <article><span>Searches</span><strong id="huntHistoryTotal">0</strong></article>
+        <article><span>Sprites found</span><strong id="huntHistorySpriteTotal">0</strong></article>
         <article><span>Dust earned</span><strong id="huntHistoryDustTotal">0</strong></article>
       </section>
+
+      <section class="sprite-search-list-panel" aria-labelledby="spriteSearchListTitle">
+        <div class="journal-section-heading">
+          <div><span>Your current targets</span><h3 id="spriteSearchListTitle">Search List</h3></div>
+        </div>
+        <form class="compass-target-form" id="compassTargetForm" role="search">
+          <label class="visually-hidden" for="compassTargetInput">Find a Sprite to add to your Search List</label>
+          <input id="compassTargetInput" type="search" placeholder="Find a Sprite or variant…" autocomplete="off" enterkeyhint="search" aria-controls="compassTargetResults" aria-expanded="false">
+          <button type="submit">Find</button>
+        </form>
+        <div class="compass-target-results" id="compassTargetResults" role="listbox" hidden></div>
+        <p class="visually-hidden" id="compassTargetStatus" aria-live="polite"></p>
+        <div class="compass-target-list" id="compassTargetList"></div>
+        <div class="feature-empty-state" id="compassTargetEmpty">
+          <strong>Your Search List is empty.</strong>
+          <span>Add Sprites you are actively looking for and Sprite Compass will keep them at the top of your plans.</span>
+        </div>
+      </section>
+
+      <div class="journal-section-heading sprite-search-history-heading">
+        <div><span>Newest first</span><h3>Search History</h3></div>
+      </div>
       <div class="feature-page-actions">
-        <button class="danger-btn" id="clearHuntHistoryBtn" type="button">Clear Run History</button>
+        <button class="danger-btn" id="clearHuntHistoryBtn" type="button">Clear Search History</button>
       </div>
       <div class="hunt-history-list" id="huntHistoryList"></div>
       <div class="feature-empty-state" id="huntHistoryEmpty">
-        <strong>No completed Sprite Runs yet.</strong>
-        <span>Start a Sprite Run from the Current Tracker and your results will appear here.</span>
+        <strong>No completed Sprite Searches yet.</strong>
+        <span>Start a Sprite Search and its recap will appear here.</span>
       </div>
     </section>
 
@@ -641,7 +671,7 @@
         <div class="dust-receipt-list" id="dustReceiptList"></div>
         <div class="feature-empty-state" id="dustReceiptEmpty">
           <strong>No receipts yet.</strong>
-          <span>Sprite Run deposits and recorded Sprite Dust purchases will appear here.</span>
+          <span>Sprite Search deposits and recorded Sprite Dust purchases will appear here.</span>
         </div>
       </section>
     </section>
@@ -683,7 +713,14 @@
           </div>
           <div class="page-head-actions">
             <span class="page-count" id="pageCount" aria-label="Collected on this page">0 / 0</span>
-            <button class="sprite-view-toggle" id="spriteViewToggle" type="button" aria-pressed="false">List view</button>
+            <label class="sprite-view-menu" for="spriteViewSelect">
+              <span class="visually-hidden">Sprite view</span>
+              <select id="spriteViewSelect" aria-label="Choose Sprite view">
+                <option value="card">Card</option>
+                <option value="list">List</option>
+                <option value="sheet">Sheet</option>
+              </select>
+            </label>
             <button class="share-sheet-button" id="shareSheetBtn" type="button" hidden>Share sheet</button>
             <button class="sprite-editor-toggle" id="spriteEditorToggle" type="button" aria-pressed="false">Edit sprites</button>
             <button class="add-sprite-group-button" id="addSpriteGroupBtn" type="button">+ Add sprite group</button>
@@ -835,7 +872,7 @@
       <div class="backup-tool-grid">
         <section>
           <h3>Save a backup</h3>
-          <p>Includes progress, collection dates, Journal memories and activity, Sprite Run History, your active Run cart, and the Sprite Dust account.</p>
+          <p>Includes progress, collection dates, Journal memories and activity, Sprite Search History, your active Search cart, Search List, and the Sprite Dust account.</p>
           <button class="primary-btn" id="downloadBackupBtn" type="button">Download backup file</button>
         </section>
         <section>
@@ -887,10 +924,28 @@
     </form>
   </dialog>
 
+  <dialog class="reset-dialog sprite-search-start-dialog" id="spriteSearchStartDialog" aria-labelledby="spriteSearchStartTitle">
+    <form id="spriteSearchStartForm">
+      <h2 id="spriteSearchStartTitle" tabindex="-1">Start Sprite Search</h2>
+      <p>Choose the area once. Every Sprite completed during this search will use this location automatically.</p>
+      <label class="add-sprite-label" for="spriteSearchLocation">Search location</label>
+      <select id="spriteSearchLocation">
+        <option value="">No location selected</option>
+        <option value="Top of Map">Top of Map (Lifty Lodge, Latte Landing, Wonkee Land, etc.)</option>
+        <option value="Bottom of Map">Bottom of Map (Cluster Coast, Sunken Shores, Heatwave Harbor, etc.)</option>
+        <option value="Boss Fight">Boss Fight (Wolfe, Voidblade, Skeletor)</option>
+      </select>
+      <div class="dialog-actions">
+        <button id="cancelSpriteSearchStartBtn" type="button">Cancel</button>
+        <button class="primary-btn" type="submit">Begin Search</button>
+      </div>
+    </form>
+  </dialog>
+
   <dialog class="reset-dialog hunt-checkout-dialog" id="huntCheckoutDialog" aria-labelledby="huntCheckoutTitle">
     <form id="huntCheckoutForm">
-      <h2 id="huntCheckoutTitle" tabindex="-1">Sprite Run Checkout</h2>
-      <p id="huntCheckoutDuration">Run time: 00:00</p>
+      <h2 id="huntCheckoutTitle" tabindex="-1">Sprite Search Checkout</h2>
+      <p id="huntCheckoutDuration">Search time: 00:00</p>
       <div class="hunt-checkout-items" id="huntCheckoutItems"></div>
       <div class="hunt-checkout-total">
         <span>Deposit total</span>
@@ -898,8 +953,20 @@
       </div>
       <p class="hunt-checkout-warning" id="huntCheckoutWarning" hidden>Some Sprites do not have a Dust value saved for that level and will add 0 Dust.</p>
       <div class="dialog-actions">
-        <button id="continueHuntBtn" type="button">Continue Run</button>
+        <button id="continueHuntBtn" type="button">Continue Search</button>
         <button class="primary-btn" id="completeHuntOrderBtn" type="submit">Complete Order</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog class="reset-dialog sprite-search-recap-dialog" id="spriteSearchRecapDialog" aria-labelledby="spriteSearchRecapTitle">
+    <form method="dialog">
+      <span class="sprite-search-recap-eyebrow">Search complete</span>
+      <h2 id="spriteSearchRecapTitle" tabindex="-1">Sprite Search Recap</h2>
+      <div class="sprite-search-recap-summary" id="spriteSearchRecapSummary"></div>
+      <div class="sprite-search-recap-items" id="spriteSearchRecapItems"></div>
+      <div class="dialog-actions">
+        <button class="primary-btn" value="close" type="submit">Done</button>
       </div>
     </form>
   </dialog>
@@ -967,8 +1034,8 @@
 
   <script src="data.js?v=82"></script>
   <script src="state-schema-v127.js?v=127"></script>
-  <script src="feature-config-v129.js?v=129"></script>
-  <script src="app.js?v=130"></script>
+  <script src="feature-config-v129.js?v=131"></script>
+  <script src="app.js?v=131"></script>
   <script src="cloud-config-v128.js?v=128"></script>
   <script src="cloud-v128.js?v=128"></script>
 </body>

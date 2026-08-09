@@ -30,7 +30,7 @@ window.SPRITE_FEATURE_CONFIG = Object.freeze({
     }),
     spriteRunHistory:Object.freeze({
       state:'public',
-      label:'Sprite Run History',
+      label:'Sprite Compass',
       route:'hunts',
       implemented:true
     }),

@@ -30,7 +30,7 @@
   const defaultFeatureDefinitions = {
     spriteVault:{ state:'public',label:'Sprite Vault',implemented:true },
     collectionJournal:{ state:'public',label:'Collection Journal',implemented:true },
-    spriteRunHistory:{ state:'public',label:'Sprite Run History',implemented:true },
+    spriteRunHistory:{ state:'public',label:'Sprite Compass',implemented:true },
     spriteDust:{ state:'public',label:'Sprite Dust',implemented:true },
     sheetView:{ state:'hidden',label:'Sheet View',implemented:true }
   };
@@ -62,6 +62,7 @@
   const HUNT_MODE_KEY = `galaxy_sprite_tracker_hunt_mode_v1_${STORAGE_SCOPE}`;
   const HUNT_CART_KEY = `galaxy_sprite_tracker_hunt_cart_v1_${STORAGE_SCOPE}`;
   const HUNT_HISTORY_KEY = `galaxy_sprite_tracker_hunt_history_v1_${STORAGE_SCOPE}`;
+  const SEARCH_TARGETS_KEY = `galaxy_sprite_tracker_search_targets_v1_${STORAGE_SCOPE}`;
   const DUST_LEDGER_KEY = `galaxy_sprite_tracker_dust_ledger_v1_${STORAGE_SCOPE}`;
   const JOURNAL_FALLBACK_KEY = `galaxy_sprite_tracker_collection_journal_v1_${STORAGE_SCOPE}`;
   const FUTURE_STATE_KEY = `galaxy_sprite_tracker_state_v1_${STORAGE_SCOPE}`;
@@ -70,9 +71,10 @@
   const MAX_JOURNAL_ENTRIES = 500;
   const LEGACY_PROGRESS_KEY = 'galaxy_sprite_tracker_progress_v1';
   const BACKUP_FORMAT = 'my-sprite-tracker-backup';
-  const BACKUP_VERSION = 4;
+  const BACKUP_VERSION = 5;
   const MAX_BACKUP_BYTES = 24 * 1024 * 1024;
   const MAX_HUNT_HISTORY = 300;
+  const MAX_SEARCH_TARGETS = 150;
   const MAX_DUST_RECEIPTS = 1000;
   const DUST_PURCHASE_ITEMS = Object.freeze([
     { category:'Base Sprite Re-Summon', name:'Rare Base Sprite Re-Summon', cost:1800 },
@@ -240,7 +242,8 @@
       active:saved.active === true && Boolean(startedAt),
       startedAt,
       sessionStartedAt,
-      lastDurationMs
+      lastDurationMs,
+      location:cleanLocation(saved.location)
     };
   }
 
@@ -256,6 +259,7 @@
         familyId,
         variantId,
         level:Math.max(1,Math.min(5,Math.round(Number(item.level) || 1))),
+        mastered:item.mastered === true,
         addedAt:validIsoDate(item.addedAt) || new Date().toISOString()
       }];
     });
@@ -276,6 +280,7 @@
           variantName:String(item.variantName || 'Variant').slice(0,80),
           rarity:rarities.includes(item.rarity) ? item.rarity : defaultRarity,
           level:Math.max(1,Math.min(5,Math.round(Number(item.level) || 1))),
+          mastered:item.mastered === true,
           dust:Math.max(0,Math.min(1000000,Math.round(Number(item.dust) || 0)))
         }];
       }) : [];
@@ -283,9 +288,28 @@
         id:String(hunt.id || `${Date.parse(completedAt)}-hunt`).slice(0,200),
         startedAt:validIsoDate(hunt.startedAt),
         completedAt,
+        location:cleanLocation(hunt.location),
         durationMs:Math.max(0,Math.min(7 * 24 * 60 * 60 * 1000,Number(hunt.durationMs) || 0)),
         dustEarned:Math.max(0,Math.min(100000000,Math.round(Number(hunt.dustEarned) || 0))),
         items
+      }];
+    });
+  }
+
+  function normalizeSearchTargets(value) {
+    if (!Array.isArray(value)) return [];
+    const seen = new Set();
+    return value.slice(0,MAX_SEARCH_TARGETS).flatMap((target) => {
+      if (!target || typeof target !== 'object') return [];
+      const familyId = String(target.familyId || '').slice(0,200);
+      const variantId = String(target.variantId || '').slice(0,200);
+      const key = `${familyId}:${variantId}`;
+      if (!familyId || !variantId || seen.has(key)) return [];
+      seen.add(key);
+      return [{
+        familyId,
+        variantId,
+        addedAt:validIsoDate(target.addedAt) || new Date().toISOString()
       }];
     });
   }
@@ -304,7 +328,7 @@
         type,
         amount,
         note:String(entry.note || (type === 'deposit'
-          ? 'Sprite Run deposit'
+          ? 'Sprite Search deposit'
           : (type === 'purchase' ? 'Sprite Dust purchase' : 'Manual balance adjustment'))).slice(0,100),
         createdAt,
         huntId:String(entry.huntId || '').slice(0,200)
@@ -653,6 +677,7 @@
   let huntTimerInterval = 0;
   let huntCart = loadStoredArray(HUNT_CART_KEY,normalizeHuntCart);
   let huntHistory = loadStoredArray(HUNT_HISTORY_KEY,normalizeHuntHistory);
+  let searchTargets = loadStoredArray(SEARCH_TARGETS_KEY,normalizeSearchTargets);
   let dustLedger = loadStoredArray(DUST_LEDGER_KEY,normalizeDustLedger);
 
   const tabsEl = document.getElementById('rarityTabs');
@@ -727,11 +752,29 @@
   const huntCheckoutDustTotal = document.getElementById('huntCheckoutDustTotal');
   const huntCheckoutWarning = document.getElementById('huntCheckoutWarning');
   const completeHuntOrderBtn = document.getElementById('completeHuntOrderBtn');
+  const spriteSearchStartDialog = document.getElementById('spriteSearchStartDialog');
+  const spriteSearchStartForm = document.getElementById('spriteSearchStartForm');
+  const spriteSearchStartTitle = document.getElementById('spriteSearchStartTitle');
+  const spriteSearchLocation = document.getElementById('spriteSearchLocation');
+  const spriteSearchRecapDialog = document.getElementById('spriteSearchRecapDialog');
+  const spriteSearchRecapTitle = document.getElementById('spriteSearchRecapTitle');
+  const spriteSearchRecapSummary = document.getElementById('spriteSearchRecapSummary');
+  const spriteSearchRecapItems = document.getElementById('spriteSearchRecapItems');
   const huntHistoryList = document.getElementById('huntHistoryList');
   const huntHistoryEmpty = document.getElementById('huntHistoryEmpty');
   const huntHistoryTotal = document.getElementById('huntHistoryTotal');
   const huntHistorySpriteTotal = document.getElementById('huntHistorySpriteTotal');
   const huntHistoryDustTotal = document.getElementById('huntHistoryDustTotal');
+  const compassNextTarget = document.getElementById('compassNextTarget');
+  const compassNextReason = document.getElementById('compassNextReason');
+  const compassTargetTotal = document.getElementById('compassTargetTotal');
+  const compassStartSearchBtn = document.getElementById('compassStartSearchBtn');
+  const compassTargetForm = document.getElementById('compassTargetForm');
+  const compassTargetInput = document.getElementById('compassTargetInput');
+  const compassTargetResults = document.getElementById('compassTargetResults');
+  const compassTargetStatus = document.getElementById('compassTargetStatus');
+  const compassTargetList = document.getElementById('compassTargetList');
+  const compassTargetEmpty = document.getElementById('compassTargetEmpty');
   const spriteDustBalanceBtn = document.getElementById('spriteDustBalanceBtn');
   const spriteDustBalance = document.getElementById('spriteDustBalance');
   const spriteDustAccountBalance = document.getElementById('spriteDustAccountBalance');
@@ -757,7 +800,7 @@
   const spriteSearchStatus = document.getElementById('spriteSearchStatus');
   const clearSpriteSearchBtn = document.getElementById('clearSpriteSearchBtn');
   const spriteEditorToggle = document.getElementById('spriteEditorToggle');
-  const spriteViewToggle = document.getElementById('spriteViewToggle');
+  const spriteViewSelect = document.getElementById('spriteViewSelect');
   const shareSheetBtn = document.getElementById('shareSheetBtn');
   const addSpriteDialog = document.getElementById('addSpriteDialog');
   const addSpriteForm = document.getElementById('addSpriteForm');
@@ -814,22 +857,30 @@
   function saveHuntMode() {
     try {
       localStorage.setItem(HUNT_MODE_KEY,JSON.stringify(huntMode));
-      noteLocalSaveChange('sprite-run');
+      noteLocalSaveChange('sprite-search');
     } catch { /* Hunt Mode can continue for this visit. */ }
   }
 
   function saveHuntCart() {
     try {
       localStorage.setItem(HUNT_CART_KEY,JSON.stringify(huntCart));
-      noteLocalSaveChange('sprite-run');
-    } catch { showToast('The Sprite Run cart could not be saved.'); }
+      noteLocalSaveChange('sprite-search');
+    } catch { showToast('The Sprite Search cart could not be saved.'); }
   }
 
   function saveHuntHistory() {
     try {
       localStorage.setItem(HUNT_HISTORY_KEY,JSON.stringify(huntHistory));
-      noteLocalSaveChange('sprite-run-history');
-    } catch { showToast('Sprite Run History could not be saved.'); }
+      noteLocalSaveChange('sprite-search-history');
+    } catch { showToast('Sprite Search History could not be saved.'); }
+  }
+
+  function saveSearchTargets() {
+    searchTargets = normalizeSearchTargets(searchTargets);
+    try {
+      localStorage.setItem(SEARCH_TARGETS_KEY,JSON.stringify(searchTargets));
+      noteLocalSaveChange('sprite-compass');
+    } catch { showToast('The Search List could not be saved.'); }
   }
 
   function saveDustLedger() {
@@ -864,8 +915,9 @@
     huntTimerInterval = 0;
     huntModeBtn.classList.toggle('is-active',huntMode.active);
     huntModeBtn.setAttribute('aria-pressed',String(huntMode.active));
-    huntModeBtn.setAttribute('aria-label',huntMode.active ? 'End Sprite Run' : 'Start Sprite Run');
-    huntModeBtn.title = huntMode.active ? 'End Sprite Run' : 'Start Sprite Run';
+    huntModeBtn.setAttribute('aria-label',huntMode.active ? 'End Sprite Search' : 'Start Sprite Search');
+    huntModeBtn.title = huntMode.active ? 'End Sprite Search' : 'Start Sprite Search';
+    if (spriteViewSelect) spriteViewSelect.disabled = huntMode.active || appView === APP_VIEW_VAULT;
     document.body.classList.toggle('hunt-mode-active',huntMode.active);
     document.querySelectorAll('.card').forEach((card) => {
       const huntOnly = huntMode.active && appView !== APP_VIEW_VAULT;
@@ -897,6 +949,21 @@
       else finishEmptyHunt();
       return;
     }
+    openSpriteSearchStart();
+  }
+
+  function openSpriteSearchStart() {
+    spriteSearchLocation.value = cleanLocation(huntMode.location) || '';
+    document.documentElement.classList.add('sprite-search-start-open');
+    document.body.classList.add('sprite-search-start-open');
+    if (!spriteSearchStartDialog.open) spriteSearchStartDialog.showModal();
+    requestAnimationFrame(() => {
+      try { spriteSearchStartTitle.focus({ preventScroll:true }); }
+      catch { spriteSearchStartTitle.focus(); }
+    });
+  }
+
+  function startSpriteSearch(location = '') {
     const resume = Boolean(huntCart.length && huntMode.lastDurationMs);
     if (spriteEditMode) {
       spriteEditMode = false;
@@ -910,12 +977,14 @@
       active:true,
       startedAt:new Date(now - (resume ? huntMode.lastDurationMs : 0)).toISOString(),
       sessionStartedAt:resume ? (huntMode.sessionStartedAt || new Date(now - huntMode.lastDurationMs).toISOString()) : new Date(now).toISOString(),
-      lastDurationMs:resume ? huntMode.lastDurationMs : 0
+      lastDurationMs:resume ? huntMode.lastDurationMs : 0,
+      location:cleanLocation(location) || cleanLocation(huntMode.location)
     };
     saveHuntMode();
     applyHuntMode();
     if (spriteSearchInput.value.trim()) renderSpriteSearchResults();
-    showToast(resume ? 'Sprite Run resumed' : 'Sprite Run started · add Sprites to your cart');
+    renderHuntHistory();
+    showToast(resume ? 'Sprite Search resumed' : 'Sprite Search started · add Sprites to your cart');
   }
 
   function huntItemInfo(item) {
@@ -945,12 +1014,13 @@
   }
 
   function addSpriteToHuntCart(family,variant) {
-    if (!huntMode.active) return showToast('Start a Sprite Run before adding Sprites to the cart.');
+    if (!huntMode.active) return showToast('Start a Sprite Search before adding Sprites to the cart.');
     huntCart.push({
       id:`${Date.now()}-${Math.random().toString(36).slice(2)}`,
       familyId:family.id,
       variantId:variant.id,
       level:1,
+      mastered:false,
       addedAt:new Date().toISOString()
     });
     saveHuntCart();
@@ -961,7 +1031,7 @@
       closeSpriteSearchResults();
       spriteSearchInput.focus({ preventScroll:true });
     }
-    showToast(`${familyView(family).name} · ${variantView(family,variant).name} added to Sprite Run cart`);
+    showToast(`${familyView(family).name} · ${variantView(family,variant).name} added to Sprite Search cart`);
   }
 
   function freezeHuntTimer() {
@@ -981,7 +1051,7 @@
     huntMode.sessionStartedAt ||= new Date(Date.now() - elapsed).toISOString();
     saveHuntMode();
     applyHuntMode();
-    showToast('Sprite Run resumed');
+    showToast('Sprite Search resumed');
   }
 
   function updateHuntCartLevel(itemId,level) {
@@ -991,6 +1061,14 @@
     saveHuntCart();
     renderHuntCheckout();
     renderHuntCartTray();
+  }
+
+  function updateHuntCartMastery(itemId,mastered) {
+    const item = huntCart.find((entry) => entry.id === itemId);
+    if (!item) return;
+    item.mastered = mastered === true;
+    saveHuntCart();
+    renderHuntCheckout();
   }
 
   function removeHuntCartItem(itemId) {
@@ -1029,6 +1107,15 @@
       });
       levelSelect.addEventListener('change',() => updateHuntCartLevel(item.id,levelSelect.value));
       levelLabel.append(levelCaption,levelSelect);
+      const masteredLabel = document.createElement('label');
+      masteredLabel.className = 'hunt-checkout-mastered';
+      const masteredInput = document.createElement('input');
+      const masteredCaption = document.createElement('span');
+      masteredInput.type = 'checkbox';
+      masteredInput.checked = item.mastered === true;
+      masteredCaption.textContent = 'Mastered';
+      masteredInput.addEventListener('change',() => updateHuntCartMastery(item.id,masteredInput.checked));
+      masteredLabel.append(masteredInput,masteredCaption);
       const dust = document.createElement('strong');
       dust.className = 'hunt-checkout-item-dust';
       dust.textContent = `${formatDust(info.dust)} Dust`;
@@ -1036,19 +1123,20 @@
       remove.type = 'button';
       remove.className = 'hunt-checkout-remove';
       remove.textContent = '×';
-      remove.setAttribute('aria-label',`Remove ${info.familyName} ${info.variantName} from Sprite Run cart`);
+      remove.setAttribute('aria-label',`Remove ${info.familyName} ${info.variantName} from Sprite Search cart`);
       remove.addEventListener('click',() => removeHuntCartItem(item.id));
-      row.append(copy,levelLabel,dust,remove);
+      row.append(copy,levelLabel,masteredLabel,dust,remove);
       huntCheckoutItems.appendChild(row);
     });
-    huntCheckoutDuration.textContent = `Run time: ${formatHuntDuration(huntMode.lastDurationMs || huntElapsedMs())}`;
+    const location = cleanLocation(huntMode.location);
+    huntCheckoutDuration.textContent = `Search time: ${formatHuntDuration(huntMode.lastDurationMs || huntElapsedMs())}${location ? ` · ${location}` : ''}`;
     huntCheckoutDustTotal.textContent = formatDust(huntCartDustTotal());
     huntCheckoutWarning.hidden = !missingDust;
     completeHuntOrderBtn.disabled = !huntCart.length;
   }
 
   function openHuntCheckout() {
-    if (!huntCart.length) return showToast('Your Sprite Run cart is empty.');
+    if (!huntCart.length) return showToast('Your Sprite Search cart is empty.');
     freezeHuntTimer();
     renderHuntCheckout();
     document.documentElement.classList.add('hunt-checkout-open');
@@ -1066,6 +1154,7 @@
       id:`hunt-${Date.now()}-${Math.random().toString(36).slice(2)}`,
       startedAt:huntMode.sessionStartedAt || '',
       completedAt,
+      location:cleanLocation(huntMode.location),
       durationMs:Math.max(0,huntMode.lastDurationMs || huntElapsedMs()),
       dustEarned:Math.max(0,Math.round(dustEarned || 0)),
       items
@@ -1074,7 +1163,7 @@
 
   function resetHuntSession() {
     huntCart = [];
-    huntMode = { active:false, startedAt:'', sessionStartedAt:'', lastDurationMs:0 };
+    huntMode = { active:false, startedAt:'', sessionStartedAt:'', lastDurationMs:0, location:'' };
     saveHuntCart();
     saveHuntMode();
     applyHuntMode();
@@ -1088,7 +1177,52 @@
     saveHuntHistory();
     resetHuntSession();
     renderHuntHistory();
-    showToast(`Sprite Run saved · ${formatHuntDuration(hunt.durationMs)}`);
+    openSpriteSearchRecap(hunt);
+    showToast(`Sprite Search saved · ${formatHuntDuration(hunt.durationMs)}`);
+  }
+
+  function openSpriteSearchRecap(hunt) {
+    if (!hunt || !spriteSearchRecapDialog) return;
+    spriteSearchRecapSummary.replaceChildren();
+    const summary = [
+      ['Time',formatHuntDuration(hunt.durationMs)],
+      ['Location',hunt.location || 'Not selected'],
+      ['Sprites',String(hunt.items.length)],
+      ['Dust',formatDust(hunt.dustEarned)]
+    ];
+    summary.forEach(([label,value]) => {
+      const item = document.createElement('span');
+      const caption = document.createElement('small');
+      const content = document.createElement('strong');
+      caption.textContent = label;
+      content.textContent = value;
+      item.append(caption,content);
+      spriteSearchRecapSummary.appendChild(item);
+    });
+    spriteSearchRecapItems.replaceChildren();
+    if (!hunt.items.length) {
+      const empty = document.createElement('p');
+      empty.textContent = 'Timer-only search · no Sprites were checked out.';
+      spriteSearchRecapItems.appendChild(empty);
+    } else {
+      hunt.items.forEach((item) => {
+        const row = document.createElement('div');
+        row.dataset.rarity = item.rarity;
+        const name = document.createElement('strong');
+        const detail = document.createElement('span');
+        name.textContent = `${item.familyName} · ${item.variantName}`;
+        detail.textContent = `${item.mastered ? 'Mastered' : 'Collected'} · Level ${item.level} · ${formatDust(item.dust)} Dust`;
+        row.append(name,detail);
+        spriteSearchRecapItems.appendChild(row);
+      });
+    }
+    document.documentElement.classList.add('sprite-search-recap-open');
+    document.body.classList.add('sprite-search-recap-open');
+    if (!spriteSearchRecapDialog.open) spriteSearchRecapDialog.showModal();
+    requestAnimationFrame(() => {
+      try { spriteSearchRecapTitle.focus({ preventScroll:true }); }
+      catch { spriteSearchRecapTitle.focus(); }
+    });
   }
 
   function completeHuntOrder(event) {
@@ -1104,7 +1238,16 @@
       const before = snapshotVariantState(current);
       current.collected = true;
       current.collectedAt ||= completedAt;
-      recordJournalEntry(before.collected ? 'recollected' : 'collected',info.family,info.variant,before,current,{ timestamp:completedAt });
+      if (item.mastered) {
+        current.mastered = true;
+        current.masteredAt ||= completedAt;
+      }
+      const location = cleanLocation(huntMode.location);
+      if (location) current.locationFound = location;
+      const journalType = item.mastered && !before.mastered
+        ? 'mastered'
+        : (before.collected ? 'recollected' : 'collected');
+      recordJournalEntry(journalType,info.family,info.variant,before,current,{ timestamp:completedAt });
       historyItems.push({
         familyId:item.familyId,
         variantId:item.variantId,
@@ -1112,6 +1255,7 @@
         variantName:info.variantName,
         rarity:info.rarity,
         level:item.level,
+        mastered:item.mastered === true,
         dust:info.dust
       });
     });
@@ -1124,13 +1268,16 @@
         id:`deposit-${Date.now()}-${Math.random().toString(36).slice(2)}`,
         type:'deposit',
         amount:dustEarned,
-        note:`Sprite Run deposit · ${historyItems.length} ${historyItems.length === 1 ? 'Sprite' : 'Sprites'}`,
+        note:`Sprite Search deposit · ${historyItems.length} ${historyItems.length === 1 ? 'Sprite' : 'Sprites'}`,
         createdAt:completedAt,
         huntId:hunt.id
       });
       dustLedger = normalizeDustLedger(dustLedger);
     }
     saveProgress();
+    const foundKeys = new Set(historyItems.map((item) => `${item.familyId}:${item.variantId}`));
+    searchTargets = searchTargets.filter((target) => !foundKeys.has(`${target.familyId}:${target.variantId}`));
+    saveSearchTargets();
     saveHuntHistory();
     saveDustLedger();
     scheduleJournalSave();
@@ -1138,6 +1285,7 @@
     resetHuntSession();
     renderAll();
     goHomeToRare({ focusSearch:true, announce:false });
+    openSpriteSearchRecap(hunt);
     showToast(`Order complete · ${historyItems.length} Sprites · ${formatDust(dustEarned)} Dust`);
   }
 
@@ -1155,11 +1303,12 @@
     const sheetView = mode === 'sheet';
     document.body.classList.toggle('sprite-list-view',listView);
     document.body.classList.toggle('sprite-sheet-view',sheetView);
-    const nextMode = mode === 'card' ? 'list' : (mode === 'list' && !isUnownedPage() && ['public','preview'].includes(featureAccess('sheetView')) ? 'sheet' : 'card');
-    const label = { card:'Card',list:'List',sheet:'Sheet' }[nextMode];
-    spriteViewToggle.setAttribute('aria-pressed',String(mode !== 'card'));
-    spriteViewToggle.textContent = `${label} view`;
-    spriteViewToggle.setAttribute('aria-label',`Use ${label.toLowerCase()} view on the ${activeRarity} page`);
+    const sheetAvailable = !isUnownedPage() && ['public','preview'].includes(featureAccess('sheetView'));
+    spriteViewSelect.value = mode;
+    const sheetOption = spriteViewSelect.querySelector('option[value="sheet"]');
+    if (sheetOption) sheetOption.disabled = !sheetAvailable;
+    spriteViewSelect.disabled = huntMode.active || appView === APP_VIEW_VAULT;
+    spriteViewSelect.setAttribute('aria-label',`Choose view for the ${activeRarity} page`);
     shareSheetBtn.hidden = !sheetView || appView !== APP_VIEW_TRACKER;
   }
 
@@ -1326,7 +1475,7 @@
         ? 'Sprite Vault'
         : (appView === APP_VIEW_JOURNAL
             ? 'Collection Journal'
-            : (appView === APP_VIEW_HUNTS ? 'Sprite Run History' : (appView === APP_VIEW_DUST ? 'Sprite Dust' : 'Current Tracker')));
+            : (appView === APP_VIEW_HUNTS ? 'Sprite Compass' : (appView === APP_VIEW_DUST ? 'Sprite Dust' : 'Current Tracker')));
       showToast(label);
     }
   }
@@ -1595,6 +1744,7 @@
       huntMode,
       huntCart,
       huntHistory,
+      searchTargets,
       dustLedger
     };
   }
@@ -2329,9 +2479,167 @@
     },0);
   }
 
+  function searchTargetEntry(target) {
+    return searchableSprites().find((entry) => entry.familyId === target.familyId && entry.variantId === target.variantId) || null;
+  }
+
+  function searchTargetInfo(target) {
+    const entry = searchTargetEntry(target);
+    if (!entry) return null;
+    const family = allFamilies().find((item) => item.id === entry.familyId);
+    const variant = family && orderedVariants(family).find((item) => item.id === entry.variantId);
+    if (!family || !variant) return null;
+    return {
+      target,
+      entry,
+      family,
+      variant,
+      current:variantState(entry.familyId,entry.variantId),
+      image:displayImageSource(variantView(family,variant).image)
+    };
+  }
+
+  function addSearchTarget(entry) {
+    if (!entry) return;
+    const exists = searchTargets.some((target) => target.familyId === entry.familyId && target.variantId === entry.variantId);
+    if (exists) return showToast('That Sprite is already on your Search List.');
+    searchTargets.unshift({
+      familyId:entry.familyId,
+      variantId:entry.variantId,
+      addedAt:new Date().toISOString()
+    });
+    saveSearchTargets();
+    compassTargetInput.value = '';
+    closeCompassTargetResults();
+    renderHuntHistory();
+    showToast(`${entry.groupName} · ${entry.variantName} added to Search List`);
+  }
+
+  function removeSearchTarget(target) {
+    searchTargets = searchTargets.filter((entry) => !(entry.familyId === target.familyId && entry.variantId === target.variantId));
+    saveSearchTargets();
+    renderHuntHistory();
+    showToast('Removed from Search List');
+  }
+
+  function closeCompassTargetResults() {
+    compassTargetResults.hidden = true;
+    compassTargetInput.setAttribute('aria-expanded','false');
+  }
+
+  function renderCompassTargetResults() {
+    const query = compassTargetInput.value.trim();
+    compassTargetResults.replaceChildren();
+    if (!query) return closeCompassTargetResults();
+    const matches = findSpriteMatches(query).slice(0,8);
+    if (!matches.length) {
+      const empty = document.createElement('p');
+      empty.className = 'sprite-search-empty';
+      empty.textContent = 'No matching Sprites';
+      compassTargetResults.appendChild(empty);
+    } else {
+      matches.forEach((entry) => {
+        const button = document.createElement('button');
+        const copy = document.createElement('span');
+        const name = document.createElement('strong');
+        const detail = document.createElement('small');
+        const added = searchTargets.some((target) => target.familyId === entry.familyId && target.variantId === entry.variantId);
+        button.type = 'button';
+        button.role = 'option';
+        button.disabled = added;
+        name.textContent = `${entry.groupName} · ${entry.variantName}`;
+        detail.textContent = added ? `${entry.rarity} · Already on list` : `${entry.rarity} · Add to Search List`;
+        copy.append(name,detail);
+        button.append(copy);
+        button.addEventListener('click',() => addSearchTarget(entry));
+        compassTargetResults.appendChild(button);
+      });
+    }
+    compassTargetResults.hidden = false;
+    compassTargetInput.setAttribute('aria-expanded','true');
+  }
+
+  function compassRecommendation() {
+    const targets = searchTargets.map(searchTargetInfo).filter(Boolean);
+    const missingTarget = targets.find((info) => !info.current.collected);
+    if (missingTarget) return { info:missingTarget, reason:'First unowned Sprite on your Search List.' };
+    const masteryTarget = targets.find((info) => !info.current.mastered);
+    if (masteryTarget) return { info:masteryTarget, reason:'Already collected and ready to master.' };
+
+    const rarityOrder = rarities.map((rarity) => {
+      const stats = rarityStats(rarity);
+      return { rarity,ratio:stats.total ? stats.collected / stats.total : 0 };
+    }).sort((left,right) => right.ratio - left.ratio);
+    const entries = searchableSprites().filter((entry) => entry.seasonId === CURRENT_SEASON_ID);
+    for (const { rarity } of rarityOrder) {
+      const entry = entries.find((candidate) => candidate.rarity === rarity && !variantState(candidate.familyId,candidate.variantId).collected);
+      if (!entry) continue;
+      const info = searchTargetInfo({ familyId:entry.familyId,variantId:entry.variantId,addedAt:'' });
+      if (info) return { info,reason:`${rarity} is currently closest to completion.` };
+    }
+    return { info:null,reason:'Your current collection has no unowned Sprites.' };
+  }
+
+  function openCompassTarget(entry) {
+    if (!entry) return;
+    setAppView(APP_VIEW_TRACKER,{ announce:false });
+    requestAnimationFrame(() => openSpriteSearchResult(entry));
+  }
+
+  function renderSpriteCompass() {
+    searchTargets = normalizeSearchTargets(searchTargets).filter((target) => searchTargetEntry(target));
+    compassTargetTotal.textContent = String(searchTargets.length);
+    compassTargetList.replaceChildren();
+    compassTargetEmpty.hidden = Boolean(searchTargets.length);
+    searchTargets.map(searchTargetInfo).filter(Boolean).forEach((info) => {
+      const row = document.createElement('article');
+      row.className = 'compass-target-card';
+      row.dataset.rarity = info.entry.rarity;
+      const thumb = document.createElement('span');
+      thumb.className = 'compass-target-thumb';
+      if (info.image) {
+        const image = document.createElement('img');
+        image.src = info.image;
+        image.alt = '';
+        thumb.appendChild(image);
+      } else {
+        thumb.textContent = (info.entry.groupName || 'S').slice(0,1).toUpperCase();
+      }
+      const copy = document.createElement('div');
+      const name = document.createElement('strong');
+      const detail = document.createElement('span');
+      name.textContent = `${info.entry.groupName} · ${info.entry.variantName}`;
+      detail.textContent = info.current.mastered
+        ? `${info.entry.rarity} · Mastered`
+        : (info.current.collected ? `${info.entry.rarity} · In Collection` : `${info.entry.rarity} · Unowned`);
+      copy.append(name,detail);
+      const actions = document.createElement('div');
+      const open = document.createElement('button');
+      const remove = document.createElement('button');
+      open.type = 'button';
+      open.textContent = 'Open';
+      open.addEventListener('click',() => openCompassTarget(info.entry));
+      remove.type = 'button';
+      remove.className = 'compass-target-remove';
+      remove.textContent = 'Remove';
+      remove.addEventListener('click',() => removeSearchTarget(info.target));
+      actions.append(open,remove);
+      row.append(thumb,copy,actions);
+      compassTargetList.appendChild(row);
+    });
+
+    const recommendation = compassRecommendation();
+    compassNextTarget.textContent = recommendation.info
+      ? `${recommendation.info.entry.groupName} · ${recommendation.info.entry.variantName}`
+      : 'Collection complete';
+    compassNextReason.textContent = recommendation.reason;
+    compassStartSearchBtn.textContent = huntMode.active ? 'Open Active Search' : 'Start Search';
+  }
+
   function renderHuntHistory() {
     if (!huntHistoryPage) return;
     huntHistory = normalizeHuntHistory(huntHistory);
+    renderSpriteCompass();
     const spriteTotal = huntHistory.reduce((total,hunt) => total + hunt.items.length,0);
     const dustTotal = huntHistory.reduce((total,hunt) => total + hunt.dustEarned,0);
     huntHistoryTotal.textContent = String(huntHistory.length);
@@ -2349,20 +2657,20 @@
       const title = document.createElement('h3');
       const time = document.createElement('time');
       const remove = document.createElement('button');
-      title.textContent = `Sprite Run ${huntHistory.length - index}`;
+      title.textContent = `Sprite Search ${huntHistory.length - index}`;
       time.dateTime = hunt.completedAt;
       time.textContent = formatJournalDate(hunt.completedAt);
       copy.append(title,time);
       remove.type = 'button';
       remove.className = 'hunt-history-delete';
       remove.textContent = 'Delete';
-      remove.setAttribute('aria-label',`Delete Sprite Run from ${time.textContent}`);
+      remove.setAttribute('aria-label',`Delete Sprite Search from ${time.textContent}`);
       remove.addEventListener('click',() => {
         requestClearConfirmation(() => {
           huntHistory = huntHistory.filter((entry) => entry.id !== hunt.id);
           saveHuntHistory();
           renderHuntHistory();
-          showToast('Sprite Run deleted');
+          showToast('Sprite Search deleted');
         });
       });
       header.append(copy,remove);
@@ -2379,15 +2687,21 @@
 
       const items = document.createElement('div');
       items.className = 'hunt-history-items';
+      if (hunt.location) {
+        const location = document.createElement('span');
+        location.className = 'hunt-history-location';
+        location.textContent = `Location · ${hunt.location}`;
+        items.appendChild(location);
+      }
       if (!hunt.items.length) {
         const empty = document.createElement('span');
-        empty.textContent = 'Timer-only Sprite Run · no Sprites checked out';
+        empty.textContent = 'Timer-only Sprite Search · no Sprites checked out';
         items.appendChild(empty);
       } else {
         hunt.items.forEach((item) => {
           const row = document.createElement('span');
           row.dataset.rarity = item.rarity;
-          row.textContent = `${item.familyName} · ${item.variantName} · L${item.level} · ${formatDust(item.dust)} Dust`;
+          row.textContent = `${item.familyName} · ${item.variantName} · ${item.mastered ? 'Mastered' : 'Collected'} · L${item.level} · ${formatDust(item.dust)} Dust`;
           items.appendChild(row);
         });
       }
@@ -3336,7 +3650,7 @@
     imageButton.tabIndex = vaultDisplay || huntDisplay ? -1 : 0;
     imageButton.setAttribute('aria-label',vaultDisplay
       ? `${variantName} ${groupName} display case`
-      : (huntDisplay ? `${variantName} ${groupName} Sprite Run card` : (spriteEditMode ? `Upload image for ${variantName} ${groupName}` : collectedAction)));
+      : (huntDisplay ? `${variantName} ${groupName} Sprite Search card` : (spriteEditMode ? `Upload image for ${variantName} ${groupName}` : collectedAction)));
     if (spriteEditMode || vaultDisplay || huntDisplay) imageButton.removeAttribute('aria-pressed');
     else imageButton.setAttribute('aria-pressed',String(Boolean(current.collected)));
     collectButton.setAttribute('aria-label',collectedAction);
@@ -3826,7 +4140,7 @@
     huntCartButton.type = 'button';
     huntCartButton.className = 'hunt-add-cart-button';
     huntCartButton.innerHTML = '<span aria-hidden="true">+</span>';
-    huntCartButton.setAttribute('aria-label',`Add ${view.name || 'sprite'} ${familyInfo.name || ''} to Sprite Run cart`.trim());
+    huntCartButton.setAttribute('aria-label',`Add ${view.name || 'sprite'} ${familyInfo.name || ''} to Sprite Search cart`.trim());
 
     const masterLabel = document.createElement('div');
     masterLabel.className = 'master-label';
@@ -4355,7 +4669,7 @@
   function spriteSearchState(entry) {
     if (huntMode.active) {
       const copies = huntCart.filter((item) => item.familyId === entry.familyId && item.variantId === entry.variantId).length;
-      return copies ? `${copies} in cart · Add again` : 'Add to Sprite Run cart';
+      return copies ? `${copies} in cart · Add again` : 'Add to Sprite Search cart';
     }
     const current = state[entry.familyId]?.[entry.variantId] || {};
     if (current.mastered) return design.header.masteredLabel || 'Mastered';
@@ -4535,7 +4849,8 @@
       active:source.active === true && Boolean(startedAt),
       startedAt,
       sessionStartedAt:validIsoDate(source.sessionStartedAt) || startedAt,
-      lastDurationMs:Math.max(0,Math.min(7 * 24 * 60 * 60 * 1000,Number(source.lastDurationMs) || 0))
+      lastDurationMs:Math.max(0,Math.min(7 * 24 * 60 * 60 * 1000,Number(source.lastDurationMs) || 0)),
+      location:cleanLocation(source.location)
     };
   }
 
@@ -4553,6 +4868,7 @@
       huntMode:sanitizeHuntModeBackup(huntMode),
       huntCart:normalizeHuntCart(huntCart),
       huntHistory:normalizeHuntHistory(huntHistory),
+      searchList:normalizeSearchTargets(searchTargets),
       dustLedger:normalizeDustLedger(dustLedger)
     };
   }
@@ -4580,7 +4896,7 @@
 
   function parsedBackup(value) {
     if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('That is not a Sprite Tracker backup.');
-    if (value.format !== BACKUP_FORMAT || ![1,2,3,BACKUP_VERSION].includes(value.version)) {
+    if (value.format !== BACKUP_FORMAT || ![1,2,3,4,BACKUP_VERSION].includes(value.version)) {
       throw new Error('That file is not a compatible Sprite Tracker backup.');
     }
     return {
@@ -4591,6 +4907,7 @@
       huntMode:value.version >= 3 ? sanitizeHuntModeBackup(value.huntMode) : sanitizeHuntModeBackup(huntMode),
       huntCart:value.version >= 3 ? normalizeHuntCart(value.huntCart) : normalizeHuntCart(huntCart),
       huntHistory:value.version >= 3 ? normalizeHuntHistory(value.huntHistory) : normalizeHuntHistory(huntHistory),
+      searchList:value.version >= 5 ? normalizeSearchTargets(value.searchList) : normalizeSearchTargets(searchTargets),
       dustLedger:value.version >= 3 ? normalizeDustLedger(value.dustLedger) : normalizeDustLedger(dustLedger)
     };
   }
@@ -4661,6 +4978,7 @@
       huntMode:sanitizeHuntModeBackup(huntMode),
       huntCart:normalizeHuntCart(huntCart),
       huntHistory:normalizeHuntHistory(huntHistory),
+      searchList:normalizeSearchTargets(searchTargets),
       dustLedger:normalizeDustLedger(dustLedger)
     };
     try {
@@ -4674,6 +4992,7 @@
     huntMode = restored.huntMode;
     huntCart = restored.huntCart;
     huntHistory = restored.huntHistory;
+    searchTargets = restored.searchList;
     dustLedger = restored.dustLedger;
     seasonView = appView === APP_VIEW_VAULT ? vaultSeasonView : CURRENT_SEASON_ID;
     if (!saveProgress()) {
@@ -4683,6 +5002,7 @@
       huntMode = safetyCopy.huntMode;
       huntCart = safetyCopy.huntCart;
       huntHistory = safetyCopy.huntHistory;
+      searchTargets = safetyCopy.searchList;
       dustLedger = safetyCopy.dustLedger;
       throw new Error('Progress could not be saved in this browser.');
     }
@@ -4691,6 +5011,7 @@
     saveHuntMode();
     saveHuntCart();
     saveHuntHistory();
+    saveSearchTargets();
     saveDustLedger();
     await replaceJournalEntries(restored.journal);
     if (closeBackup && backupDialog.open) backupDialog.close();
@@ -4716,6 +5037,7 @@
       ...progress,
       journal:Array.isArray(backup?.journal) ? backup.journal.length : 0,
       runs:Array.isArray(backup?.huntHistory) ? backup.huntHistory.length : 0,
+      targets:Array.isArray(backup?.searchList) ? backup.searchList.length : 0,
       dustReceipts:Array.isArray(backup?.dustLedger) ? backup.dustLedger.length : 0
     };
   }
@@ -4742,6 +5064,7 @@
       huntMode = sanitizeHuntModeBackup(saved.huntMode);
       huntCart = normalizeHuntCart(saved.huntCart);
       huntHistory = normalizeHuntHistory(saved.huntHistory);
+      searchTargets = normalizeSearchTargets(saved.searchList);
       dustLedger = normalizeDustLedger(saved.dustLedger);
       seasonView = appView === APP_VIEW_VAULT ? vaultSeasonView : CURRENT_SEASON_ID;
       if (!saveProgress()) throw new Error('Progress could not be saved.');
@@ -4750,6 +5073,7 @@
       saveHuntMode();
       saveHuntCart();
       saveHuntHistory();
+      saveSearchTargets();
       saveDustLedger();
       await replaceJournalEntries(saved.journal || []);
       localStorage.removeItem(PRE_RESTORE_PROGRESS_KEY);
@@ -5647,6 +5971,40 @@
   });
   huntModeBtn.addEventListener('click',toggleHuntMode);
   huntModeBtn.addEventListener('pointerup',() => requestAnimationFrame(() => huntModeBtn.blur()));
+  compassStartSearchBtn.addEventListener('click',() => {
+    if (huntMode.active) goHomeToRare({ announce:false });
+    else openSpriteSearchStart();
+  });
+  spriteSearchStartForm.addEventListener('submit',(event) => {
+    event.preventDefault();
+    const location = cleanLocation(spriteSearchLocation.value);
+    spriteSearchStartDialog.close();
+    startSpriteSearch(location);
+    if (appView === APP_VIEW_HUNTS) goHomeToRare({ announce:false });
+  });
+  document.getElementById('cancelSpriteSearchStartBtn').addEventListener('click',() => spriteSearchStartDialog.close());
+  spriteSearchStartDialog.addEventListener('close',() => {
+    document.documentElement.classList.remove('sprite-search-start-open');
+    document.body.classList.remove('sprite-search-start-open');
+  });
+  spriteSearchRecapDialog.addEventListener('close',() => {
+    document.documentElement.classList.remove('sprite-search-recap-open');
+    document.body.classList.remove('sprite-search-recap-open');
+  });
+  compassTargetInput.addEventListener('input',renderCompassTargetResults);
+  compassTargetForm.addEventListener('submit',(event) => {
+    event.preventDefault();
+    const match = findSpriteMatches(compassTargetInput.value.trim())[0];
+    if (!match) {
+      compassTargetStatus.textContent = 'No matching Sprites';
+      renderCompassTargetResults();
+      return;
+    }
+    addSearchTarget(match);
+  });
+  document.addEventListener('pointerdown',(event) => {
+    if (!event.target.closest('.compass-target-form') && !event.target.closest('.compass-target-results')) closeCompassTargetResults();
+  });
   huntCheckoutBtn.addEventListener('click',openHuntCheckout);
   huntCheckoutForm.addEventListener('submit',completeHuntOrder);
   document.getElementById('continueHuntBtn').addEventListener('click',resumeHuntFromCheckout);
@@ -5666,7 +6024,7 @@
       huntHistory = [];
       saveHuntHistory();
       renderHuntHistory();
-      showToast('Sprite Run History cleared');
+      showToast('Sprite Search History cleared');
     });
   });
   document.getElementById('recordDustPurchaseBtn').addEventListener('click',openDustPurchaseDialog);
@@ -5792,11 +6150,7 @@
     if (!event.target.closest('.sprite-search')) closeSpriteSearchResults();
   });
   spriteEditorToggle.addEventListener('click',() => setSpriteEditMode(!spriteEditMode));
-  spriteViewToggle.addEventListener('click',() => {
-    const current = currentSpriteViewMode();
-    const sheetAvailable = !isUnownedPage() && ['public','preview'].includes(featureAccess('sheetView'));
-    setSpriteViewMode(current === 'card' ? 'list' : (current === 'list' && sheetAvailable ? 'sheet' : 'card'));
-  });
+  spriteViewSelect.addEventListener('change',() => setSpriteViewMode(spriteViewSelect.value));
   addSpriteGroupBtn.addEventListener('click',openAddSpriteGroupDialog);
   publishSpritesBtn.addEventListener('click',openPublishSpritesDialog);
   publishSpritesForm.addEventListener('submit',async (event) => {
@@ -5905,7 +6259,7 @@
                     : (isUnownedPage() ? `#${missingView}` : `#${activeRarity.toLowerCase()}`)))));
   if (location.hash !== activeHash) history.replaceState({ rarity:activeRarity },'',activeHash);
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./service-worker.js?v=130',{ updateViaCache:'none' }).then((registration) => registration.update()).catch(() => {});
+    navigator.serviceWorker.register('./service-worker.js?v=131',{ updateViaCache:'none' }).then((registration) => registration.update()).catch(() => {});
   }
   const signalAppRendered = () => window.dispatchEvent(new Event('sprite-app-rendered'));
   if (document.fonts?.ready) {
