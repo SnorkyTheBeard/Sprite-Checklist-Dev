@@ -35,11 +35,16 @@
   const signedOut = document.getElementById('profileSignedOut');
   const openAccountButton = document.getElementById('profileOpenAccountBtn');
   const ownerPanel = document.getElementById('profileOwnerPanel');
+  const ownerHero = document.getElementById('profileOwnerHero');
+  const heroCode = document.getElementById('profileHeroCode');
+  const heroAvatar = document.getElementById('profileHeroAvatar');
+  const heroShareButton = document.getElementById('profileHeroShareBtn');
   const visitorPanel = document.getElementById('profileVisitorPanel');
   const quickButton = document.getElementById('profileQuickBtn');
   const quickAvatar = document.getElementById('profileQuickAvatar');
   const quickCloudIndicator = document.getElementById('profileQuickCloudIndicator');
   const accountEmail = document.getElementById('profileAccountEmail');
+  const accountName = document.getElementById('profileAccountName');
   const cloudStateDot = document.getElementById('profileCloudStateDot');
   const cloudStateText = document.getElementById('profileCloudStateText');
   const manageAccountButton = document.getElementById('profileManageAccountBtn');
@@ -303,8 +308,17 @@
   }
 
   function cloudState() { return account?.status?.() || { state:session() ? 'checking' : 'signed-out',detail:session() ? 'Checking account progress…' : 'Sign in to save across devices' }; }
-  function friendlyCloudDetail(state) {
-    if (state === 'synced') return 'Progress saves automatically';
+  function lastSaveText(value) {
+    const parsed = Date.parse(value || '');
+    if (!Number.isFinite(parsed)) return 'Preparing your first save…';
+    const date = new Date(parsed);
+    const today = new Date();
+    const sameDay = date.toDateString() === today.toDateString();
+    const time = new Intl.DateTimeFormat(undefined,{ hour:'numeric',minute:'2-digit' }).format(date);
+    return sameDay ? `Last save at ${time}` : `Last save ${new Intl.DateTimeFormat(undefined,{ month:'short',day:'numeric' }).format(date)} at ${time}`;
+  }
+  function friendlyCloudDetail(state,lastSyncedAt = '') {
+    if (state === 'synced') return lastSaveText(lastSyncedAt);
     if (['checking','syncing','pending','attention','error'].includes(state)) return 'Saving automatically…';
     if (state === 'offline') return 'Offline · saving resumes when connected';
     if (state === 'setup') return 'Account saving needs setup';
@@ -322,8 +336,9 @@
     const state = cleanText(cloud.state || (currentSession ? 'checking' : 'signed-out'),30);
     quickCloudIndicator.dataset.state = state;
     cloudStateDot.dataset.state = state;
+    accountName.textContent = ownProfile?.displayName || cleanText(currentSession?.user?.user_metadata?.display_name || 'Sprite Collector',40);
     accountEmail.textContent = currentSession?.user?.email || 'Signed-out account';
-    cloudStateText.textContent = friendlyCloudDetail(state);
+    cloudStateText.textContent = friendlyCloudDetail(state,cloud.lastSyncedAt);
   }
 
   function fallbackProfile() {
@@ -343,8 +358,12 @@
     const profile = ownProfile || fallbackProfile();
     const stats = localStats(profile.stats.displayStats);
     setAvatar(ownerAvatar,profile.avatar,profile.imagePath,profile.updatedAt);
+    setAvatar(heroAvatar,profile.avatar,profile.imagePath,profile.updatedAt);
     ownerName.textContent = profile.displayName || 'Sprite Collector';
-    ownerBio.textContent = profile.bio || 'Choose a name, profile picture, and favorite Sprites.';
+    ownerBio.textContent = profile.bio || '';
+    ownerBio.hidden = !profile.bio;
+    heroCode.textContent = profile.meadowCode || 'Creating…';
+    heroShareButton.hidden = !profile.meadowCode || profile.privacy === 'private';
     ownerCode.textContent = profile.meadowCode || '—';
     ownerCodeRow.hidden = !profile.meadowCode;
     shareButton.hidden = !profile.meadowCode || profile.privacy === 'private';
@@ -367,6 +386,7 @@
     const signedIn = Boolean(session());
     setupNotice.hidden = configured();
     signedOut.hidden = signedIn;
+    ownerHero.hidden = !signedIn;
     ownerPanel.hidden = !signedIn;
     visitorPanel.hidden = true;
     showMineButton.hidden = true;
@@ -380,6 +400,7 @@
     setupNotice.hidden = configured();
     signedOut.hidden = true;
     ownerPanel.hidden = true;
+    ownerHero.hidden = true;
     visitorPanel.hidden = false;
     showMineButton.hidden = !session();
     shownVisitorCode = profile.meadowCode;
@@ -736,6 +757,7 @@
   manageAccountButton.addEventListener('click',() => account?.openAccount?.());
   editButton.addEventListener('click',openEditor);
   shareButton.addEventListener('click',shareProfile);
+  heroShareButton.addEventListener('click',shareProfile);
   ownerCodeRow.addEventListener('click',() => { if (ownProfile?.meadowCode) copyText(ownProfile.meadowCode,'Meadow Code copied.'); });
   editCloseButton.addEventListener('click',closeEditor);
   editDialog.addEventListener('cancel',(event) => { event.preventDefault();closeEditor(); });
@@ -765,6 +787,7 @@
   });
 
   setAvatar(quickAvatar,'sprite');
+  setAvatar(heroAvatar,'sprite');
   setAvatar(ownerAvatar,'sprite');
   setAvatar(visitorAvatar,'sprite');
   setAvatar(editAvatar,'sprite');

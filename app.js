@@ -23,15 +23,17 @@
   const APP_VIEW_HUNTS = 'hunts';
   const APP_VIEW_DUST = 'dust';
   const APP_VIEW_PROFILE = 'profile';
+  const APP_VIEW_SETTINGS = 'settings';
   const APP_VIEW_COMING_SOON = 'coming-soon';
   const FEATURE_STATES = new Set(['hidden','coming-soon','preview','public']);
+  const DEV_BUILD = /dev/i.test(document.querySelector('meta[name="apple-mobile-web-app-title"]')?.content || '');
   const featureConfig = window.SPRITE_FEATURE_CONFIG && typeof window.SPRITE_FEATURE_CONFIG === 'object'
     ? window.SPRITE_FEATURE_CONFIG
     : { ownerUserIds:[],features:{} };
   const defaultFeatureDefinitions = {
     spriteVault:{ state:'public',label:'Sprite Vault',implemented:true },
     collectionJournal:{ state:'public',label:'Collection Journal',implemented:true },
-    spriteRunHistory:{ state:'public',label:'Sprite Compass',implemented:true },
+    spriteRunHistory:{ state:'public',label:'Sprite Adventure',implemented:true },
     spriteDust:{ state:'public',label:'Sprite Dust',implemented:true },
     profiles:{ state:'public',label:'Profiles',implemented:true },
     sheetView:{ state:'hidden',label:'Sheet View',implemented:true }
@@ -58,6 +60,17 @@
   const PROGRESS_KEY = `galaxy_sprite_tracker_progress_v2_${STORAGE_SCOPE}`;
   const VIEW_MODES_KEY = `galaxy_sprite_tracker_view_modes_v1_${STORAGE_SCOPE}`;
   const MISSING_VIEW_KEY = `galaxy_sprite_tracker_missing_view_v1_${STORAGE_SCOPE}`;
+  const EXPERIENCE_SETTINGS_KEY = `galaxy_sprite_tracker_experience_v1_${STORAGE_SCOPE}`;
+  const WELCOME_KEY = `galaxy_sprite_tracker_welcome_v1_${STORAGE_SCOPE}`;
+
+  function loadExperienceSettings() {
+    const saved = readJson(EXPERIENCE_SETTINGS_KEY) || {};
+    return {
+      animations:saved.animations !== false,
+      reduceMotion:saved.reduceMotion === true,
+      defaultView:['card','list','sheet'].includes(saved.defaultView) ? saved.defaultView : 'card'
+    };
+  }
   const RECENT_MISSING_KEY = `galaxy_sprite_tracker_recent_missing_v1_${STORAGE_SCOPE}`;
   const SEASON_VIEW_KEY = `galaxy_sprite_tracker_season_view_v1_${STORAGE_SCOPE}`;
   const SPRITE_CARD_EDITS_KEY = `galaxy_sprite_tracker_sprite_cards_v1_${STORAGE_SCOPE}`;
@@ -229,9 +242,10 @@
     }
     if (hashView === APP_VIEW_VAULT && SEASON_FEATURE_VISIBLE && ['public','preview'].includes(featureAccess('spriteVault'))) return APP_VIEW_VAULT;
     if (hashView === APP_VIEW_JOURNAL && ['public','preview'].includes(featureAccess('collectionJournal'))) return APP_VIEW_JOURNAL;
-    if (hashView === APP_VIEW_HUNTS && ['public','preview'].includes(featureAccess('spriteRunHistory'))) return APP_VIEW_HUNTS;
+    if ((hashView === APP_VIEW_HUNTS || hashView === 'adventure') && ['public','preview'].includes(featureAccess('spriteRunHistory'))) return APP_VIEW_HUNTS;
     if (hashView === APP_VIEW_DUST && ['public','preview'].includes(featureAccess('spriteDust'))) return APP_VIEW_DUST;
     if ((hashView === APP_VIEW_PROFILE || hashView.startsWith(`${APP_VIEW_PROFILE}/`)) && ['public','preview'].includes(featureAccess('profiles'))) return APP_VIEW_PROFILE;
+    if (hashView === APP_VIEW_SETTINGS) return APP_VIEW_SETTINGS;
     return APP_VIEW_TRACKER;
   }
 
@@ -683,6 +697,8 @@
   let huntHistory = loadStoredArray(HUNT_HISTORY_KEY,normalizeHuntHistory);
   let searchTargets = loadStoredArray(SEARCH_TARGETS_KEY,normalizeSearchTargets);
   let dustLedger = loadStoredArray(DUST_LEDGER_KEY,normalizeDustLedger);
+  let experienceSettings = loadExperienceSettings();
+  let welcomeIndex = 0;
 
   const tabsEl = document.getElementById('rarityTabs');
   const collectionsEl = document.getElementById('collections');
@@ -709,6 +725,7 @@
   const huntHistoryPage = document.getElementById('huntHistoryPage');
   const spriteDustPage = document.getElementById('spriteDustPage');
   const spriteProfilePage = document.getElementById('spriteProfilePage');
+  const settingsPage = document.getElementById('settingsPage');
   const comingSoonPage = document.getElementById('comingSoonPage');
   const comingSoonEyebrow = document.getElementById('comingSoonEyebrow');
   const comingSoonFeatureName = document.getElementById('comingSoonFeatureName');
@@ -718,6 +735,7 @@
   const journalLocationsLogged = document.getElementById('journalLocationsLogged');
   const journalEntryCount = document.getElementById('journalEntryCount');
   const journalLocationEmpty = document.getElementById('journalLocationEmpty');
+  const journalDropSpotList = document.getElementById('journalDropSpotList');
   const journalZoneTopCount = document.getElementById('journalZoneTopCount');
   const journalZoneBottomCount = document.getElementById('journalZoneBottomCount');
   const journalZoneBossCount = document.getElementById('journalZoneBossCount');
@@ -847,6 +865,18 @@
   const seasonVaultMastered = document.getElementById('seasonVaultMastered');
   const seasonVaultCollectedBar = document.getElementById('seasonVaultCollectedBar');
   const seasonVaultMasteredBar = document.getElementById('seasonVaultMasteredBar');
+  const settingsAnimationToggle = document.getElementById('settingsAnimationToggle');
+  const settingsReduceMotionToggle = document.getElementById('settingsReduceMotionToggle');
+  const settingsDefaultView = document.getElementById('settingsDefaultView');
+  const settingsSaveStatus = document.getElementById('settingsSaveStatus');
+  const settingsManageAccountBtn = document.getElementById('settingsManageAccountBtn');
+  const welcomeDialog = document.getElementById('welcomeDialog');
+  const welcomeStep = document.getElementById('welcomeStep');
+  const welcomeIcon = document.getElementById('welcomeIcon');
+  const welcomeTitle = document.getElementById('welcomeTitle');
+  const welcomeCopy = document.getElementById('welcomeCopy');
+  const welcomeDots = document.getElementById('welcomeDots');
+  const welcomeNextBtn = document.getElementById('welcomeNextBtn');
 
   function saveProgress() {
     try {
@@ -870,14 +900,14 @@
     try {
       localStorage.setItem(HUNT_CART_KEY,JSON.stringify(huntCart));
       noteLocalSaveChange('sprite-search');
-    } catch { showToast('The Sprite Search cart could not be saved.'); }
+    } catch { showToast('The active Adventure could not be saved.'); }
   }
 
   function saveHuntHistory() {
     try {
       localStorage.setItem(HUNT_HISTORY_KEY,JSON.stringify(huntHistory));
       noteLocalSaveChange('sprite-search-history');
-    } catch { showToast('Sprite Search History could not be saved.'); }
+    } catch { showToast('Adventure history could not be saved.'); }
   }
 
   function saveSearchTargets() {
@@ -913,6 +943,9 @@
     const elapsed = huntElapsedMs();
     huntTimer.textContent = formatHuntDuration(elapsed);
     huntTimer.hidden = !huntMode.active && !huntMode.lastDurationMs;
+    if (compassStartSearchBtn) compassStartSearchBtn.textContent = huntMode.active
+      ? `Finish Adventure · ${formatHuntDuration(elapsed)}`
+      : 'Start Adventure';
   }
 
   function applyHuntMode() {
@@ -920,8 +953,8 @@
     huntTimerInterval = 0;
     huntModeBtn.classList.toggle('is-active',huntMode.active);
     huntModeBtn.setAttribute('aria-pressed',String(huntMode.active));
-    huntModeBtn.setAttribute('aria-label',huntMode.active ? 'End Sprite Search' : 'Start Sprite Search');
-    huntModeBtn.title = huntMode.active ? 'End Sprite Search' : 'Start Sprite Search';
+    huntModeBtn.setAttribute('aria-label',huntMode.active ? 'Finish Sprite Adventure' : 'Start Sprite Adventure');
+    huntModeBtn.title = huntMode.active ? 'Finish Sprite Adventure' : 'Start Sprite Adventure';
     if (spriteViewSelect) spriteViewSelect.disabled = huntMode.active || appView === APP_VIEW_VAULT;
     document.body.classList.toggle('hunt-mode-active',huntMode.active);
     document.querySelectorAll('.card').forEach((card) => {
@@ -989,7 +1022,7 @@
     applyHuntMode();
     if (spriteSearchInput.value.trim()) renderSpriteSearchResults();
     renderHuntHistory();
-    showToast(resume ? 'Sprite Search resumed' : 'Sprite Search started · add Sprites to your cart');
+    showToast(resume ? 'Sprite Adventure resumed' : 'Sprite Adventure started');
   }
 
   function huntItemInfo(item) {
@@ -1019,7 +1052,7 @@
   }
 
   function addSpriteToHuntCart(family,variant) {
-    if (!huntMode.active) return showToast('Start a Sprite Search before adding Sprites to the cart.');
+    if (!huntMode.active) return showToast('Start a Sprite Adventure before adding Sprites.');
     huntCart.push({
       id:`${Date.now()}-${Math.random().toString(36).slice(2)}`,
       familyId:family.id,
@@ -1030,13 +1063,14 @@
     });
     saveHuntCart();
     renderHuntCartTray();
+    if (appView === APP_VIEW_HUNTS) renderHuntHistory();
     if (spriteSearchInput.value.trim()) {
       spriteSearchInput.value = '';
       clearSpriteSearchBtn.hidden = true;
       closeSpriteSearchResults();
       spriteSearchInput.focus({ preventScroll:true });
     }
-    showToast(`${familyView(family).name} · ${variantView(family,variant).name} added to Sprite Search cart`);
+    showToast(`${familyView(family).name} · ${variantView(family,variant).name} added to this Adventure`);
   }
 
   function freezeHuntTimer() {
@@ -1056,7 +1090,7 @@
     huntMode.sessionStartedAt ||= new Date(Date.now() - elapsed).toISOString();
     saveHuntMode();
     applyHuntMode();
-    showToast('Sprite Search resumed');
+    showToast('Sprite Adventure resumed');
   }
 
   function updateHuntCartLevel(itemId,level) {
@@ -1128,20 +1162,20 @@
       remove.type = 'button';
       remove.className = 'hunt-checkout-remove';
       remove.textContent = '×';
-      remove.setAttribute('aria-label',`Remove ${info.familyName} ${info.variantName} from Sprite Search cart`);
+      remove.setAttribute('aria-label',`Remove ${info.familyName} ${info.variantName} from this Adventure`);
       remove.addEventListener('click',() => removeHuntCartItem(item.id));
       row.append(copy,levelLabel,masteredLabel,dust,remove);
       huntCheckoutItems.appendChild(row);
     });
     const location = cleanLocation(huntMode.location);
-    huntCheckoutDuration.textContent = `Search time: ${formatHuntDuration(huntMode.lastDurationMs || huntElapsedMs())}${location ? ` · ${location}` : ''}`;
+    huntCheckoutDuration.textContent = `Adventure time: ${formatHuntDuration(huntMode.lastDurationMs || huntElapsedMs())}${location ? ` · ${location}` : ''}`;
     huntCheckoutDustTotal.textContent = formatDust(huntCartDustTotal());
     huntCheckoutWarning.hidden = !missingDust;
     completeHuntOrderBtn.disabled = !huntCart.length;
   }
 
   function openHuntCheckout() {
-    if (!huntCart.length) return showToast('Your Sprite Search cart is empty.');
+    if (!huntCart.length) return showToast('Add at least one Sprite to finish this Adventure.');
     freezeHuntTimer();
     renderHuntCheckout();
     document.documentElement.classList.add('hunt-checkout-open');
@@ -1183,7 +1217,7 @@
     resetHuntSession();
     renderHuntHistory();
     openSpriteSearchRecap(hunt);
-    showToast(`Sprite Search saved · ${formatHuntDuration(hunt.durationMs)}`);
+    showToast(`Sprite Adventure saved · ${formatHuntDuration(hunt.durationMs)}`);
   }
 
   function openSpriteSearchRecap(hunt) {
@@ -1207,7 +1241,7 @@
     spriteSearchRecapItems.replaceChildren();
     if (!hunt.items.length) {
       const empty = document.createElement('p');
-      empty.textContent = 'Timer-only search · no Sprites were checked out.';
+      empty.textContent = 'Timer-only Adventure · no Sprites were added.';
       spriteSearchRecapItems.appendChild(empty);
     } else {
       hunt.items.forEach((item) => {
@@ -1273,7 +1307,7 @@
         id:`deposit-${Date.now()}-${Math.random().toString(36).slice(2)}`,
         type:'deposit',
         amount:dustEarned,
-        note:`Sprite Search deposit · ${historyItems.length} ${historyItems.length === 1 ? 'Sprite' : 'Sprites'}`,
+        note:`Sprite Adventure deposit · ${historyItems.length} ${historyItems.length === 1 ? 'Sprite' : 'Sprites'}`,
         createdAt:completedAt,
         huntId:hunt.id
       });
@@ -1299,7 +1333,10 @@
     const saved = spriteViewModes[activeRarity];
     const sheetAvailable = !isUnownedPage() && ['public','preview'].includes(featureAccess('sheetView'));
     if (saved === 'sheet' && sheetAvailable) return 'sheet';
-    return saved === 'list' ? 'list' : 'card';
+    if (saved === 'list') return 'list';
+    if (!saved && experienceSettings.defaultView === 'sheet' && sheetAvailable) return 'sheet';
+    if (!saved && experienceSettings.defaultView === 'list') return 'list';
+    return 'card';
   }
 
   function applySpriteViewMode() {
@@ -1314,7 +1351,7 @@
     if (sheetOption) sheetOption.disabled = !sheetAvailable;
     spriteViewSelect.disabled = huntMode.active || appView === APP_VIEW_VAULT;
     spriteViewSelect.setAttribute('aria-label',`Choose view for the ${activeRarity} page`);
-    shareSheetBtn.hidden = !sheetView || appView !== APP_VIEW_TRACKER;
+    shareSheetBtn.hidden = true;
   }
 
   function setSpriteViewMode(mode) {
@@ -1412,14 +1449,16 @@
     const huntsOpen = appView === APP_VIEW_HUNTS;
     const dustOpen = appView === APP_VIEW_DUST;
     const profileOpen = appView === APP_VIEW_PROFILE;
+    const settingsOpen = appView === APP_VIEW_SETTINGS;
     const comingSoonOpen = appView === APP_VIEW_COMING_SOON;
-    const featureOpen = journalOpen || huntsOpen || dustOpen || profileOpen || comingSoonOpen;
+    const featureOpen = journalOpen || huntsOpen || dustOpen || profileOpen || settingsOpen || comingSoonOpen;
     document.body.classList.toggle('vault-view',vaultOpen);
     document.body.classList.toggle('tracker-view',!vaultOpen && !featureOpen);
     document.body.classList.toggle('journal-view',journalOpen);
     document.body.classList.toggle('hunt-history-view',huntsOpen);
     document.body.classList.toggle('dust-account-view',dustOpen);
     document.body.classList.toggle('sprite-profile-view',profileOpen);
+    document.body.classList.toggle('settings-view',settingsOpen);
     document.body.classList.toggle('coming-soon-view',comingSoonOpen);
     document.querySelectorAll('.tracker-primary-view').forEach((element) => {
       element.hidden = vaultOpen || featureOpen;
@@ -1429,8 +1468,10 @@
     huntHistoryPage.hidden = !huntsOpen;
     spriteDustPage.hidden = !dustOpen;
     spriteProfilePage.hidden = !profileOpen;
+    settingsPage.hidden = !settingsOpen;
     comingSoonPage.hidden = !comingSoonOpen;
     if (profileOpen) window.dispatchEvent(new Event('sprite-profile-view-opened'));
+    if (settingsOpen) renderSettings();
     if (comingSoonOpen) renderComingSoonPage();
     tabsEl.hidden = featureOpen;
     document.getElementById('mainContent').hidden = featureOpen;
@@ -1455,7 +1496,7 @@
     }
     const next = view === APP_VIEW_VAULT && SEASON_FEATURE_VISIBLE
       ? APP_VIEW_VAULT
-      : ([APP_VIEW_JOURNAL,APP_VIEW_HUNTS,APP_VIEW_DUST,APP_VIEW_PROFILE].includes(view) ? view : APP_VIEW_TRACKER);
+      : ([APP_VIEW_JOURNAL,APP_VIEW_HUNTS,APP_VIEW_DUST,APP_VIEW_PROFILE,APP_VIEW_SETTINGS].includes(view) ? view : APP_VIEW_TRACKER);
     const changed = appView !== next;
     if (next === APP_VIEW_VAULT && season !== null) vaultSeasonView = sanitizeSeasonView(season);
     appView = next;
@@ -1471,12 +1512,14 @@
       : (appView === APP_VIEW_JOURNAL
           ? '#journal'
           : (appView === APP_VIEW_HUNTS
-              ? '#hunts'
+              ? '#adventure'
               : (appView === APP_VIEW_DUST
                   ? '#dust'
                   : (appView === APP_VIEW_PROFILE
                       ? (location.hash.toLowerCase().startsWith('#profile/') ? location.hash : '#profile')
-                      : (isUnownedPage() ? `#${missingView}` : `#${activeRarity.toLowerCase()}`)))));
+                      : (appView === APP_VIEW_SETTINGS
+                          ? '#settings'
+                          : (isUnownedPage() ? `#${missingView}` : `#${activeRarity.toLowerCase()}`))))));
     if (location.hash !== viewHash) history.replaceState({ appView, rarity:activeRarity },'',viewHash);
     if (changed) window.scrollTo({ top:0, behavior:'auto' });
     closeAppMenu();
@@ -1487,8 +1530,8 @@
         : (appView === APP_VIEW_JOURNAL
             ? 'Collection Journal'
             : (appView === APP_VIEW_HUNTS
-                ? 'Sprite Compass'
-                : (appView === APP_VIEW_DUST ? 'Sprite Dust' : (appView === APP_VIEW_PROFILE ? 'Profiles' : 'Current Tracker'))));
+                ? 'Sprite Adventure'
+                : (appView === APP_VIEW_DUST ? 'Sprite Dust' : (appView === APP_VIEW_PROFILE ? 'My Sprite Profile' : (appView === APP_VIEW_SETTINGS ? 'Settings' : 'Current Tracker')))));
       showToast(label);
     }
   }
@@ -2245,7 +2288,7 @@
     let logged = 0;
     Object.values(state || {}).forEach((variants) => {
       Object.values(variants || {}).forEach((current) => {
-        const location = locationZone(current?.locationFound);
+        const location = cleanLocation(current?.locationFound);
         if (!current?.collected || !location) return;
         logged += 1;
         counts.set(location,(counts.get(location) || 0) + 1);
@@ -2376,10 +2419,10 @@
     const activityEntries = visibleEntries.filter((entry) => entry.activityCleared !== true);
     const locationStats = journalCurrentLocationStats();
     const top = locationStats.ranked[0];
-    journalTopLocation.textContent = top?.[0] || 'No locations yet';
+    journalTopLocation.textContent = top?.[0] || 'No drop spots yet';
     journalTopLocationCount.textContent = top
       ? `${top[1]} ${top[1] === 1 ? 'Sprite was' : 'Sprites were'} collected here.`
-      : 'Add a location when you collect a Sprite.';
+      : 'Your most-used location will appear here.';
     journalLocationsLogged.textContent = String(locationStats.logged);
     journalEntryCount.textContent = String(activityEntries.length);
     clearJournalActivityBtn.disabled = !journalReady || !journalEntries.some((entry) => entry.activityCleared !== true);
@@ -2387,6 +2430,21 @@
     journalZoneBottomCount.textContent = String(locationStats.counts.get('Bottom of Map') || 0);
     journalZoneBossCount.textContent = String(locationStats.counts.get('Boss Fight') || 0);
     journalLocationEmpty.hidden = Boolean(locationStats.ranked.length);
+    journalDropSpotList.replaceChildren();
+    locationStats.ranked.slice(0,8).forEach(([place,count],index) => {
+      const row = document.createElement('article');
+      row.className = 'journal-drop-spot';
+      const rank = document.createElement('span');
+      const copy = document.createElement('div');
+      const name = document.createElement('strong');
+      const total = document.createElement('small');
+      rank.textContent = String(index + 1);
+      name.textContent = place;
+      total.textContent = `${count} ${count === 1 ? 'Sprite' : 'Sprites'}`;
+      copy.append(name,total);
+      row.append(rank,copy);
+      journalDropSpotList.appendChild(row);
+    });
     journalMapZones.forEach((button) => {
       const active = button.dataset.journalMapZone === journalLocationFilter;
       button.classList.toggle('is-active',active);
@@ -2399,12 +2457,11 @@
       if (!journalLocationFilter) return true;
       return locationZone(entry.after?.locationFound) === journalLocationFilter;
     }).slice(0,150);
-    const memories = visibleEntries.filter((entry) => entry.memory === true);
     journalMemoryList.replaceChildren();
-    journalMemoryEmpty.hidden = Boolean(memories.length);
-    memories.forEach((entry) => journalMemoryList.appendChild(makeJournalMemoryCard(entry)));
+    journalMemoryEmpty.hidden = true;
     journalEntryList.replaceChildren();
-    journalEmptyState.hidden = Boolean(filtered.length);
+    const adventureRecaps = filter === 'all' ? normalizeHuntHistory(huntHistory).slice(0,20) : [];
+    journalEmptyState.hidden = Boolean(filtered.length || adventureRecaps.length);
     if (!journalReady && !filtered.length) {
       journalEmptyState.querySelector('strong').textContent = 'Opening your journal…';
       journalEmptyState.querySelector('span').textContent = 'Your saved activity will appear in a moment.';
@@ -2415,6 +2472,26 @@
       journalEmptyState.querySelector('strong').textContent = 'No matching activity.';
       journalEmptyState.querySelector('span').textContent = 'Choose another filter to see more journal entries.';
     }
+
+    adventureRecaps.forEach((adventure) => {
+      const row = document.createElement('article');
+      row.className = 'journal-entry journal-adventure-recap';
+      const mark = document.createElement('div');
+      mark.className = 'journal-entry-thumb';
+      mark.textContent = '↟';
+      const copy = document.createElement('div');
+      copy.className = 'journal-entry-copy';
+      const name = document.createElement('h4');
+      name.textContent = `Sprite Adventure · ${adventure.items.length} ${adventure.items.length === 1 ? 'Sprite' : 'Sprites'}`;
+      const action = document.createElement('strong');
+      action.textContent = `${formatHuntDuration(adventure.durationMs)}${adventure.location ? ` · ${adventure.location}` : ''}`;
+      const time = document.createElement('time');
+      time.dateTime = adventure.completedAt;
+      time.textContent = formatJournalDate(adventure.completedAt);
+      copy.append(name,action,time);
+      row.append(mark,copy);
+      journalEntryList.appendChild(row);
+    });
 
     filtered.forEach((entry) => {
       const { family,variant } = journalSprite(entry);
@@ -2448,7 +2525,7 @@
       time.dateTime = entry.timestamp;
       time.textContent = formatJournalDate(entry.timestamp);
       copy.append(name,action,time);
-      const location = locationZone(entry.after?.locationFound) || cleanLocation(entry.after?.locationFound);
+      const location = cleanLocation(entry.after?.locationFound);
       if (location) {
         const place = document.createElement('span');
         place.className = 'journal-entry-location';
@@ -2460,17 +2537,10 @@
       if (current?.collected && family && variant) {
         const edit = document.createElement('button');
         edit.type = 'button';
-        edit.textContent = current.locationFound ? 'Edit details' : 'Add location';
+        edit.textContent = current.locationFound ? 'Edit location' : 'Add drop spot';
         edit.addEventListener('click',() => openLocationDetails(family,variant));
         actions.appendChild(edit);
       }
-      const remember = document.createElement('button');
-      remember.type = 'button';
-      remember.className = 'journal-memory-button';
-      remember.textContent = entry.memory ? 'Saved Memory' : 'Add to Journal';
-      remember.setAttribute('aria-pressed',String(entry.memory));
-      remember.addEventListener('click',() => openJournalMemory(entry.id));
-      actions.appendChild(remember);
       const undo = document.createElement('button');
       undo.type = 'button';
       undo.className = 'journal-undo-button';
@@ -2544,7 +2614,7 @@
     const query = compassTargetInput.value.trim();
     compassTargetResults.replaceChildren();
     if (!query) return closeCompassTargetResults();
-    const matches = findSpriteMatches(query).slice(0,8);
+    const matches = findSpriteMatches(query).filter((entry) => !variantState(entry.familyId,entry.variantId).collected).slice(0,8);
     if (!matches.length) {
       const empty = document.createElement('p');
       empty.className = 'sprite-search-empty';
@@ -2556,15 +2626,20 @@
         const copy = document.createElement('span');
         const name = document.createElement('strong');
         const detail = document.createElement('small');
-        const added = searchTargets.some((target) => target.familyId === entry.familyId && target.variantId === entry.variantId);
+        const added = huntCart.some((item) => item.familyId === entry.familyId && item.variantId === entry.variantId);
         button.type = 'button';
         button.role = 'option';
-        button.disabled = added;
+        button.disabled = added || !huntMode.active;
         name.textContent = `${entry.groupName} · ${entry.variantName}`;
-        detail.textContent = added ? `${entry.rarity} · Already on list` : `${entry.rarity} · Add to Search List`;
+        detail.textContent = added ? `${entry.rarity} · Added` : (huntMode.active ? `${entry.rarity} · Add to Adventure` : `${entry.rarity} · Start an Adventure first`);
         copy.append(name,detail);
         button.append(copy);
-        button.addEventListener('click',() => addSearchTarget(entry));
+        button.addEventListener('click',() => {
+          addSpriteSearchResultToHunt(entry);
+          compassTargetInput.value = '';
+          closeCompassTargetResults();
+          renderSpriteCompass();
+        });
         compassTargetResults.appendChild(button);
       });
     }
@@ -2600,11 +2675,23 @@
   }
 
   function renderSpriteCompass() {
-    searchTargets = normalizeSearchTargets(searchTargets).filter((target) => searchTargetEntry(target));
-    compassTargetTotal.textContent = String(searchTargets.length);
+    const query = normalizeSearchText(compassTargetInput.value || '');
+    const available = searchableSprites()
+      .filter((entry) => entry.seasonId === CURRENT_SEASON_ID)
+      .filter((entry) => !variantState(entry.familyId,entry.variantId).collected)
+      .filter((entry) => !query || entry.searchText.includes(query))
+      .sort((left,right) => {
+        const leftAdded = huntCart.some((item) => item.familyId === left.familyId && item.variantId === left.variantId) ? 1 : 0;
+        const rightAdded = huntCart.some((item) => item.familyId === right.familyId && item.variantId === right.variantId) ? 1 : 0;
+        return rightAdded - leftAdded;
+      })
+      .slice(0,40);
+    compassTargetTotal.textContent = String(huntCart.length);
     compassTargetList.replaceChildren();
-    compassTargetEmpty.hidden = Boolean(searchTargets.length);
-    searchTargets.map(searchTargetInfo).filter(Boolean).forEach((info) => {
+    compassTargetEmpty.hidden = Boolean(available.length);
+    available.forEach((entry) => {
+      const info = searchTargetInfo({ familyId:entry.familyId,variantId:entry.variantId,addedAt:'' });
+      if (!info) return;
       const row = document.createElement('article');
       row.className = 'compass-target-card';
       row.dataset.rarity = info.entry.rarity;
@@ -2622,21 +2709,31 @@
       const name = document.createElement('strong');
       const detail = document.createElement('span');
       name.textContent = `${info.entry.groupName} · ${info.entry.variantName}`;
-      detail.textContent = info.current.mastered
-        ? `${info.entry.rarity} · Mastered`
-        : (info.current.collected ? `${info.entry.rarity} · In Collection` : `${info.entry.rarity} · Unowned`);
+      const copies = huntCart.filter((item) => item.familyId === entry.familyId && item.variantId === entry.variantId).length;
+      detail.textContent = copies ? `${info.entry.rarity} · Added to Adventure` : `${info.entry.rarity} · Unowned`;
       copy.append(name,detail);
       const actions = document.createElement('div');
-      const open = document.createElement('button');
-      const remove = document.createElement('button');
-      open.type = 'button';
-      open.textContent = 'Open';
-      open.addEventListener('click',() => openCompassTarget(info.entry));
-      remove.type = 'button';
-      remove.className = 'compass-target-remove';
-      remove.textContent = 'Remove';
-      remove.addEventListener('click',() => removeSearchTarget(info.target));
-      actions.append(open,remove);
+      const add = document.createElement('button');
+      add.type = 'button';
+      add.className = 'compass-quick-add';
+      add.textContent = '+';
+      add.setAttribute('aria-label',`Add ${entry.groupName} ${entry.variantName} to this Adventure`);
+      add.disabled = !huntMode.active;
+      add.addEventListener('click',() => addSpriteToHuntCart(info.family,info.variant));
+      actions.append(add);
+      if (copies) {
+        const undo = document.createElement('button');
+        undo.type = 'button';
+        undo.className = 'compass-quick-undo';
+        undo.textContent = 'Undo';
+        undo.addEventListener('click',() => {
+          const latest = [...huntCart].reverse().find((item) => item.familyId === entry.familyId && item.variantId === entry.variantId);
+          if (latest) removeHuntCartItem(latest.id);
+          renderHuntHistory();
+          showToast(`${entry.variantName} removed from this Adventure`);
+        });
+        actions.append(undo);
+      }
       row.append(thumb,copy,actions);
       compassTargetList.appendChild(row);
     });
@@ -2646,7 +2743,7 @@
       ? `${recommendation.info.entry.groupName} · ${recommendation.info.entry.variantName}`
       : 'Collection complete';
     compassNextReason.textContent = recommendation.reason;
-    compassStartSearchBtn.textContent = huntMode.active ? 'Open Active Search' : 'Start Search';
+    compassStartSearchBtn.textContent = huntMode.active ? `Finish Adventure · ${formatHuntDuration(huntElapsedMs())}` : 'Start Adventure';
   }
 
   function renderHuntHistory() {
@@ -2670,20 +2767,20 @@
       const title = document.createElement('h3');
       const time = document.createElement('time');
       const remove = document.createElement('button');
-      title.textContent = `Sprite Search ${huntHistory.length - index}`;
+      title.textContent = `Sprite Adventure ${huntHistory.length - index}`;
       time.dateTime = hunt.completedAt;
       time.textContent = formatJournalDate(hunt.completedAt);
       copy.append(title,time);
       remove.type = 'button';
       remove.className = 'hunt-history-delete';
       remove.textContent = 'Delete';
-      remove.setAttribute('aria-label',`Delete Sprite Search from ${time.textContent}`);
+      remove.setAttribute('aria-label',`Delete Sprite Adventure from ${time.textContent}`);
       remove.addEventListener('click',() => {
         requestClearConfirmation(() => {
           huntHistory = huntHistory.filter((entry) => entry.id !== hunt.id);
           saveHuntHistory();
           renderHuntHistory();
-          showToast('Sprite Search deleted');
+          showToast('Sprite Adventure deleted');
         });
       });
       header.append(copy,remove);
@@ -2708,7 +2805,7 @@
       }
       if (!hunt.items.length) {
         const empty = document.createElement('span');
-        empty.textContent = 'Timer-only Sprite Search · no Sprites checked out';
+        empty.textContent = 'Timer-only Sprite Adventure · no Sprites added';
         items.appendChild(empty);
       } else {
         hunt.items.forEach((item) => {
@@ -2928,7 +3025,14 @@
     const name = `${familyView(family).name || 'Sprite'} · ${variantView(family,variant).name || 'Variant'}`;
     locationFoundTitle.textContent = newlyCollected ? 'Where did you find it?' : 'Edit collection details';
     locationFoundSpriteName.textContent = name;
-    locationFoundSelect.value = locationZone(current.locationFound) || '';
+    const savedLocation = cleanLocation(current.locationFound);
+    if (savedLocation && ![...locationFoundSelect.options].some((option) => option.value === savedLocation)) {
+      const option = document.createElement('option');
+      option.value = savedLocation;
+      option.textContent = savedLocation;
+      locationFoundSelect.appendChild(option);
+    }
+    locationFoundSelect.value = savedLocation;
     locationCollectedAt.value = isoToLocalDateTime(current.collectedAt || new Date().toISOString());
     locationMasteredAt.value = isoToLocalDateTime(current.masteredAt || '');
     locationMasteredAtLabel.hidden = !current.mastered;
@@ -3893,36 +3997,9 @@
 
     const title = document.createElement('h3');
     title.textContent = group.name || 'Sprite';
-    const content = document.createElement('div');
-    content.className = 'sheet-collection-row';
-    const baseVariant = rowVariants.find((variant) => variant.id === 'base' || /^base$/i.test(variantView(family,variant).name || '')) || rowVariants[0];
-    const base = document.createElement('div');
-    base.className = 'sheet-base-sprite';
-    const thumb = document.createElement('span');
-    thumb.className = 'sheet-base-thumb';
-    const baseSource = displayImageSource(variantView(family,baseVariant).image);
-    if (baseSource) {
-      const image = document.createElement('img');
-      image.src = baseSource;
-      image.alt = `${group.name || 'Sprite'} Base artwork`;
-      image.width = 78;
-      image.height = 78;
-      image.loading = 'lazy';
-      image.decoding = 'async';
-      thumb.appendChild(image);
-    } else {
-      thumb.textContent = (group.name || 'S').slice(0,1).toUpperCase();
-    }
-    const baseInfo = document.createElement('div');
-    baseInfo.className = 'sheet-base-info';
-    const baseName = document.createElement('strong');
-    baseName.textContent = variantView(family,baseVariant).name || 'Base';
-    baseInfo.append(baseName,sheetStateControls(family,baseVariant));
-    base.append(thumb,baseInfo);
-
     const variants = document.createElement('div');
-    variants.className = 'sheet-variant-list';
-    rowVariants.filter((variant) => variant !== baseVariant).forEach((variant) => {
+    variants.className = 'sheet-variant-list sheet-variant-grid';
+    rowVariants.forEach((variant) => {
       const item = document.createElement('div');
       item.className = 'sheet-variant-item';
       const name = document.createElement('span');
@@ -3930,14 +4007,7 @@
       item.append(name,sheetStateControls(family,variant));
       variants.appendChild(item);
     });
-    if (!variants.childElementCount) {
-      const onlyBase = document.createElement('p');
-      onlyBase.className = 'sheet-only-base';
-      onlyBase.textContent = 'Base edition only';
-      variants.appendChild(onlyBase);
-    }
-    content.append(base,variants);
-    section.append(title,content);
+    section.append(title,variants);
     return section;
   }
 
@@ -4153,7 +4223,7 @@
     huntCartButton.type = 'button';
     huntCartButton.className = 'hunt-add-cart-button';
     huntCartButton.innerHTML = '<span aria-hidden="true">+</span>';
-    huntCartButton.setAttribute('aria-label',`Add ${view.name || 'sprite'} ${familyInfo.name || ''} to Sprite Search cart`.trim());
+    huntCartButton.setAttribute('aria-label',`Add ${view.name || 'sprite'} ${familyInfo.name || ''} to this Adventure`.trim());
 
     const masterLabel = document.createElement('div');
     masterLabel.className = 'master-label';
@@ -4682,7 +4752,7 @@
   function spriteSearchState(entry) {
     if (huntMode.active) {
       const copies = huntCart.filter((item) => item.familyId === entry.familyId && item.variantId === entry.variantId).length;
-      return copies ? `${copies} in cart · Add again` : 'Add to Sprite Search cart';
+      return copies ? `${copies} in Adventure · Add again` : 'Add to Sprite Adventure';
     }
     const current = state[entry.familyId]?.[entry.variantId] || {};
     if (current.mastered) return design.header.masteredLabel || 'Mastered';
@@ -4713,6 +4783,8 @@
 
   function openSpriteSearchResult(entry) {
     closeSpriteSearchResults();
+    spriteSearchInput.value = '';
+    clearSpriteSearchBtn.hidden = true;
     spriteSearchInput.blur();
     if (SEASON_FEATURE_VISIBLE && entry.seasonId !== CURRENT_SEASON_ID) {
       setAppView(APP_VIEW_VAULT,{ announce:false, season:entry.seasonId });
@@ -4787,6 +4859,66 @@
     toastTimer = setTimeout(() => statusToast.classList.remove('show'),2400);
   }
 
+  function saveExperienceSettings() {
+    try { localStorage.setItem(EXPERIENCE_SETTINGS_KEY,JSON.stringify(experienceSettings)); } catch { /* Keep this visit's preferences. */ }
+    noteLocalSaveChange('preferences');
+  }
+
+  function applyExperienceSettings() {
+    document.documentElement.classList.toggle('user-motion-disabled',!experienceSettings.animations);
+    document.documentElement.classList.toggle('user-reduced-motion',experienceSettings.reduceMotion);
+    settingsAnimationToggle.checked = experienceSettings.animations;
+    settingsReduceMotionToggle.checked = experienceSettings.reduceMotion;
+    settingsDefaultView.value = experienceSettings.defaultView;
+  }
+
+  function formatSettingsSaveTime(value) {
+    const parsed = Date.parse(value || '');
+    if (!Number.isFinite(parsed)) return '';
+    return new Intl.DateTimeFormat(undefined,{ month:'short',day:'numeric',hour:'numeric',minute:'2-digit' }).format(new Date(parsed));
+  }
+
+  function renderSettings() {
+    applyExperienceSettings();
+    const adminCard = document.querySelector('.settings-admin-card');
+    if (adminCard) adminCard.hidden = !DEV_BUILD && !ownerPreviewActive();
+    const status = window.SPRITE_ACCOUNT_BRIDGE?.status?.();
+    settingsSaveStatus.textContent = status?.signedIn
+      ? (status.lastSyncedAt ? `Last save at ${formatSettingsSaveTime(status.lastSyncedAt)}` : 'Signed in · your first automatic save is being prepared.')
+      : 'Sign in to save your tracker automatically across devices.';
+  }
+
+  const welcomeSlides = [
+    { icon:'✓',title:'Track your collection',copy:'Tap In Collection on any card, then tap its crown when you master that Sprite.' },
+    { icon:'⌕',title:'Find any Sprite fast',copy:'Type a Sprite or variant name. Results update as you type and open the exact card.' },
+    { icon:'↟',title:'Start a Sprite Adventure',copy:'Time a play session, Quick Add what you find, and finish with a clean recap.' },
+    { icon:'☁',title:'Keep progress protected',copy:'Sign in from your profile and every change saves automatically to your account.' }
+  ];
+
+  function renderWelcome() {
+    const slide = welcomeSlides[welcomeIndex];
+    welcomeStep.textContent = `${welcomeIndex + 1} of ${welcomeSlides.length}`;
+    welcomeIcon.textContent = slide.icon;
+    welcomeTitle.textContent = slide.title;
+    welcomeCopy.textContent = slide.copy;
+    [...welcomeDots.children].forEach((dot,index) => dot.classList.toggle('is-active',index === welcomeIndex));
+    welcomeNextBtn.textContent = welcomeIndex === welcomeSlides.length - 1 ? 'Start tracking' : 'Next';
+  }
+
+  function finishWelcome() {
+    try { localStorage.setItem(WELCOME_KEY,'seen'); } catch { /* Do not repeat during this visit. */ }
+    if (welcomeDialog.open) welcomeDialog.close();
+  }
+
+  function maybeOpenWelcome() {
+    let seen = false;
+    try { seen = localStorage.getItem(WELCOME_KEY) === 'seen'; } catch { /* Show the short guide. */ }
+    if (seen || welcomeDialog.open) return;
+    welcomeIndex = 0;
+    renderWelcome();
+    welcomeDialog.showModal();
+  }
+
   function safeStorageGet(key) {
     try { return localStorage.getItem(key); } catch { return null; }
   }
@@ -4836,6 +4968,15 @@
     )));
   }
 
+  function sanitizeExperienceSettings(value) {
+    const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+    return {
+      animations:source.animations !== false,
+      reduceMotion:source.reduceMotion === true,
+      defaultView:['card','list','sheet'].includes(source.defaultView) ? source.defaultView : 'card'
+    };
+  }
+
   function sanitizeSeasonView(value) {
     if (!SEASON_FEATURE_VISIBLE) return CURRENT_SEASON_ID;
     if (value === 'current' || value === 'previous') return CURRENT_SEASON_ID;
@@ -4876,6 +5017,7 @@
       app:'My Sprite Tracker',
       progress:sanitizeProgress(state),
       viewModes:sanitizeViewModes(spriteViewModes),
+      experience:sanitizeExperienceSettings(experienceSettings),
       seasonView:sanitizeSeasonView(vaultSeasonView),
       journal:normalizeJournalEntries(journalEntries),
       huntMode:sanitizeHuntModeBackup(huntMode),
@@ -4915,6 +5057,7 @@
     return {
       progress:sanitizeProgress(value.progress),
       viewModes:sanitizeViewModes(value.viewModes),
+      experience:sanitizeExperienceSettings(value.experience || experienceSettings),
       seasonView:sanitizeSeasonView(value.seasonView),
       journal:value.version >= 2 ? normalizeJournalEntries(value.journal) : [],
       huntMode:value.version >= 3 ? sanitizeHuntModeBackup(value.huntMode) : sanitizeHuntModeBackup(huntMode),
@@ -4986,6 +5129,7 @@
     const safetyCopy = {
       progress:sanitizeProgress(state),
       viewModes:sanitizeViewModes(spriteViewModes),
+      experience:sanitizeExperienceSettings(experienceSettings),
       seasonView:sanitizeSeasonView(vaultSeasonView),
       journal:normalizeJournalEntries(journalEntries),
       huntMode:sanitizeHuntModeBackup(huntMode),
@@ -5001,6 +5145,7 @@
     }
     state = restored.progress;
     spriteViewModes = restored.viewModes;
+    experienceSettings = restored.experience;
     vaultSeasonView = restored.seasonView;
     huntMode = restored.huntMode;
     huntCart = restored.huntCart;
@@ -5011,6 +5156,7 @@
     if (!saveProgress()) {
       state = safetyCopy.progress;
       spriteViewModes = safetyCopy.viewModes;
+      experienceSettings = safetyCopy.experience;
       vaultSeasonView = safetyCopy.seasonView;
       huntMode = safetyCopy.huntMode;
       huntCart = safetyCopy.huntCart;
@@ -5020,6 +5166,7 @@
       throw new Error('Progress could not be saved in this browser.');
     }
     try { localStorage.setItem(VIEW_MODES_KEY,JSON.stringify(spriteViewModes)); } catch { /* Progress is still safely restored. */ }
+    saveExperienceSettings();
     try { localStorage.setItem(SEASON_VIEW_KEY,vaultSeasonView); } catch { /* The restored view remains active for this visit. */ }
     saveHuntMode();
     saveHuntCart();
@@ -5115,6 +5262,7 @@
       const saved = JSON.parse(raw);
       state = sanitizeProgress(saved.progress);
       spriteViewModes = sanitizeViewModes(saved.viewModes);
+      experienceSettings = sanitizeExperienceSettings(saved.experience);
       vaultSeasonView = sanitizeSeasonView(saved.seasonView);
       huntMode = sanitizeHuntModeBackup(saved.huntMode);
       huntCart = normalizeHuntCart(saved.huntCart);
@@ -5124,6 +5272,7 @@
       seasonView = appView === APP_VIEW_VAULT ? vaultSeasonView : CURRENT_SEASON_ID;
       if (!saveProgress()) throw new Error('Progress could not be saved.');
       localStorage.setItem(VIEW_MODES_KEY,JSON.stringify(spriteViewModes));
+      saveExperienceSettings();
       localStorage.setItem(SEASON_VIEW_KEY,vaultSeasonView);
       saveHuntMode();
       saveHuntCart();
@@ -6027,7 +6176,10 @@
   huntModeBtn.addEventListener('click',toggleHuntMode);
   huntModeBtn.addEventListener('pointerup',() => requestAnimationFrame(() => huntModeBtn.blur()));
   compassStartSearchBtn.addEventListener('click',() => {
-    if (huntMode.active) goHomeToRare({ announce:false });
+    if (huntMode.active) {
+      if (huntCart.length) openHuntCheckout();
+      else finishEmptyHunt();
+    }
     else openSpriteSearchStart();
   });
   spriteSearchStartForm.addEventListener('submit',(event) => {
@@ -6035,7 +6187,7 @@
     const location = cleanLocation(spriteSearchLocation.value);
     spriteSearchStartDialog.close();
     startSpriteSearch(location);
-    if (appView === APP_VIEW_HUNTS) goHomeToRare({ announce:false });
+    setAppView(APP_VIEW_HUNTS,{ announce:false });
   });
   document.getElementById('cancelSpriteSearchStartBtn').addEventListener('click',() => spriteSearchStartDialog.close());
   spriteSearchStartDialog.addEventListener('close',() => {
@@ -6046,7 +6198,7 @@
     document.documentElement.classList.remove('sprite-search-recap-open');
     document.body.classList.remove('sprite-search-recap-open');
   });
-  compassTargetInput.addEventListener('input',renderCompassTargetResults);
+  compassTargetInput.addEventListener('input',() => { renderCompassTargetResults(); renderSpriteCompass(); });
   compassTargetForm.addEventListener('submit',(event) => {
     event.preventDefault();
     const match = findSpriteMatches(compassTargetInput.value.trim())[0];
@@ -6055,7 +6207,11 @@
       renderCompassTargetResults();
       return;
     }
-    addSearchTarget(match);
+    if (!huntMode.active) return openSpriteSearchStart();
+    addSpriteSearchResultToHunt(match);
+    compassTargetInput.value = '';
+    closeCompassTargetResults();
+    renderSpriteCompass();
   });
   document.addEventListener('pointerdown',(event) => {
     if (!event.target.closest('.compass-target-form') && !event.target.closest('.compass-target-results')) closeCompassTargetResults();
@@ -6079,7 +6235,7 @@
       huntHistory = [];
       saveHuntHistory();
       renderHuntHistory();
-      showToast('Sprite Search History cleared');
+      showToast('Sprite Adventure history cleared');
     });
   });
   document.getElementById('recordDustPurchaseBtn').addEventListener('click',openDustPurchaseDialog);
@@ -6204,7 +6360,34 @@
   document.addEventListener('pointerdown',(event) => {
     if (!event.target.closest('.sprite-search')) closeSpriteSearchResults();
   });
-  spriteEditorToggle.addEventListener('click',() => setSpriteEditMode(!spriteEditMode));
+  settingsAnimationToggle.addEventListener('change',() => {
+    experienceSettings.animations = settingsAnimationToggle.checked;
+    saveExperienceSettings();
+    applyExperienceSettings();
+  });
+  settingsReduceMotionToggle.addEventListener('change',() => {
+    experienceSettings.reduceMotion = settingsReduceMotionToggle.checked;
+    saveExperienceSettings();
+    applyExperienceSettings();
+  });
+  settingsDefaultView.addEventListener('change',() => {
+    experienceSettings.defaultView = settingsDefaultView.value;
+    saveExperienceSettings();
+    showToast(`Default view: ${experienceSettings.defaultView}`);
+  });
+  settingsManageAccountBtn.addEventListener('click',() => window.SPRITE_ACCOUNT_BRIDGE?.openAccount?.());
+  window.addEventListener('sprite-cloud-status-changed',renderSettings);
+  window.addEventListener('sprite-account-bridge-ready',renderSettings);
+  document.getElementById('welcomeSkipBtn').addEventListener('click',finishWelcome);
+  welcomeNextBtn.addEventListener('click',() => {
+    if (welcomeIndex >= welcomeSlides.length - 1) return finishWelcome();
+    welcomeIndex += 1;
+    renderWelcome();
+  });
+  spriteEditorToggle.addEventListener('click',() => {
+    if (appView === APP_VIEW_SETTINGS) goHomeToRare({ announce:false });
+    setSpriteEditMode(!spriteEditMode);
+  });
   spriteViewSelect.addEventListener('change',() => setSpriteViewMode(spriteViewSelect.value));
   addSpriteGroupBtn.addEventListener('click',openAddSpriteGroupDialog);
   publishSpritesBtn.addEventListener('click',openPublishSpritesDialog);
@@ -6282,7 +6465,7 @@
       setAppView(APP_VIEW_JOURNAL,{ announce:false });
       return;
     }
-    if (hashView === APP_VIEW_HUNTS) {
+    if (hashView === APP_VIEW_HUNTS || hashView === 'adventure') {
       setAppView(APP_VIEW_HUNTS,{ announce:false });
       return;
     }
@@ -6292,6 +6475,10 @@
     }
     if (hashView === APP_VIEW_PROFILE || hashView.startsWith(`${APP_VIEW_PROFILE}/`)) {
       setAppView(APP_VIEW_PROFILE,{ announce:false });
+      return;
+    }
+    if (hashView === APP_VIEW_SETTINGS) {
+      setAppView(APP_VIEW_SETTINGS,{ announce:false });
       return;
     }
     if (appView !== APP_VIEW_TRACKER) setAppView(APP_VIEW_TRACKER,{ announce:false });
@@ -6310,17 +6497,19 @@
     : (appView === APP_VIEW_JOURNAL
         ? '#journal'
         : (appView === APP_VIEW_HUNTS
-            ? '#hunts'
+            ? '#adventure'
             : (appView === APP_VIEW_DUST
                 ? '#dust'
                 : (appView === APP_VIEW_PROFILE
                     ? (location.hash.toLowerCase().startsWith('#profile/') ? location.hash : '#profile')
-                    : (appView === APP_VIEW_COMING_SOON
-                        ? `#coming-soon-${featureSlug(comingSoonFeatureId)}`
-                        : (isUnownedPage() ? `#${missingView}` : `#${activeRarity.toLowerCase()}`))))));
+                    : (appView === APP_VIEW_SETTINGS
+                        ? '#settings'
+                        : (appView === APP_VIEW_COMING_SOON
+                            ? `#coming-soon-${featureSlug(comingSoonFeatureId)}`
+                            : (isUnownedPage() ? `#${missingView}` : `#${activeRarity.toLowerCase()}`)))))));
   if (location.hash !== activeHash) history.replaceState({ rarity:activeRarity },'',activeHash);
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./service-worker.js?v=134',{ updateViaCache:'none' }).then((registration) => registration.update()).catch(() => {});
+    navigator.serviceWorker.register('./service-worker.js?v=135',{ updateViaCache:'none' }).then((registration) => registration.update()).catch(() => {});
   }
   const signalAppRendered = () => window.dispatchEvent(new Event('sprite-app-rendered'));
   if (document.fonts?.ready) {
@@ -6331,4 +6520,6 @@
   } else {
     signalAppRendered();
   }
+  applyExperienceSettings();
+  window.setTimeout(maybeOpenWelcome,700);
 })();

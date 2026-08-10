@@ -286,12 +286,13 @@
       }
     })();
   </script>
-<link rel="stylesheet" href="styles.css?v=131">
+<link rel="stylesheet" href="styles.css?v=135">
 <link rel="stylesheet" href="vault-v105.css?v=112">
 <link rel="stylesheet" href="viewport-v106.css?v=107">
 <link rel="stylesheet" href="scene-v126.css?v=126">
-<link rel="stylesheet" href="cloud-v128.css?v=134">
-<link rel="stylesheet" href="profile-v133.css?v=134">
+<link rel="stylesheet" href="cloud-v128.css?v=135">
+<link rel="stylesheet" href="profile-v133.css?v=135">
+<link rel="stylesheet" href="v135.css?v=135">
 </head>
 <body>
   <div class="app-launch-screen" aria-hidden="true">
@@ -317,7 +318,7 @@
       </svg>
     </button>
 
-    <button class="profile-quick-button" id="profileQuickBtn" type="button" aria-label="Open Profile and Cloud" title="Profile and Cloud">
+    <button class="profile-quick-button" id="profileQuickBtn" type="button" aria-label="Open My Sprite Profile" title="My Sprite Profile">
       <span class="profile-quick-avatar" id="profileQuickAvatar" data-avatar="sprite" aria-hidden="true">
         <svg viewBox="0 0 64 64" focusable="false"><path d="M20 8c8-5 22-4 28 5 6 8 3 19 5 27 2 6 7 9 4 14-2 5-9 5-14 2-3 6-8 7-13 3-6 3-12 0-12-7-6 2-11 0-12-5-1-5 4-8 6-12 3-7 1-16 8-27Z"></path><path d="m23 35 7 7 13-15"></path></svg>
       </span>
@@ -362,16 +363,7 @@
               <path d="m15.8 8.2-2.1 5.5-5.5 2.1 2.1-5.5Z"></path>
               <path d="M12 2v2M12 20v2M2 12h2M20 12h2"></path>
             </svg>
-            <span>Sprite Compass</span>
-          </button>
-          <button class="app-menu-item" type="button" data-feature-id="spriteMeadow">
-            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-              <path d="M4 20c0-4.8 2.1-8.1 6.2-10.1M20 20c0-4.5-1.8-7.8-5.5-9.8"></path>
-              <path d="M12 20V8M8.5 11.5C6.3 11.5 5 10 5 8c2.2 0 3.5 1.4 3.5 3.5ZM15.5 11.5C17.7 11.5 19 10 19 8c-2.2 0-3.5 1.4-3.5 3.5Z"></path>
-              <path d="M3 20h18"></path>
-            </svg>
-            <span>Sprite Meadow</span>
-            <small class="app-menu-feature-badge" data-feature-badge>Coming Soon</small>
+            <span>Sprite Adventure</span>
           </button>
           <button class="app-menu-item" type="button" data-app-view="profile" data-feature-id="profiles" hidden>
             <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -388,6 +380,12 @@
             <small class="app-menu-feature-badge" data-feature-badge>Preview</small>
           </button>
         </nav>
+        <div class="app-menu-secondary">
+          <button class="app-menu-settings" type="button" data-app-view="settings">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.8 2.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6v.2h-4V21a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1L4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9A1.7 1.7 0 0 0 3 14H2.8v-4H3a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9L4.2 7 7 4.2l.1.1a1.7 1.7 0 0 0 1.9.3A1.7 1.7 0 0 0 10 3V2.8h4V3a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1L19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.2v4H21a1.7 1.7 0 0 0-1.6 1Z"></path></svg>
+            <span>Settings</span>
+          </button>
+        </div>
       </div>
     </dialog>
 
@@ -414,7 +412,6 @@
       <form class="sprite-search-form" id="spriteSearchForm" role="search">
         <label class="visually-hidden" for="spriteSearchInput">Search sprites</label>
         <input id="spriteSearchInput" type="search" placeholder="Search sprites…" autocomplete="off" enterkeyhint="search" aria-controls="spriteSearchResults" aria-expanded="false">
-        <button type="submit">Find</button>
         <button class="search-clear" id="clearSpriteSearchBtn" type="button" hidden>Clear</button>
       </form>
       <div class="sprite-search-results" id="spriteSearchResults" role="listbox" hidden></div>
@@ -423,7 +420,7 @@
 
     <section class="tracker-tools tracker-primary-view" aria-label="Collection tools">
       <div class="hunt-mode-control">
-        <button id="huntModeBtn" type="button" aria-label="Start Sprite Search" aria-pressed="false" title="Start Sprite Search">
+        <button id="huntModeBtn" type="button" aria-label="Start Sprite Adventure" aria-pressed="false" title="Start Sprite Adventure">
           <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
             <path d="M8 7V5.8A4 4 0 0 1 12 2a4 4 0 0 1 4 3.8V7"></path>
             <rect x="5" y="7" width="14" height="14" rx="3"></rect>
@@ -438,11 +435,6 @@
           <circle cx="12" cy="13" r="3.5"></circle>
         </svg>
       </button>
-      <button id="backupBtn" type="button" aria-label="Save or restore progress" title="Save or restore progress">
-        <svg viewBox="-2 -2 28 28" aria-hidden="true" focusable="false">
-          <path d="M17.5 19H8.8A5.8 5.8 0 0 1 8 7.45 7 7 0 0 1 21.1 10 4.7 4.7 0 0 1 17.5 19Z"></path>
-        </svg>
-      </button>
       <button class="sprite-dust-balance-button" id="spriteDustBalanceBtn" type="button" aria-label="Open Sprite Dust account" title="Open Sprite Dust account">
         <svg class="dust-bottle-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
           <rect x="9.4" y="2.2" width="5.2" height="3.3" rx=".8"></rect>
@@ -455,7 +447,7 @@
 
     <section class="hunt-cart-tray tracker-primary-view" id="huntCartTray" aria-live="polite" hidden>
       <div>
-        <span>Sprite Search cart</span>
+        <span>Current Adventure</span>
         <strong id="huntCartSummary">0 Sprites · 0 Dust</strong>
       </div>
       <button id="huntCheckoutBtn" type="button">Checkout</button>
@@ -499,92 +491,30 @@
     <section class="collection-journal-page" id="collectionJournalPage" aria-labelledby="collectionJournalTitle" hidden>
       <header class="collection-journal-head">
         <h2 id="collectionJournalTitle">Collection Journal</h2>
-        <span>Your dates and locations save automatically to your account when you are signed in.</span>
       </header>
 
-      <section class="journal-insights" aria-label="Collection location insights">
+      <section class="journal-insights" aria-label="Collection journal overview">
         <article class="journal-insight-card journal-top-location">
-          <span>Top collecting spot</span>
-          <strong id="journalTopLocation">No locations yet</strong>
-          <small id="journalTopLocationCount">Add a location when you collect a Sprite.</small>
+          <span>Favorite drop spot</span>
+          <strong id="journalTopLocation">No drop spots yet</strong>
+          <small id="journalTopLocationCount">Your most-used location will appear here.</small>
         </article>
-        <article class="journal-insight-card">
-          <span>Locations visited</span>
-          <strong id="journalLocationsLogged">0</strong>
-        </article>
-        <article class="journal-insight-card">
-          <span>Journal entries</span>
-          <strong id="journalEntryCount">0</strong>
-        </article>
+        <article class="journal-insight-card"><span>Drop spots visited</span><strong id="journalLocationsLogged">0</strong></article>
+        <article class="journal-insight-card"><span>Timeline entries</span><strong id="journalEntryCount">0</strong></article>
       </section>
 
       <section class="journal-location-chart" aria-labelledby="journalLocationChartTitle">
-        <div class="journal-section-heading">
-          <div>
-            <h3 id="journalLocationChartTitle">Locations of Luck</h3>
-          </div>
-        </div>
-        <div class="journal-map-layout">
-          <figure class="journal-map-figure" aria-labelledby="journalMapInstructions">
-            <svg class="journal-map-art" viewBox="0 0 776 436" role="img" aria-label="Illustrated island map with tappable top, boss fight, and bottom areas">
-              <defs>
-                <radialGradient id="journalSea" cx="50%" cy="42%" r="72%"><stop stop-color="#173b56"></stop><stop offset="1" stop-color="#061321"></stop></radialGradient>
-                <linearGradient id="journalIsland" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#9bcaa3"></stop><stop offset=".54" stop-color="#69a37e"></stop><stop offset="1" stop-color="#d5a267"></stop></linearGradient>
-                <linearGradient id="journalRiver" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#b9eff8"></stop><stop offset="1" stop-color="#58b8d8"></stop></linearGradient>
-                <filter id="journalIslandShadow" x="-20%" y="-20%" width="140%" height="150%"><feDropShadow dx="0" dy="10" stdDeviation="10" flood-color="#01060b" flood-opacity=".65"></feDropShadow></filter>
-              </defs>
-              <rect width="776" height="436" rx="26" fill="url(#journalSea)"></rect>
-              <g class="journal-map-waves" fill="none" stroke="#66b6d2" stroke-linecap="round">
-                <path d="M33 76c48-19 86-16 129 1M612 77c44-17 86-16 127 2M24 349c53-17 95-15 140 3M608 352c48-19 87-17 133 2"></path>
-                <path d="M60 104c29-10 55-9 82 1M635 106c26-10 52-9 78 1M52 323c31-10 60-9 91 2M638 325c27-9 53-8 80 1"></path>
-              </g>
-              <path class="journal-map-island" filter="url(#journalIslandShadow)" fill="url(#journalIsland)" stroke="#d4eee2" stroke-width="5" d="M217 50c55-29 115-32 163-13 39 15 69 15 106 8 55-10 110 23 119 70 5 25-5 45-24 61 29 24 37 61 17 87-17 22-43 32-76 35-19 38-57 57-103 56-37 35-91 42-131 17-36-22-48-56-41-87-45-3-78-28-83-64-4-31 11-57 37-75-19-37-11-75 16-99Z"></path>
-              <g class="journal-map-terrain" fill="none" stroke-linecap="round" stroke-linejoin="round">
-                <path class="journal-map-river" d="M357 52c-15 42 35 58 8 93-26 33-7 57 25 75 28 15 7 50 27 82 10 17 6 35-5 49"></path>
-                <path class="journal-map-road" d="M215 190c68-37 118-19 168 15 54 36 104 43 175 10"></path>
-                <path class="journal-map-road" d="M297 78c3 72-13 120-53 177M489 76c-21 62-11 124 43 190"></path>
-              </g>
-              <g class="journal-map-contours" fill="none" stroke="#294e3e" stroke-width="2" opacity=".3">
-                <path d="M239 101c35-28 83-33 119-16M474 91c44-17 89 0 100 32M200 244c28 31 62 41 103 34M463 305c34 6 67-4 88-31"></path>
-                <path d="M254 119c30-22 65-25 91-11M481 111c31-10 61 0 74 20M217 255c25 21 50 28 79 23M472 320c27 2 49-7 64-25"></path>
-              </g>
-              <g class="journal-map-pois" fill="#f4fff9" stroke="#173529" stroke-width="3">
-                <circle cx="294" cy="105" r="7"></circle><circle cx="466" cy="103" r="7"></circle>
-                <circle cx="250" cy="239" r="7"></circle><circle cx="513" cy="250" r="7"></circle>
-                <circle cx="337" cy="320" r="7"></circle><circle cx="474" cy="313" r="7"></circle>
-              </g>
-              <g class="journal-map-boss-mark" transform="translate(387 211)"><path d="m0-15 4 10 11-1-8 7 3 11-10-6-10 6 3-11-8-7 11 1Z"></path></g>
-            </svg>
-            <button class="journal-map-zone journal-map-zone-top" type="button" data-journal-map-zone="Top of Map" aria-label="Show Top of Map activity"><span>Top</span></button>
-            <button class="journal-map-zone journal-map-zone-bottom" type="button" data-journal-map-zone="Bottom of Map" aria-label="Show Bottom of Map activity"><span>Bottom</span></button>
-            <button class="journal-map-zone journal-map-zone-boss" type="button" data-journal-map-zone="Boss Fight" aria-label="Show Boss Fight activity"><span>Boss</span></button>
-          </figure>
-          <div class="journal-map-legend" aria-label="Map collection totals">
-            <div data-journal-zone="Top of Map"><i aria-hidden="true"></i><span>Top of Map</span><strong id="journalZoneTopCount">0</strong></div>
-            <div data-journal-zone="Bottom of Map"><i aria-hidden="true"></i><span>Bottom of Map</span><strong id="journalZoneBottomCount">0</strong></div>
-            <div data-journal-zone="Boss Fight"><i aria-hidden="true"></i><span>Boss Fight</span><strong id="journalZoneBossCount">0</strong></div>
-          </div>
-        </div>
-        <p class="journal-map-instructions" id="journalMapInstructions">Tap a map area to filter your activity. Tap it again to show every area.</p>
-        <p class="journal-empty-copy" id="journalLocationEmpty">Start a Sprite Search to begin tracking where Sprites are found.</p>
-      </section>
-
-      <section class="journal-memories" aria-labelledby="journalMemoriesTitle">
-        <div class="journal-section-heading">
-          <div><span>Saved moments</span><h3 id="journalMemoriesTitle">Memories</h3></div>
-        </div>
-        <div class="journal-memory-list" id="journalMemoryList"></div>
-        <div class="feature-empty-state" id="journalMemoryEmpty">
-          <strong>No saved memories yet.</strong>
-          <span>Choose Add to Journal beside any activity to keep it here with an optional photo.</span>
-        </div>
+        <div class="journal-section-heading"><div><span>Your personal route</span><h3 id="journalLocationChartTitle">Drop Spots</h3></div></div>
+        <div class="journal-drop-spot-list" id="journalDropSpotList"></div>
+        <p class="journal-empty-copy" id="journalLocationEmpty">Locations added during an Adventure will build your route here.</p>
+        <div hidden aria-hidden="true"><strong id="journalZoneTopCount">0</strong><strong id="journalZoneBottomCount">0</strong><strong id="journalZoneBossCount">0</strong><div id="journalMemoryList"></div><div id="journalMemoryEmpty"></div></div>
       </section>
 
       <section class="journal-history" aria-labelledby="journalHistoryTitle">
         <div class="journal-section-heading journal-history-heading">
           <div>
-            <span>Newest first</span>
-            <h3 id="journalHistoryTitle">Activity</h3>
+            <span>Your collection story</span>
+            <h3 id="journalHistoryTitle">Timeline</h3>
           </div>
           <div class="journal-history-controls">
             <label class="journal-filter-label" for="journalActionFilter">
@@ -594,7 +524,7 @@
                 <option value="collected">Collected</option>
                 <option value="mastered">Mastered</option>
                 <option value="removed">Removed</option>
-                <option value="details">Details edited</option>
+                <option value="details">Location edited</option>
               </select>
             </label>
             <button class="journal-clear-activity" id="clearJournalActivityBtn" type="button">Clear Activity</button>
@@ -602,60 +532,54 @@
         </div>
         <div class="journal-entry-list" id="journalEntryList" aria-live="polite"></div>
         <div class="journal-empty-state" id="journalEmptyState">
-          <strong>Your journal is ready.</strong>
-          <span>Collect or master a Sprite and its time will appear here automatically.</span>
+          <strong>Your timeline starts with your next Sprite.</strong>
+          <span>Collection, mastery, Adventures, and drop spots will appear here automatically.</span>
         </div>
       </section>
     </section>
 
     <section class="hunt-history-page sprite-compass-page" id="huntHistoryPage" aria-labelledby="huntHistoryTitle" hidden>
       <header class="feature-page-head">
-        <span>Plan your next search</span>
-        <h2 id="huntHistoryTitle">Sprite Compass</h2>
-        <p>Keep your targets together, start a search with one location, and review every completed trip.</p>
+        <span>Your play-session companion</span>
+        <h2 id="huntHistoryTitle">Sprite Adventure</h2>
       </header>
-      <section class="sprite-compass-overview" aria-label="Sprite Compass overview">
+      <section class="sprite-compass-overview" aria-label="Sprite Adventure overview">
         <article class="sprite-compass-next-target">
-          <span>Next target</span>
-          <strong id="compassNextTarget">No target yet</strong>
-          <small id="compassNextReason">Add a Sprite to your Search List.</small>
-          <button class="primary-btn" id="compassStartSearchBtn" type="button">Start Search</button>
+          <span>Suggested Sprite</span>
+          <strong id="compassNextTarget">Your collection is ready</strong>
+          <small id="compassNextReason">A useful suggestion will appear here.</small>
+          <button class="primary-btn" id="compassStartSearchBtn" type="button">Start Adventure</button>
         </article>
-        <article><span>Search List</span><strong id="compassTargetTotal">0</strong></article>
-        <article><span>Searches</span><strong id="huntHistoryTotal">0</strong></article>
+        <article><span>Added now</span><strong id="compassTargetTotal">0</strong></article>
+        <article><span>Adventures</span><strong id="huntHistoryTotal">0</strong></article>
         <article><span>Sprites found</span><strong id="huntHistorySpriteTotal">0</strong></article>
         <article><span>Dust earned</span><strong id="huntHistoryDustTotal">0</strong></article>
       </section>
 
       <section class="sprite-search-list-panel" aria-labelledby="spriteSearchListTitle">
         <div class="journal-section-heading">
-          <div><span>Your current targets</span><h3 id="spriteSearchListTitle">Search List</h3></div>
+          <div><span>Unowned Sprites</span><h3 id="spriteSearchListTitle">Quick Add</h3></div>
         </div>
         <form class="compass-target-form" id="compassTargetForm" role="search">
-          <label class="visually-hidden" for="compassTargetInput">Find a Sprite to add to your Search List</label>
-          <input id="compassTargetInput" type="search" placeholder="Find a Sprite or variant…" autocomplete="off" enterkeyhint="search" aria-controls="compassTargetResults" aria-expanded="false">
-          <button type="submit">Find</button>
+          <label class="visually-hidden" for="compassTargetInput">Find an unowned Sprite</label>
+          <input id="compassTargetInput" type="search" placeholder="Find an unowned Sprite…" autocomplete="off" enterkeyhint="search" aria-controls="compassTargetResults" aria-expanded="false">
+          <button type="submit">Add</button>
         </form>
         <div class="compass-target-results" id="compassTargetResults" role="listbox" hidden></div>
         <p class="visually-hidden" id="compassTargetStatus" aria-live="polite"></p>
         <div class="compass-target-list" id="compassTargetList"></div>
         <div class="feature-empty-state" id="compassTargetEmpty">
-          <strong>Your Search List is empty.</strong>
-          <span>Add Sprites you are actively looking for and Sprite Compass will keep them at the top of your plans.</span>
+          <strong>No Sprites added to this Adventure.</strong>
+          <span>Start an Adventure, then use the plus buttons to build your session recap.</span>
         </div>
       </section>
 
-      <div class="journal-section-heading sprite-search-history-heading">
-        <div><span>Newest first</span><h3>Search History</h3></div>
-      </div>
-      <div class="feature-page-actions">
-        <button class="danger-btn" id="clearHuntHistoryBtn" type="button">Clear Search History</button>
-      </div>
-      <div class="hunt-history-list" id="huntHistoryList"></div>
-      <div class="feature-empty-state" id="huntHistoryEmpty">
-        <strong>No completed Sprite Searches yet.</strong>
-        <span>Start a Sprite Search and its recap will appear here.</span>
-      </div>
+      <section class="adventure-map-panel" aria-labelledby="adventureMapTitle">
+        <div class="journal-section-heading"><div><span>Optional guide</span><h3 id="adventureMapTitle">Sprite Chest Map</h3></div></div>
+        <div class="adventure-map-slot"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 6 5-3 6 3 5-3v15l-5 3-6-3-5 3Z"></path><path d="M9 3v15M15 6v15"></path></svg><strong>Map artwork ready to add</strong><span>Your Sprite Chest map can drop into this space without another layout rebuild.</span></div>
+      </section>
+
+      <div hidden aria-hidden="true"><button id="clearHuntHistoryBtn" type="button">Clear Adventure History</button><div id="huntHistoryList"></div><div id="huntHistoryEmpty"></div></div>
     </section>
 
     <section class="sprite-dust-page" id="spriteDustPage" aria-labelledby="spriteDustPageTitle" hidden>
@@ -678,17 +602,20 @@
         <div class="dust-receipt-list" id="dustReceiptList"></div>
         <div class="feature-empty-state" id="dustReceiptEmpty">
           <strong>No receipts yet.</strong>
-          <span>Sprite Search deposits and recorded Sprite Dust purchases will appear here.</span>
+          <span>Adventure deposits and recorded Sprite Dust purchases will appear here.</span>
         </div>
       </section>
     </section>
 
     <section class="sprite-profile-page" id="spriteProfilePage" aria-labelledby="spriteProfilePageTitle" hidden>
       <header class="feature-page-head sprite-profile-page-head">
-        <span>Collector identity</span>
         <h2 id="spriteProfilePageTitle">My Sprite Profile</h2>
-        <p>Your public-facing collection card, Meadow Code, favorites, and protected cloud account in one place.</p>
       </header>
+
+      <section class="profile-meadow-hero" id="profileOwnerHero" hidden>
+        <div><span>Your Meadow Code</span><strong id="profileHeroCode">—</strong><button id="profileHeroShareBtn" type="button">Share code</button></div>
+        <div class="profile-avatar profile-hero-avatar" id="profileHeroAvatar" data-avatar="sprite" aria-hidden="true"></div>
+      </section>
 
       <section class="profile-lookup-panel" aria-labelledby="profileLookupTitle">
         <div><span>Visit another collector</span><h3 id="profileLookupTitle">Meadow Code</h3></div>
@@ -715,7 +642,7 @@
       <section class="profile-owner-panel" id="profileOwnerPanel" hidden>
         <section class="profile-account-rail" id="profileAccountRail" aria-label="Account and cloud status">
           <i id="profileCloudStateDot" aria-hidden="true"></i>
-          <div><strong id="profileAccountEmail">Signed-in account</strong><span id="profileCloudStateText">Checking account progress…</span></div>
+          <div><strong id="profileAccountName">Sprite Collector</strong><span id="profileAccountEmail">Signed-in account</span><small id="profileCloudStateText">Checking account progress…</small></div>
           <button id="profileManageAccountBtn" type="button">Account</button>
         </section>
 
@@ -724,7 +651,7 @@
           <div class="profile-identity-copy">
             <span>Your public profile</span>
             <h3 id="profileOwnerName">Sprite Collector</h3>
-            <p id="profileOwnerBio">Choose a name, profile picture, and favorite Sprites.</p>
+            <p id="profileOwnerBio"></p>
           </div>
           <div class="profile-owner-actions">
             <button class="profile-edit-button" id="profileEditBtn" type="button">Edit profile</button>
@@ -766,6 +693,30 @@
           <div class="profile-favorite-showcase" id="profileVisitorFavorites"></div>
           <p id="profileVisitorFavoritesEmpty">No favorite Sprites shared yet.</p>
         </section>
+      </section>
+    </section>
+
+    <section class="settings-page" id="settingsPage" aria-labelledby="settingsPageTitle" hidden>
+      <header class="feature-page-head settings-page-head"><span>Make the tracker yours</span><h2 id="settingsPageTitle">Settings</h2></header>
+      <section class="settings-card" aria-labelledby="settingsExperienceTitle">
+        <div class="journal-section-heading"><div><span>Display</span><h3 id="settingsExperienceTitle">Experience</h3></div></div>
+        <label class="settings-row"><span><strong>Animated backgrounds</strong><small>Snow, stars, and rarity motion effects.</small></span><input id="settingsAnimationToggle" type="checkbox" checked></label>
+        <label class="settings-row"><span><strong>Reduce motion</strong><small>Keep the artwork still and transitions gentle.</small></span><input id="settingsReduceMotionToggle" type="checkbox"></label>
+        <label class="settings-row"><span><strong>Default tracker view</strong><small>Used when you open a rarity for the first time.</small></span><select id="settingsDefaultView"><option value="card">Card</option><option value="list">List</option><option value="sheet">Sheet</option></select></label>
+      </section>
+      <section class="settings-card" aria-labelledby="settingsAccountTitle">
+        <div class="journal-section-heading"><div><span>Automatic protection</span><h3 id="settingsAccountTitle">Account &amp; Data</h3></div></div>
+        <p class="settings-save-status" id="settingsSaveStatus">Sign in to save your tracker across devices.</p>
+        <div class="settings-action-grid"><button id="settingsManageAccountBtn" type="button">Manage account</button><button id="backupBtn" type="button">Backup or restore</button></div>
+      </section>
+      <section class="settings-card settings-admin-card" aria-labelledby="settingsAdminTitle">
+        <div class="journal-section-heading"><div><span>Owner tools</span><h3 id="settingsAdminTitle">Admin Mode</h3></div></div>
+        <p>Edit the public Sprite catalog here. Regular collection controls stay uncluttered.</p>
+        <div class="settings-action-grid"><button class="sprite-editor-toggle" id="spriteEditorToggle" type="button" aria-pressed="false">Edit sprites</button><button class="add-sprite-group-button" id="addSpriteGroupBtn" type="button">Add sprite group</button><button class="publish-sprites-button" id="publishSpritesBtn" type="button">No changes to publish</button></div>
+      </section>
+      <section class="settings-card settings-danger-card" aria-labelledby="settingsResetTitle">
+        <div class="journal-section-heading"><div><span>Start over</span><h3 id="settingsResetTitle">Reset Tracker</h3></div></div>
+        <button class="reset-btn" id="resetBtn" type="button">Reset checklist progress</button>
       </section>
     </section>
 
@@ -869,9 +820,6 @@
               </select>
             </label>
             <button class="share-sheet-button" id="shareSheetBtn" type="button" hidden>Share sheet</button>
-            <button class="sprite-editor-toggle" id="spriteEditorToggle" type="button" aria-pressed="false">Edit sprites</button>
-            <button class="add-sprite-group-button" id="addSpriteGroupBtn" type="button">+ Add sprite group</button>
-            <button class="publish-sprites-button" id="publishSpritesBtn" type="button">No changes to publish</button>
           </div>
         </header>
         <section class="missing-recent-changes" id="missingRecentChanges" aria-labelledby="missingRecentTitle" hidden>
@@ -888,7 +836,6 @@
 
     <footer>
       <p id="footerNote"></p>
-      <button class="reset-btn" id="resetBtn" type="button">Reset checklist progress</button>
       <p class="fan-content-disclaimer">
         Portions of the materials used are trademarks and/or copyrighted works of Epic Games, Inc. All rights reserved by Epic. This material is not official and is not endorsed by Epic.
       </p>
@@ -1019,7 +966,7 @@
       <div class="backup-tool-grid">
         <section>
           <h3>Save a backup</h3>
-          <p>Includes progress, collection dates, Journal memories and activity, Sprite Search History, your active Search cart, Search List, and the Sprite Dust account.</p>
+          <p>Includes progress, collection dates, Journal activity, Adventure history, your active Adventure, and the Sprite Dust account.</p>
           <button class="primary-btn" id="downloadBackupBtn" type="button">Download backup file</button>
         </section>
         <section>
@@ -1047,11 +994,17 @@
       <div class="location-found-fields">
         <label for="locationFoundSelect">
           <span>Location found</span>
-          <select id="locationFoundSelect">
+      <select id="locationFoundSelect">
             <option value="">Not added</option>
-            <option value="Top of Map">Top of Map (Lifty Lodge, Latte Landing, Wonkee Land, etc.)</option>
-            <option value="Bottom of Map">Bottom of Map (Cluster Coast, Sunken Shores, Heatwave Harbor, etc.)</option>
-            <option value="Boss Fight">Boss Fight (Wolfe, Voidblade, Skeletor)</option>
+            <option value="Lifty Lodge">Lifty Lodge</option>
+            <option value="Latte Landing">Latte Landing</option>
+            <option value="Wonkee Land">Wonkee Land</option>
+            <option value="Battlewood Boulevard">Battlewood Boulevard</option>
+            <option value="Cluster Coast">Cluster Coast</option>
+            <option value="Sunken Shores">Sunken Shores</option>
+            <option value="Heatwave Harbor">Heatwave Harbor</option>
+            <option value="Boss Encounter">Boss Encounter</option>
+            <option value="Other">Other / not listed</option>
           </select>
         </label>
         <label for="locationCollectedAt">
@@ -1073,26 +1026,32 @@
 
   <dialog class="reset-dialog sprite-search-start-dialog" id="spriteSearchStartDialog" aria-labelledby="spriteSearchStartTitle">
     <form id="spriteSearchStartForm">
-      <h2 id="spriteSearchStartTitle" tabindex="-1">Start Sprite Search</h2>
-      <p>Choose the area once. Every Sprite completed during this search will use this location automatically.</p>
-      <label class="add-sprite-label" for="spriteSearchLocation">Search location</label>
+      <h2 id="spriteSearchStartTitle" tabindex="-1">Start Sprite Adventure</h2>
+      <p>Choose your drop spot once. Every Sprite completed during this Adventure will use it automatically.</p>
+      <label class="add-sprite-label" for="spriteSearchLocation">Drop spot</label>
       <select id="spriteSearchLocation">
-        <option value="">No location selected</option>
-        <option value="Top of Map">Top of Map (Lifty Lodge, Latte Landing, Wonkee Land, etc.)</option>
-        <option value="Bottom of Map">Bottom of Map (Cluster Coast, Sunken Shores, Heatwave Harbor, etc.)</option>
-        <option value="Boss Fight">Boss Fight (Wolfe, Voidblade, Skeletor)</option>
+        <option value="">Choose later</option>
+        <option value="Lifty Lodge">Lifty Lodge</option>
+        <option value="Latte Landing">Latte Landing</option>
+        <option value="Wonkee Land">Wonkee Land</option>
+        <option value="Battlewood Boulevard">Battlewood Boulevard</option>
+        <option value="Cluster Coast">Cluster Coast</option>
+        <option value="Sunken Shores">Sunken Shores</option>
+        <option value="Heatwave Harbor">Heatwave Harbor</option>
+        <option value="Boss Encounter">Boss Encounter</option>
+        <option value="Other">Other / not listed</option>
       </select>
       <div class="dialog-actions">
         <button id="cancelSpriteSearchStartBtn" type="button">Cancel</button>
-        <button class="primary-btn" type="submit">Begin Search</button>
+        <button class="primary-btn" type="submit">Begin Adventure</button>
       </div>
     </form>
   </dialog>
 
   <dialog class="reset-dialog hunt-checkout-dialog" id="huntCheckoutDialog" aria-labelledby="huntCheckoutTitle">
     <form id="huntCheckoutForm">
-      <h2 id="huntCheckoutTitle" tabindex="-1">Sprite Search Checkout</h2>
-      <p id="huntCheckoutDuration">Search time: 00:00</p>
+      <h2 id="huntCheckoutTitle" tabindex="-1">Finish Sprite Adventure</h2>
+      <p id="huntCheckoutDuration">Adventure time: 00:00</p>
       <div class="hunt-checkout-items" id="huntCheckoutItems"></div>
       <div class="hunt-checkout-total">
         <span>Deposit total</span>
@@ -1100,16 +1059,16 @@
       </div>
       <p class="hunt-checkout-warning" id="huntCheckoutWarning" hidden>Some Sprites do not have a Dust value saved for that level and will add 0 Dust.</p>
       <div class="dialog-actions">
-        <button id="continueHuntBtn" type="button">Continue Search</button>
-        <button class="primary-btn" id="completeHuntOrderBtn" type="submit">Complete Order</button>
+        <button id="continueHuntBtn" type="button">Continue Adventure</button>
+        <button class="primary-btn" id="completeHuntOrderBtn" type="submit">Finish Adventure</button>
       </div>
     </form>
   </dialog>
 
   <dialog class="reset-dialog sprite-search-recap-dialog" id="spriteSearchRecapDialog" aria-labelledby="spriteSearchRecapTitle">
     <form method="dialog">
-      <span class="sprite-search-recap-eyebrow">Search complete</span>
-      <h2 id="spriteSearchRecapTitle" tabindex="-1">Sprite Search Recap</h2>
+      <span class="sprite-search-recap-eyebrow">Adventure complete</span>
+      <h2 id="spriteSearchRecapTitle" tabindex="-1">Adventure Recap</h2>
       <div class="sprite-search-recap-summary" id="spriteSearchRecapSummary"></div>
       <div class="sprite-search-recap-items" id="spriteSearchRecapItems"></div>
       <div class="dialog-actions">
@@ -1176,15 +1135,26 @@
     </form>
   </dialog>
 
+  <dialog class="welcome-dialog" id="welcomeDialog" aria-labelledby="welcomeTitle">
+    <div class="welcome-card">
+      <span class="welcome-step" id="welcomeStep">1 of 4</span>
+      <div class="welcome-icon" id="welcomeIcon" aria-hidden="true">✓</div>
+      <h2 id="welcomeTitle">Welcome to My Sprite Tracker</h2>
+      <p id="welcomeCopy">Tap a card to mark a Sprite in your collection, then tap its crown when you master it.</p>
+      <div class="welcome-dots" id="welcomeDots" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+      <div class="dialog-actions"><button id="welcomeSkipBtn" type="button">Skip</button><button class="primary-btn" id="welcomeNextBtn" type="button">Next</button></div>
+    </div>
+  </dialog>
+
   <div class="status-toast" id="statusToast" role="status" aria-live="polite"></div>
   <noscript>This checklist needs JavaScript enabled to save progress.</noscript>
 
   <script src="data.js?v=82"></script>
   <script src="state-schema-v127.js?v=127"></script>
-  <script src="feature-config-v129.js?v=134"></script>
-  <script src="app.js?v=134"></script>
+  <script src="feature-config-v129.js?v=135"></script>
+  <script src="app.js?v=135"></script>
   <script src="cloud-config-v128.js?v=128"></script>
-  <script src="cloud-v128.js?v=134"></script>
-  <script src="profile-v133.js?v=134"></script>
+  <script src="cloud-v128.js?v=135"></script>
+  <script src="profile-v133.js?v=135"></script>
 </body>
 </html>

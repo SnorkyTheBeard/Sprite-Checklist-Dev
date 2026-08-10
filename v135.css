@@ -1,0 +1,217 @@
+/* =========================================================
+   V135 · Profile, Adventure, Journal and tracker refinement
+   ========================================================= */
+
+html,
+body { max-width:100%; overflow-x:hidden; }
+
+.app-shell { width:min(100%,1180px); max-width:100%; overflow:clip; }
+
+.app-menu-secondary {
+  margin-top:auto;
+  padding:12px 14px calc(12px + env(safe-area-inset-bottom));
+  border-top:1px solid rgba(255,255,255,.08);
+}
+.app-menu-settings {
+  width:100%; min-height:50px; display:flex; align-items:center; gap:12px;
+  padding:10px 14px; border:0; border-radius:15px; color:#dce6f2;
+  background:rgba(255,255,255,.045); font:800 14px/1 inherit; text-align:left;
+}
+.app-menu-settings svg { width:23px; height:23px; fill:none; stroke:currentColor; stroke-width:1.7; }
+.app-menu-settings.is-active { color:#fff; background:linear-gradient(135deg,rgba(82,187,255,.2),rgba(159,100,255,.18)); }
+
+/* The public tracker keeps only collection tools. Owner controls live in Settings. */
+.page-head {
+  align-items:stretch; flex-direction:column; gap:10px; padding:14px clamp(12px,3vw,22px) 10px;
+}
+.page-head > div:first-child { width:100%; text-align:center; }
+.page-head h2 { font-size:clamp(32px,8vw,54px); line-height:.96; }
+.page-head-actions {
+  width:100%; display:flex; align-items:center; justify-content:center; gap:9px;
+}
+.page-head-actions .page-count,
+.page-head-actions .sprite-view-menu { flex:0 1 auto; }
+.page-head-actions .page-count { min-width:84px; text-align:center; white-space:nowrap; }
+.page-head-actions select { min-width:116px; }
+.share-sheet-button { display:none !important; }
+
+body.tracker-view .page-head {
+  position:sticky; top:0; z-index:34;
+  background:linear-gradient(180deg,rgba(3,10,19,.94),rgba(3,10,19,.78));
+  border:1px solid rgba(255,255,255,.08); border-radius:0 0 22px 22px;
+  -webkit-backdrop-filter:blur(18px) saturate(1.2); backdrop-filter:blur(18px) saturate(1.2);
+}
+
+body.sprite-sheet-view #collections { display:grid; gap:10px; padding:2px clamp(10px,3vw,20px) 110px; }
+body.sprite-sheet-view .sheet-collection {
+  margin:0; padding:12px 13px; border-radius:16px;
+  background:rgba(8,14,23,.72); border:1px solid rgba(255,255,255,.16);
+  -webkit-backdrop-filter:blur(12px); backdrop-filter:blur(12px);
+}
+body.sprite-sheet-view .sheet-collection > h3 {
+  margin:0 0 8px; font-size:clamp(18px,4.5vw,24px); text-align:left;
+}
+body.sprite-sheet-view .sheet-variant-grid {
+  display:flex; flex-wrap:wrap; align-items:center; gap:6px 8px;
+}
+body.sprite-sheet-view .sheet-variant-item {
+  min-width:0; width:auto; flex:0 1 auto; display:flex; align-items:center; gap:5px;
+  padding:5px 7px; border-radius:10px; background:rgba(255,255,255,.055);
+}
+body.sprite-sheet-view .sheet-variant-item > span { font-size:12px; white-space:nowrap; }
+body.sprite-sheet-view .sheet-state-controls { gap:3px; }
+body.sprite-sheet-view .sheet-state-controls button { width:27px; height:27px; min-width:27px; padding:4px; }
+
+.sprite-search-form { grid-template-columns:minmax(0,1fr) auto; }
+.sprite-search-form input { min-width:0; }
+.sprite-search-results { z-index:70; }
+
+/* Profile: code and avatar first, then visit/account/public card. */
+.sprite-profile-page { padding-inline:clamp(14px,4vw,30px); }
+.sprite-profile-page-head { margin-bottom:18px; }
+.sprite-profile-page-head h2 { margin-bottom:0; }
+.profile-meadow-hero {
+  display:grid; grid-template-columns:minmax(0,1fr) 92px; align-items:center; gap:18px;
+  max-width:760px; margin:0 auto 16px; padding:18px 20px;
+  border:1px solid rgba(132,220,255,.4); border-radius:24px;
+  background:linear-gradient(135deg,rgba(7,28,62,.9),rgba(17,22,58,.84));
+  box-shadow:0 16px 42px rgba(0,0,0,.28),inset 0 1px rgba(255,255,255,.13);
+}
+.profile-meadow-hero[hidden] { display:none; }
+.profile-meadow-hero > div:first-child { min-width:0; display:grid; gap:6px; }
+.profile-meadow-hero span { color:#9fe4ff; font-size:12px; font-weight:900; letter-spacing:.14em; text-transform:uppercase; }
+.profile-meadow-hero strong { color:#fff; font-size:clamp(25px,7vw,40px); letter-spacing:.08em; overflow-wrap:anywhere; }
+.profile-meadow-hero button { justify-self:start; padding:8px 13px; border-radius:999px; }
+.profile-hero-avatar { width:92px; height:92px; border-radius:27px; }
+.profile-lookup-panel { max-width:760px; margin:0 auto 16px; }
+.profile-account-rail { max-width:760px; margin-inline:auto; }
+.profile-account-rail > div { min-width:0; display:grid; gap:2px; }
+.profile-account-rail #profileAccountName { color:#fff; font-size:18px; }
+.profile-account-rail #profileAccountEmail { color:#b8c5d8; font-size:12px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.profile-account-rail #profileCloudStateText { color:#91a7bd; font-size:11px; }
+.profile-owner-display { max-width:760px; margin-inline:auto; }
+.profile-owner-display .profile-code-chip { display:none !important; }
+.profile-owner-display .profile-identity-copy > span { display:none; }
+.profile-stats-strip {
+  display:flex; flex-wrap:wrap; justify-content:center; gap:10px;
+}
+.profile-stat-item {
+  flex:1 1 150px; max-width:220px; min-height:112px; border-radius:999px;
+  display:grid; place-content:center; text-align:center;
+}
+
+/* Adventure */
+.sprite-compass-page { padding-inline:clamp(13px,4vw,28px); }
+.sprite-compass-page .feature-page-head { margin-bottom:18px; }
+.sprite-compass-page .feature-page-head h2 { font-size:clamp(48px,11vw,84px); }
+.sprite-compass-overview {
+  max-width:900px; margin-inline:auto; grid-template-columns:repeat(4,minmax(0,1fr));
+}
+.sprite-compass-next-target { grid-column:1 / -1; }
+.sprite-compass-next-target .primary-btn { min-height:48px; }
+.sprite-search-list-panel,.adventure-map-panel { max-width:900px; margin:18px auto 0; }
+.compass-target-form { grid-template-columns:minmax(0,1fr) auto; }
+.compass-target-list { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:9px; }
+.compass-target-card { min-width:0; padding:9px; border-radius:16px; }
+.compass-target-card > div { min-width:0; }
+.compass-target-card > div strong,.compass-target-card > div span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.compass-quick-add {
+  width:42px !important; height:42px; min-width:42px; padding:0 !important; border-radius:50% !important;
+  color:#fff !important; background:rgba(21,199,103,.8) !important; border:1px solid rgba(174,255,212,.7) !important;
+  font-size:27px !important; line-height:1 !important; box-shadow:0 0 20px rgba(46,229,131,.22);
+}
+.compass-quick-add:disabled { opacity:.32; background:rgba(255,255,255,.08) !important; box-shadow:none; }
+.compass-target-card > div:last-child { display:flex; align-items:center; gap:5px; }
+.compass-quick-undo { padding:7px 8px !important; border-radius:999px !important; font-size:10px !important; }
+.adventure-map-slot {
+  min-height:240px; display:grid; place-items:center; align-content:center; gap:9px; padding:28px;
+  text-align:center; border:1px dashed rgba(145,210,255,.38); border-radius:22px;
+  background:radial-gradient(circle at 50% 50%,rgba(63,159,204,.18),transparent 48%),rgba(5,16,29,.76);
+}
+.adventure-map-slot svg { width:62px; height:62px; fill:none; stroke:#a5e6ff; stroke-width:1.3; }
+.adventure-map-slot span { max-width:430px; color:#9fb0c4; font-size:13px; line-height:1.45; }
+.hunt-cart-tray > div span { font-size:0; }
+.hunt-cart-tray > div span::after { content:'Current Adventure'; font-size:12px; }
+.hunt-cart-tray button { font-size:0; }
+.hunt-cart-tray button::after { content:'Finish'; font-size:13px; }
+
+/* Journal */
+.collection-journal-page { padding-inline:clamp(13px,4vw,30px); }
+.collection-journal-head { text-align:center; }
+.collection-journal-head h2 { font-size:clamp(48px,11vw,80px); }
+.journal-insights,.journal-location-chart,.journal-history { max-width:900px; margin-inline:auto; }
+.journal-drop-spot-list { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:9px; }
+.journal-drop-spot {
+  display:flex; align-items:center; gap:12px; padding:13px; border:1px solid rgba(255,255,255,.12);
+  border-radius:16px; background:rgba(5,15,28,.68); -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px);
+}
+.journal-drop-spot > span { width:34px; height:34px; display:grid; place-items:center; border-radius:50%; color:#06111d; background:#9de4ff; font-weight:950; }
+.journal-drop-spot > div { display:grid; gap:2px; }
+.journal-drop-spot small { color:#9dafc2; }
+.journal-adventure-recap { border-color:rgba(118,215,255,.36); background:linear-gradient(135deg,rgba(14,75,105,.3),rgba(11,18,35,.78)); }
+.journal-entry-actions { align-self:center; }
+
+/* Settings */
+.settings-page { min-height:72vh; padding:18px clamp(13px,4vw,30px) 140px; }
+.settings-page-head { max-width:900px; margin-inline:auto; }
+.settings-card {
+  max-width:760px; margin:14px auto; padding:18px; border:1px solid rgba(255,255,255,.13); border-radius:23px;
+  background:linear-gradient(145deg,rgba(10,24,42,.9),rgba(8,13,25,.84));
+  box-shadow:0 18px 40px rgba(0,0,0,.24); -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px);
+}
+.settings-row { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:14px 0; border-top:1px solid rgba(255,255,255,.08); }
+.settings-row > span { display:grid; gap:3px; }
+.settings-row small { color:#92a6ba; font-size:12px; }
+.settings-row input[type="checkbox"] { width:48px; height:26px; accent-color:#5ecbff; }
+.settings-row select { min-width:112px; }
+.settings-save-status { color:#b8d4e7; }
+.settings-action-grid { display:flex; flex-wrap:wrap; gap:9px; }
+.settings-action-grid button { flex:1 1 180px; min-height:46px; }
+.settings-admin-card { border-color:rgba(247,194,88,.28); }
+.settings-danger-card { border-color:rgba(255,101,116,.28); }
+
+/* Welcome */
+.welcome-dialog { width:min(92vw,510px); padding:0; border:0; background:transparent; color:#fff; }
+.welcome-dialog::backdrop { background:rgba(0,4,10,.78); -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px); }
+.welcome-card { padding:28px; text-align:center; border:1px solid rgba(147,220,255,.35); border-radius:28px; background:linear-gradient(160deg,#0d2641,#080e1b 70%); box-shadow:0 30px 90px rgba(0,0,0,.6); }
+.welcome-step { color:#8fdcff; font-size:12px; font-weight:900; letter-spacing:.14em; text-transform:uppercase; }
+.welcome-icon { width:78px; height:78px; margin:18px auto; display:grid; place-items:center; border-radius:25px; color:#fff; background:linear-gradient(135deg,#168ccc,#7248d7); box-shadow:0 0 34px rgba(82,191,255,.32); font-size:38px; }
+.welcome-card h2 { margin:0; font-size:clamp(30px,8vw,44px); }
+.welcome-card p { color:#b8c9dc; line-height:1.55; }
+.welcome-dots { display:flex; justify-content:center; gap:7px; margin:18px 0; }
+.welcome-dots i { width:7px; height:7px; border-radius:50%; background:rgba(255,255,255,.2); }
+.welcome-dots i.is-active { width:23px; border-radius:99px; background:#7edbff; }
+
+/* Feedback and motion preferences */
+.status-toast { bottom:calc(104px + env(safe-area-inset-bottom)) !important; z-index:220 !important; max-width:min(88vw,520px); pointer-events:none; }
+html.user-motion-disabled .page-motion-layer,
+html.user-motion-disabled .page-motion-effect { display:none !important; animation:none !important; }
+html.user-reduced-motion *,
+html.user-reduced-motion *::before,
+html.user-reduced-motion *::after { scroll-behavior:auto !important; animation-duration:.001ms !important; animation-iteration-count:1 !important; transition-duration:.001ms !important; }
+
+@media (max-width:680px) {
+  .app-menu-panel { width:min(82vw,360px); }
+  .tracker-tools { gap:9px; }
+  .profile-meadow-hero { grid-template-columns:minmax(0,1fr) 76px; padding:15px; }
+  .profile-hero-avatar { width:76px; height:76px; border-radius:22px; }
+  .profile-account-rail { grid-template-columns:auto minmax(0,1fr) auto; padding:12px; }
+  .sprite-compass-overview { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .sprite-compass-next-target { grid-column:1 / -1; }
+  .compass-target-list,.journal-drop-spot-list { grid-template-columns:1fr; }
+  .compass-target-card { grid-template-columns:46px minmax(0,1fr) auto; }
+  .compass-target-thumb { width:46px; height:46px; }
+  .journal-insights { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .journal-top-location { grid-column:1 / -1; }
+  .journal-entry { grid-template-columns:54px minmax(0,1fr); }
+  .journal-entry-actions { grid-column:1 / -1; display:flex; justify-content:flex-end; }
+  .settings-card { padding:15px; }
+}
+
+@media (max-width:390px) {
+  .page-head-actions { gap:6px; }
+  .page-head-actions .page-count { min-width:76px; }
+  .page-head-actions select { min-width:104px; }
+  .profile-account-rail #profileManageAccountBtn { padding-inline:10px; }
+  body.sprite-sheet-view .sheet-variant-item { padding:4px 5px; }
+}

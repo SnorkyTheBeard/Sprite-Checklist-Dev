@@ -327,7 +327,13 @@
       const name = String(session.user.user_metadata?.display_name || '').trim();
       cloudAccountName.textContent = name || 'My Sprite Tracker account';
       const meta = syncMeta();
-      cloudLastSync.textContent = meta ? `Last protected ${formatDate(meta.lastSyncedAt)}` : 'First cloud sync not completed';
+      if (meta?.lastSyncedAt) {
+        const saved = new Date(meta.lastSyncedAt);
+        const today = new Date();
+        const sameDay = saved.toDateString() === today.toDateString();
+        const time = new Intl.DateTimeFormat(undefined,{ hour:'numeric',minute:'2-digit' }).format(saved);
+        cloudLastSync.textContent = sameDay ? `Last save at ${time}` : `Last save ${formatDate(meta.lastSyncedAt)} at ${time}`;
+      } else cloudLastSync.textContent = 'Preparing your first save…';
     }
   }
 
@@ -574,10 +580,8 @@
           <small id="cloudLastSync">First cloud sync not completed</small>
         </article>
         <div class="cloud-account-actions">
-          <button id="openSpriteProfileBtn" type="button">Open profile</button>
           <button class="cloud-sign-out-button" id="cloudSignOutBtn" type="button">Sign out</button>
         </div>
-        <p class="cloud-local-note">Progress saves automatically to this account and follows you to other devices.</p>
       </section>
       <p class="cloud-account-status" id="cloudAccountStatus" role="status" aria-live="polite"></p>
     </div>`;
@@ -612,10 +616,6 @@
   authModeButtons.forEach((button) => button.addEventListener('click',() => showAuthMode(button.dataset.cloudAuthMode)));
   signInForm.addEventListener('submit',signIn);
   signUpForm.addEventListener('submit',signUp);
-  document.getElementById('openSpriteProfileBtn').addEventListener('click',() => {
-    closeCloudDialog();
-    location.hash = '#profile';
-  });
   document.getElementById('cloudSignOutBtn').addEventListener('click',signOut);
   window.addEventListener('sprite-local-save-changed',() => {
     if (!ignoreLocalChanges) scheduleAutoSync();

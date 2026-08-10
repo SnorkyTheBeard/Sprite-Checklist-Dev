@@ -30,8 +30,8 @@ window.SPRITE_FEATURE_CONFIG = Object.freeze({
     }),
     spriteRunHistory:Object.freeze({
       state:'public',
-      label:'Sprite Compass',
-      route:'hunts',
+      label:'Sprite Adventure',
+      route:'adventure',
       implemented:true
     }),
     spriteDust:Object.freeze({
@@ -46,7 +46,7 @@ window.SPRITE_FEATURE_CONFIG = Object.freeze({
       implemented:true
     }),
     spriteMeadow:Object.freeze({
-      state:'coming-soon',
+      state:'hidden',
       label:'Sprite Meadow',
       eyebrow:'A cozy new place for your collection',
       message:'Your Sprites will soon have a meadow of their own.',
