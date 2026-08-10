@@ -294,6 +294,7 @@
 <link rel="stylesheet" href="profile-v133.css?v=135">
 <link rel="stylesheet" href="v135.css?v=135">
 <link rel="stylesheet" href="v136.css?v=136">
+<link rel="stylesheet" href="v137.css?v=137">
 </head>
 <body>
   <div class="app-launch-screen" aria-hidden="true">
@@ -559,19 +560,32 @@
 
       <section class="sprite-search-list-panel" aria-labelledby="spriteSearchListTitle">
         <div class="journal-section-heading">
-          <div><span>Unowned Sprites</span><h3 id="spriteSearchListTitle">Quick Add</h3></div>
+          <div><h3 id="spriteSearchListTitle">Quick Add</h3></div>
         </div>
-        <form class="compass-target-form" id="compassTargetForm" role="search">
-          <label class="visually-hidden" for="compassTargetInput">Find an unowned Sprite</label>
-          <input id="compassTargetInput" type="search" placeholder="Find an unowned Sprite…" autocomplete="off" enterkeyhint="search" aria-controls="compassTargetResults" aria-expanded="false">
-          <button type="submit">Add</button>
-        </form>
+        <div class="compass-quick-add-toolbar">
+          <form class="compass-target-form" id="compassTargetForm" role="search">
+            <label class="visually-hidden" for="compassTargetInput">Find a Sprite</label>
+            <input id="compassTargetInput" type="search" placeholder="Search Sprites…" autocomplete="off" enterkeyhint="search" aria-controls="compassTargetList">
+          </form>
+          <label class="compass-sort-control" for="compassTargetSort">
+            <span>Sort</span>
+            <select id="compassTargetSort">
+              <option value="az">A–Z</option>
+              <option value="za">Z–A</option>
+            </select>
+          </label>
+        </div>
         <div class="compass-target-results" id="compassTargetResults" role="listbox" hidden></div>
         <p class="visually-hidden" id="compassTargetStatus" aria-live="polite"></p>
         <div class="compass-target-list" id="compassTargetList"></div>
+        <nav class="compass-quick-add-pager" id="compassQuickAddPager" aria-label="Quick Add pages" hidden>
+          <button id="compassQuickAddPrev" type="button" aria-label="Show previous Sprites">‹</button>
+          <span id="compassQuickAddPageInfo">1–20</span>
+          <button id="compassQuickAddNext" type="button" aria-label="Show next Sprites">›</button>
+        </nav>
         <div class="feature-empty-state" id="compassTargetEmpty">
-          <strong>No Sprites added to this Adventure.</strong>
-          <span>Start an Adventure, then use the plus buttons to build your session recap.</span>
+          <strong>No Sprites match this search.</strong>
+          <span>Try another Sprite name.</span>
         </div>
       </section>
 
@@ -1153,7 +1167,7 @@
   <script src="data.js?v=82"></script>
   <script src="state-schema-v127.js?v=127"></script>
   <script src="feature-config-v129.js?v=135"></script>
-  <script src="app.js?v=136"></script>
+  <script src="app.js?v=137"></script>
   <script src="cloud-config-v128.js?v=128"></script>
   <script src="cloud-v128.js?v=135"></script>
   <script src="profile-v133.js?v=135"></script>

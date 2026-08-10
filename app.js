@@ -25,6 +25,7 @@
   const APP_VIEW_PROFILE = 'profile';
   const APP_VIEW_SETTINGS = 'settings';
   const APP_VIEW_COMING_SOON = 'coming-soon';
+  const COMPASS_QUICK_ADD_PAGE_SIZE = 20;
   const FEATURE_STATES = new Set(['hidden','coming-soon','preview','public']);
   const DEV_BUILD = /dev/i.test(document.querySelector('meta[name="apple-mobile-web-app-title"]')?.content || '');
   const featureConfig = window.SPRITE_FEATURE_CONFIG && typeof window.SPRITE_FEATURE_CONFIG === 'object'
@@ -696,6 +697,7 @@
   let huntCart = loadStoredArray(HUNT_CART_KEY,normalizeHuntCart);
   let huntHistory = loadStoredArray(HUNT_HISTORY_KEY,normalizeHuntHistory);
   let searchTargets = loadStoredArray(SEARCH_TARGETS_KEY,normalizeSearchTargets);
+  let compassQuickAddPage = 0;
   let dustLedger = loadStoredArray(DUST_LEDGER_KEY,normalizeDustLedger);
   let experienceSettings = loadExperienceSettings();
   let welcomeIndex = 0;
@@ -798,6 +800,11 @@
   const compassTargetStatus = document.getElementById('compassTargetStatus');
   const compassTargetList = document.getElementById('compassTargetList');
   const compassTargetEmpty = document.getElementById('compassTargetEmpty');
+  const compassTargetSort = document.getElementById('compassTargetSort');
+  const compassQuickAddPager = document.getElementById('compassQuickAddPager');
+  const compassQuickAddPrev = document.getElementById('compassQuickAddPrev');
+  const compassQuickAddNext = document.getElementById('compassQuickAddNext');
+  const compassQuickAddPageInfo = document.getElementById('compassQuickAddPageInfo');
   const spriteDustBalanceBtn = document.getElementById('spriteDustBalanceBtn');
   const spriteDustBalance = document.getElementById('spriteDustBalance');
   const spriteDustAccountBalance = document.getElementById('spriteDustAccountBalance');
@@ -2676,25 +2683,35 @@
 
   function renderSpriteCompass() {
     const query = normalizeSearchText(compassTargetInput.value || '');
-    const available = searchableSprites()
+    const sortDirection = compassTargetSort?.value === 'za' ? -1 : 1;
+    const matching = searchableSprites()
       .filter((entry) => entry.seasonId === CURRENT_SEASON_ID)
       .filter((entry) => !variantState(entry.familyId,entry.variantId).collected)
       .filter((entry) => !query || entry.searchText.includes(query))
-      .sort((left,right) => {
-        const leftAdded = huntCart.some((item) => item.familyId === left.familyId && item.variantId === left.variantId) ? 1 : 0;
-        const rightAdded = huntCart.some((item) => item.familyId === right.familyId && item.variantId === right.variantId) ? 1 : 0;
-        return rightAdded - leftAdded;
-      })
-      .slice(0,40);
+      .sort((left,right) => sortDirection * (
+        left.groupName.localeCompare(right.groupName,undefined,{ sensitivity:'base',numeric:true })
+        || left.variantName.localeCompare(right.variantName,undefined,{ sensitivity:'base',numeric:true })
+      ));
+    const pageCount = Math.max(1,Math.ceil(matching.length / COMPASS_QUICK_ADD_PAGE_SIZE));
+    compassQuickAddPage = Math.max(0,Math.min(compassQuickAddPage,pageCount - 1));
+    const pageStart = compassQuickAddPage * COMPASS_QUICK_ADD_PAGE_SIZE;
+    const available = matching.slice(pageStart,pageStart + COMPASS_QUICK_ADD_PAGE_SIZE);
     compassTargetTotal.textContent = String(huntCart.length);
     compassTargetList.replaceChildren();
     compassTargetEmpty.hidden = Boolean(available.length);
+    if (compassQuickAddPager) {
+      compassQuickAddPager.hidden = matching.length <= COMPASS_QUICK_ADD_PAGE_SIZE;
+      compassQuickAddPrev.disabled = compassQuickAddPage === 0;
+      compassQuickAddNext.disabled = compassQuickAddPage >= pageCount - 1;
+      compassQuickAddPageInfo.textContent = matching.length
+        ? `${pageStart + 1}–${Math.min(pageStart + COMPASS_QUICK_ADD_PAGE_SIZE,matching.length)} of ${matching.length}`
+        : '0 Sprites';
+    }
     available.forEach((entry) => {
       const info = searchTargetInfo({ familyId:entry.familyId,variantId:entry.variantId,addedAt:'' });
       if (!info) return;
       const row = document.createElement('article');
       row.className = 'compass-target-card';
-      row.dataset.rarity = info.entry.rarity;
       const thumb = document.createElement('span');
       thumb.className = 'compass-target-thumb';
       if (info.image) {
@@ -2707,33 +2724,20 @@
       }
       const copy = document.createElement('div');
       const name = document.createElement('strong');
-      const detail = document.createElement('span');
       name.textContent = `${info.entry.groupName} · ${info.entry.variantName}`;
-      const copies = huntCart.filter((item) => item.familyId === entry.familyId && item.variantId === entry.variantId).length;
-      detail.textContent = copies ? `${info.entry.rarity} · Added to Adventure` : `${info.entry.rarity} · Unowned`;
-      copy.append(name,detail);
+      copy.append(name);
       const actions = document.createElement('div');
       const add = document.createElement('button');
+      const alreadyAdded = huntCart.some((item) => item.familyId === entry.familyId && item.variantId === entry.variantId);
       add.type = 'button';
       add.className = 'compass-quick-add';
       add.textContent = '+';
-      add.setAttribute('aria-label',`Add ${entry.groupName} ${entry.variantName} to this Adventure`);
-      add.disabled = !huntMode.active;
+      add.setAttribute('aria-label',alreadyAdded
+        ? `${entry.groupName} ${entry.variantName} is already in this Adventure`
+        : `Add ${entry.groupName} ${entry.variantName} to this Adventure`);
+      add.disabled = !huntMode.active || alreadyAdded;
       add.addEventListener('click',() => addSpriteToHuntCart(info.family,info.variant));
       actions.append(add);
-      if (copies) {
-        const undo = document.createElement('button');
-        undo.type = 'button';
-        undo.className = 'compass-quick-undo';
-        undo.textContent = 'Undo';
-        undo.addEventListener('click',() => {
-          const latest = [...huntCart].reverse().find((item) => item.familyId === entry.familyId && item.variantId === entry.variantId);
-          if (latest) removeHuntCartItem(latest.id);
-          renderHuntHistory();
-          showToast(`${entry.variantName} removed from this Adventure`);
-        });
-        actions.append(undo);
-      }
       row.append(thumb,copy,actions);
       compassTargetList.appendChild(row);
     });
@@ -6221,20 +6225,30 @@
     document.documentElement.classList.remove('sprite-search-recap-open');
     document.body.classList.remove('sprite-search-recap-open');
   });
-  compassTargetInput.addEventListener('input',() => { renderCompassTargetResults(); renderSpriteCompass(); });
-  compassTargetForm.addEventListener('submit',(event) => {
-    event.preventDefault();
-    const match = findSpriteMatches(compassTargetInput.value.trim())[0];
-    if (!match) {
-      compassTargetStatus.textContent = 'No matching Sprites';
-      renderCompassTargetResults();
-      return;
-    }
-    if (!huntMode.active) return openSpriteSearchStart();
-    addSpriteSearchResultToHunt(match);
-    compassTargetInput.value = '';
+  compassTargetInput.addEventListener('input',() => {
+    compassQuickAddPage = 0;
     closeCompassTargetResults();
     renderSpriteCompass();
+  });
+  compassTargetForm.addEventListener('submit',(event) => {
+    event.preventDefault();
+    closeCompassTargetResults();
+    compassTargetInput.blur();
+    renderSpriteCompass();
+  });
+  compassTargetSort?.addEventListener('change',() => {
+    compassQuickAddPage = 0;
+    renderSpriteCompass();
+  });
+  compassQuickAddPrev?.addEventListener('click',() => {
+    compassQuickAddPage = Math.max(0,compassQuickAddPage - 1);
+    renderSpriteCompass();
+    compassTargetList.scrollIntoView({ block:'nearest',behavior:'smooth' });
+  });
+  compassQuickAddNext?.addEventListener('click',() => {
+    compassQuickAddPage += 1;
+    renderSpriteCompass();
+    compassTargetList.scrollIntoView({ block:'nearest',behavior:'smooth' });
   });
   document.addEventListener('pointerdown',(event) => {
     if (!event.target.closest('.compass-target-form') && !event.target.closest('.compass-target-results')) closeCompassTargetResults();
