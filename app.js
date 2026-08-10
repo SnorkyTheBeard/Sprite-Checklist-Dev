@@ -3997,6 +3997,28 @@
 
     const title = document.createElement('h3');
     title.textContent = group.name || 'Sprite';
+    const content = document.createElement('div');
+    content.className = 'sheet-collection-row';
+    const baseVariant = rowVariants.find((variant) => variant.id === 'base' || /^base$/i.test(variantView(family,variant).name || '')) || rowVariants[0];
+    const thumb = document.createElement('span');
+    thumb.className = 'sheet-base-thumb';
+    const baseSource = displayImageSource(variantView(family,baseVariant).image);
+    if (baseSource) {
+      const image = document.createElement('img');
+      image.src = baseSource;
+      image.alt = `${group.name || 'Sprite'} Base artwork`;
+      image.width = 88;
+      image.height = 88;
+      image.loading = 'lazy';
+      image.decoding = 'async';
+      image.addEventListener('error',() => {
+        image.remove();
+        thumb.textContent = (group.name || 'S').slice(0,1).toUpperCase();
+      },{ once:true });
+      thumb.appendChild(image);
+    } else {
+      thumb.textContent = (group.name || 'S').slice(0,1).toUpperCase();
+    }
     const variants = document.createElement('div');
     variants.className = 'sheet-variant-list sheet-variant-grid';
     rowVariants.forEach((variant) => {
@@ -4007,7 +4029,8 @@
       item.append(name,sheetStateControls(family,variant));
       variants.appendChild(item);
     });
-    section.append(title,variants);
+    content.append(thumb,variants);
+    section.append(title,content);
     return section;
   }
 
