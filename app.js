@@ -32,7 +32,7 @@
     ? window.SPRITE_FEATURE_CONFIG
     : { ownerUserIds:[],features:{} };
   const defaultFeatureDefinitions = {
-    spriteVault:{ state:'public',label:'Sprite Vault',implemented:true },
+    spriteVault:{ state:'public',label:'Sprite Meadow',implemented:true },
     collectionJournal:{ state:'public',label:'Collection Journal',implemented:true },
     spriteRunHistory:{ state:'public',label:'Sprite Adventure',implemented:true },
     spriteDust:{ state:'public',label:'Sprite Dust',implemented:true },
@@ -1014,7 +1014,7 @@
       spriteEditMode = false;
       document.body.classList.remove('sprite-edit-mode');
       spriteEditorToggle.setAttribute('aria-pressed','false');
-      spriteEditorToggle.textContent = 'Edit sprites';
+      spriteEditorToggle.textContent = 'Enter Admin Mode';
       renderCollections();
     }
     const now = Date.now();
@@ -1533,7 +1533,7 @@
     if (changed) playAppViewTransition();
     if (announce && changed) {
       const label = appView === APP_VIEW_VAULT
-        ? 'Sprite Vault'
+        ? 'Sprite Meadow'
         : (appView === APP_VIEW_JOURNAL
             ? 'Collection Journal'
             : (appView === APP_VIEW_HUNTS
@@ -6117,7 +6117,7 @@
     spriteEditMode = Boolean(enabled);
     document.body.classList.toggle('sprite-edit-mode',spriteEditMode);
     spriteEditorToggle.setAttribute('aria-pressed',String(spriteEditMode));
-    spriteEditorToggle.textContent = spriteEditMode ? 'Done editing' : 'Edit sprites';
+    spriteEditorToggle.textContent = spriteEditMode ? 'Exit Admin Mode' : 'Enter Admin Mode';
     renderCollections();
     updateCounters();
     showToast(spriteEditMode ? 'Sprite editing on' : 'Sprite editing off');
@@ -6127,6 +6127,14 @@
     const unownedPage = isUnownedPage();
     const vaultPage = appView === APP_VIEW_VAULT;
     document.body.classList.toggle('unowned-page',unownedPage);
+    if (appView === APP_VIEW_SETTINGS) {
+      spriteEditorToggle.hidden = false;
+      addSpriteGroupBtn.hidden = false;
+      publishSpritesBtn.hidden = false;
+      spriteEditorToggle.setAttribute('aria-pressed',String(spriteEditMode));
+      spriteEditorToggle.textContent = spriteEditMode ? 'Exit Admin Mode' : 'Enter Admin Mode';
+      return;
+    }
     spriteEditorToggle.hidden = unownedPage || vaultPage;
     addSpriteGroupBtn.hidden = unownedPage || vaultPage || seasonView !== CURRENT_SEASON_ID;
     publishSpritesBtn.hidden = vaultPage;
@@ -6134,7 +6142,7 @@
     spriteEditMode = false;
     document.body.classList.remove('sprite-edit-mode');
     spriteEditorToggle.setAttribute('aria-pressed','false');
-    spriteEditorToggle.textContent = 'Edit sprites';
+    spriteEditorToggle.textContent = 'Enter Admin Mode';
   }
 
   appMenuBtn.addEventListener('click',openAppMenu);
@@ -6422,8 +6430,12 @@
     renderWelcome();
   });
   spriteEditorToggle.addEventListener('click',() => {
+    if (spriteEditMode) {
+      setSpriteEditMode(false);
+      return;
+    }
     if (appView === APP_VIEW_SETTINGS) goHomeToRare({ announce:false });
-    setSpriteEditMode(!spriteEditMode);
+    setSpriteEditMode(true);
   });
   spriteViewSelect.addEventListener('change',() => setSpriteViewMode(spriteViewSelect.value));
   addSpriteGroupBtn.addEventListener('click',openAddSpriteGroupDialog);

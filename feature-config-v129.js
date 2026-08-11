@@ -18,7 +18,7 @@ window.SPRITE_FEATURE_CONFIG = Object.freeze({
   features:Object.freeze({
     spriteVault:Object.freeze({
       state:'public',
-      label:'Sprite Vault',
+      label:'Sprite Meadow',
       route:'vault',
       implemented:true
     }),
@@ -44,13 +44,6 @@ window.SPRITE_FEATURE_CONFIG = Object.freeze({
       state:'public',
       label:'Sheet View',
       implemented:true
-    }),
-    spriteMeadow:Object.freeze({
-      state:'hidden',
-      label:'Sprite Meadow',
-      eyebrow:'A cozy new place for your collection',
-      message:'Your Sprites will soon have a meadow of their own.',
-      implemented:false
     }),
     profiles:Object.freeze({
       state:'public',

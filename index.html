@@ -295,6 +295,7 @@
 <link rel="stylesheet" href="v135.css?v=135">
 <link rel="stylesheet" href="v136.css?v=136">
 <link rel="stylesheet" href="v137.css?v=137">
+<link rel="stylesheet" href="v138.css?v=138">
 </head>
 <body>
   <div class="app-launch-screen" aria-hidden="true">
@@ -343,12 +344,12 @@
           </button>
           <button class="app-menu-item" type="button" data-app-view="vault" data-feature-id="spriteVault">
             <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-              <rect x="3" y="3" width="18" height="18" rx="3"></rect>
-              <rect x="6" y="6" width="12" height="12" rx="2"></rect>
-              <circle cx="12" cy="12" r="3"></circle>
-              <path d="M12 9v2M12 13v2M9 12h2M13 12h2M18 9h1M18 15h1"></path>
+              <path d="M3 19c2-1.2 4-.9 6 0s4 1.2 6 0 4-1.2 6 0"></path>
+              <path d="m6 12 6-5 6 5M8 11v7h8v-7M12 18v-4"></path>
+              <path d="M4.5 14.5v3M3.2 15.6h2.6M19.5 13v4"></path>
+              <circle cx="19.5" cy="11.5" r="1.5"></circle>
             </svg>
-            <span>Sprite Vault</span>
+            <span>Sprite Meadow</span>
           </button>
           <button class="app-menu-item" type="button" data-app-view="journal" data-feature-id="collectionJournal">
             <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -457,10 +458,10 @@
 
     <section class="season-vault-page" id="seasonVaultPage" aria-labelledby="seasonVaultPageTitle" hidden>
       <header class="season-vault-page-head">
-        <span>Collection archive</span>
-        <h2 id="seasonVaultPageTitle">Sprite Vault</h2>
+        <span>Your collection world</span>
+        <h2 id="seasonVaultPageTitle">Sprite Meadow</h2>
       </header>
-      <section class="season-vault-bar" aria-label="Selected season progress" aria-live="polite">
+      <section class="season-vault-bar" aria-label="Selected Meadow season" aria-live="polite">
         <div class="season-vault-heading">
           <div class="season-vault-title-wrap">
             <span class="season-vault-kicker">Viewing</span>
@@ -727,7 +728,7 @@
       <section class="settings-card settings-admin-card" aria-labelledby="settingsAdminTitle">
         <div class="journal-section-heading"><div><span>Owner tools</span><h3 id="settingsAdminTitle">Admin Mode</h3></div></div>
         <p>Edit the public Sprite catalog here. Regular collection controls stay uncluttered.</p>
-        <div class="settings-action-grid"><button class="sprite-editor-toggle" id="spriteEditorToggle" type="button" aria-pressed="false">Edit sprites</button><button class="add-sprite-group-button" id="addSpriteGroupBtn" type="button">Add sprite group</button><button class="publish-sprites-button" id="publishSpritesBtn" type="button">No changes to publish</button></div>
+        <div class="settings-action-grid"><button class="sprite-editor-toggle" id="spriteEditorToggle" type="button" aria-pressed="false">Enter Admin Mode</button><button class="add-sprite-group-button" id="addSpriteGroupBtn" type="button">Add sprite group</button><button class="publish-sprites-button" id="publishSpritesBtn" type="button">No changes to publish</button></div>
       </section>
       <section class="settings-card settings-danger-card" aria-labelledby="settingsResetTitle">
         <div class="journal-section-heading"><div><span>Start over</span><h3 id="settingsResetTitle">Reset Tracker</h3></div></div>
@@ -1166,8 +1167,8 @@
 
   <script src="data.js?v=82"></script>
   <script src="state-schema-v127.js?v=127"></script>
-  <script src="feature-config-v129.js?v=135"></script>
-  <script src="app.js?v=137"></script>
+  <script src="feature-config-v129.js?v=138"></script>
+  <script src="app.js?v=138"></script>
   <script src="cloud-config-v128.js?v=128"></script>
   <script src="cloud-v128.js?v=135"></script>
   <script src="profile-v133.js?v=135"></script>
