@@ -298,6 +298,7 @@
 <link rel="stylesheet" href="v138.css?v=138">
 <link rel="stylesheet" href="v139.css?v=139">
 <link rel="stylesheet" href="v140.css?v=140">
+<link rel="stylesheet" href="v141.css?v=141">
 </head>
 <body>
   <div class="app-launch-screen" aria-hidden="true">
@@ -353,7 +354,7 @@
               <path d="M4.5 14.5v3M3.2 15.6h2.6M19.5 13v4"></path>
               <circle cx="19.5" cy="11.5" r="1.5"></circle>
             </svg>
-            <span>Sprite Meadow</span>
+            <span>Sprite Archive</span>
           </button>
           <button class="app-menu-item" type="button" data-app-view="journal" data-feature-id="collectionJournal">
             <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -462,10 +463,10 @@
 
     <section class="season-vault-page" id="seasonVaultPage" aria-labelledby="seasonVaultPageTitle" hidden>
       <header class="season-vault-page-head">
-        <span>Your collection world</span>
-        <div class="feature-title-row"><h2 id="seasonVaultPageTitle">Sprite Meadow</h2><button class="context-help-button" type="button" data-help-key="meadow" aria-label="How Sprite Meadow works">?</button></div>
+        <span>Your collected Sprites</span>
+        <div class="feature-title-row"><h2 id="seasonVaultPageTitle">Sprite Archive</h2><button class="context-help-button" type="button" data-help-key="meadow" aria-label="How Sprite Archive works">?</button></div>
       </header>
-      <section class="season-vault-bar" aria-label="Selected Meadow season" aria-live="polite">
+      <section class="season-vault-bar" aria-label="Selected Archive season" aria-live="polite">
         <div class="season-vault-heading">
           <div class="season-vault-title-wrap">
             <span class="season-vault-kicker">Viewing</span>
@@ -500,7 +501,14 @@
         <div class="feature-title-row"><h2 id="collectionJournalTitle">Collection Journal</h2><button class="context-help-button" type="button" data-help-key="journal" aria-label="How Collection Journal works">?</button></div>
       </header>
 
-      <section class="journal-insights" aria-label="Collection journal overview">
+      <nav class="journal-view-tabs" id="journalViewTabs" aria-label="Journal sections">
+        <button type="button" data-journal-view="timeline" aria-pressed="true">Timeline</button>
+        <button type="button" data-journal-view="adventures" aria-pressed="false">Adventures</button>
+        <button type="button" data-journal-view="story" aria-pressed="false">Collection Story</button>
+        <button type="button" data-journal-view="insights" aria-pressed="false">Insights</button>
+      </nav>
+
+      <section class="journal-insights" id="journalInsightsPanel" aria-label="Collection journal overview" hidden>
         <article class="journal-insight-card journal-top-location">
           <span>Favorite drop spot</span>
           <strong id="journalTopLocation">No drop spots yet</strong>
@@ -510,14 +518,14 @@
         <article class="journal-insight-card"><span>Timeline entries</span><strong id="journalEntryCount">0</strong></article>
       </section>
 
-      <section class="journal-location-chart" aria-labelledby="journalLocationChartTitle">
+      <section class="journal-location-chart" id="journalLocationsPanel" aria-labelledby="journalLocationChartTitle" hidden>
         <div class="journal-section-heading"><div><span>Your personal route</span><h3 id="journalLocationChartTitle">Drop Spots</h3></div><button class="journal-manage-button" id="managePersonalRouteBtn" type="button">Add a stop</button></div>
         <div class="journal-drop-spot-list" id="journalDropSpotList"></div>
         <p class="journal-empty-copy" id="journalLocationEmpty">Locations added during an Adventure will build your route here.</p>
         <div hidden aria-hidden="true"><strong id="journalZoneTopCount">0</strong><strong id="journalZoneBottomCount">0</strong><strong id="journalZoneBossCount">0</strong><div id="journalMemoryList"></div><div id="journalMemoryEmpty"></div></div>
       </section>
 
-      <section class="journal-history" aria-labelledby="journalHistoryTitle">
+      <section class="journal-history" id="journalHistoryPanel" aria-labelledby="journalHistoryTitle">
         <div class="journal-section-heading journal-history-heading">
           <div>
             <span>Your collection story</span>
@@ -612,7 +620,11 @@
 
       <section class="adventure-map-panel" aria-labelledby="adventureMapTitle">
         <div class="journal-section-heading"><div><span>Optional guide</span><h3 id="adventureMapTitle">Sprite Chest Map</h3></div></div>
-        <div class="adventure-map-slot"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 6 5-3 6 3 5-3v15l-5 3-6-3-5 3Z"></path><path d="M9 3v15M15 6v15"></path></svg><strong>Map artwork ready to add</strong><span>Your Sprite Chest map can drop into this space without another layout rebuild.</span></div>
+        <div class="location-grid-map adventure-location-map">
+          <img src="assets/journal/chapter-7-season-3-map.webp" alt="Chapter 7 Season 3 map" loading="lazy">
+          <div class="location-grid-buttons" id="adventureLocationGrid" data-location-grid aria-label="Choose a map grid square"></div>
+        </div>
+        <p class="location-grid-selection" id="adventureGridSelection">Tap a grid square to use it as your next Adventure location.</p>
       </section>
 
       <div hidden aria-hidden="true"><button id="clearHuntHistoryBtn" type="button">Clear Adventure History</button><div id="huntHistoryList"></div><div id="huntHistoryEmpty"></div></div>
@@ -749,7 +761,7 @@
         <details><summary>Sheet View</summary><p>The smallest checklist layout, built for scanning many Sprite variants quickly.</p></details>
         <details><summary>Sprite Adventure</summary><p>Time a play session, Quick Add the Sprites you find, and finish with a recap.</p></details>
         <details><summary>Collection Journal</summary><p>Review activity, correct drop spots, build a personal route, and add your own collection stories.</p></details>
-        <details><summary>Sprite Meadow</summary><p>A quiet collection display for viewing the Sprites you already own.</p></details>
+        <details><summary>Sprite Archive</summary><p>A quiet collection display for viewing the Sprites you already own.</p></details>
       </section>
       <section class="settings-card" aria-labelledby="settingsAccountTitle">
         <div class="journal-section-heading"><div><span>Automatic protection</span><h3 id="settingsAccountTitle">Account &amp; Data</h3></div></div>
@@ -836,7 +848,7 @@
         </div>
         <p id="comingSoonEyebrow">A new Sprite feature</p>
         <h2 id="comingSoonTitle">Coming Soon</h2>
-        <strong id="comingSoonFeatureName">Sprite Meadow</strong>
+        <strong id="comingSoonFeatureName">Sprite Archive</strong>
         <p id="comingSoonMessage">Something special is growing behind the scenes.</p>
         <button class="primary-btn" id="comingSoonHomeBtn" type="button">Back to Current Tracker</button>
       </div>
@@ -1044,6 +1056,10 @@
       <h2 id="locationFoundTitle" tabindex="-1">Where did you find it?</h2>
       <p id="locationFoundSpriteName">Add optional details to this journal entry.</p>
       <div class="location-found-fields">
+        <div class="location-grid-map location-dialog-map">
+          <img src="assets/journal/chapter-7-season-3-map.webp" alt="Chapter 7 Season 3 map">
+          <div class="location-grid-buttons" id="journalLocationGrid" data-location-grid aria-label="Choose where this Sprite was found"></div>
+        </div>
         <label for="locationFoundSelect">
           <span>Location found</span>
           <select id="locationFoundSelect">
@@ -1097,6 +1113,10 @@
         <option value="Boss Encounter">Boss Encounter</option>
         <option value="Other">Other / not listed</option>
       </select>
+      <div class="location-grid-map adventure-start-map">
+        <img src="assets/journal/chapter-7-season-3-map.webp" alt="Chapter 7 Season 3 map">
+        <div class="location-grid-buttons" id="adventureStartLocationGrid" data-location-grid aria-label="Choose your Adventure map grid square"></div>
+      </div>
       <div class="dialog-actions">
         <button id="cancelSpriteSearchStartBtn" type="button">Cancel</button>
         <button class="primary-btn" type="submit">Begin Adventure</button>
@@ -1265,8 +1285,8 @@
   <script src="data.js?v=82"></script>
   <script src="sprite-events-v140.js?v=140"></script>
   <script src="state-schema-v127.js?v=127"></script>
-  <script src="feature-config-v129.js?v=140"></script>
-  <script src="app.js?v=140"></script>
+  <script src="feature-config-v129.js?v=141"></script>
+  <script src="app.js?v=141"></script>
   <script src="cloud-config-v128.js?v=128"></script>
   <script src="cloud-v128.js?v=135"></script>
   <script src="profile-v133.js?v=140"></script>

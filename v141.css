@@ -1,0 +1,112 @@
+/* V141 · Archive, Journal, Adventure grid, page polish and mobile-safe feature scenes */
+
+/* Every feature owns its own scene. Rare snow and Epic stars stay on the tracker only. */
+body.journal-view .page-backdrop {
+  background-color:#171029 !important;
+  background-image:linear-gradient(180deg,rgba(14,8,30,.25),rgba(5,7,18,.76)),url("assets/feature-backgrounds/feature-bg-profile-v139.webp") !important;
+  background-position:center !important;background-size:cover !important;background-repeat:no-repeat !important;
+}
+body.dust-account-view .page-backdrop {
+  background-color:#18120d !important;
+  background-image:linear-gradient(180deg,rgba(27,16,6,.22),rgba(7,6,10,.76)),url("assets/feature-backgrounds/feature-bg-settings-v139.webp") !important;
+  background-position:center !important;background-size:cover !important;background-repeat:no-repeat !important;
+}
+body.coming-soon-view .page-backdrop {
+  background-color:#111526 !important;
+  background-image:linear-gradient(180deg,rgba(7,12,31,.24),rgba(5,7,17,.78)),url("assets/feature-backgrounds/feature-bg-meadow-v139.webp") !important;
+  background-position:center !important;background-size:cover !important;background-repeat:no-repeat !important;
+}
+body.journal-view .motion-rare-snow,body.journal-view .motion-rare-glow,body.journal-view .motion-epic-stars,
+body.hunt-history-view .motion-rare-snow,body.hunt-history-view .motion-rare-glow,body.hunt-history-view .motion-epic-stars,
+body.dust-account-view .motion-rare-snow,body.dust-account-view .motion-rare-glow,body.dust-account-view .motion-epic-stars,
+body.sprite-profile-view .motion-rare-snow,body.sprite-profile-view .motion-rare-glow,body.sprite-profile-view .motion-epic-stars,
+body.settings-view .motion-rare-snow,body.settings-view .motion-rare-glow,body.settings-view .motion-epic-stars,
+body.vault-view .motion-rare-snow,body.vault-view .motion-rare-glow,body.vault-view .motion-epic-stars,
+body.coming-soon-view .motion-rare-snow,body.coming-soon-view .motion-rare-glow,body.coming-soon-view .motion-epic-stars {
+  visibility:hidden !important;animation-play-state:paused !important;
+}
+
+/* Let the scenery show through behind the rarity title. */
+body.tracker-view .page-head {
+  background:transparent !important;border-color:transparent !important;box-shadow:none !important;
+  -webkit-backdrop-filter:none !important;backdrop-filter:none !important;
+}
+
+/* Metallic rarity tabs with a clear pressed state. */
+.rarity-tabs { justify-content:flex-start !important; }
+.rarity-tabs .tab {
+  position:relative;overflow:hidden;color:#fff !important;border:1px solid rgba(255,255,255,.48) !important;
+  text-shadow:0 2px 3px rgba(0,0,0,.78);box-shadow:inset 0 2px rgba(255,255,255,.26),inset 0 -6px 12px rgba(0,0,0,.27),0 7px 17px rgba(0,0,0,.32) !important;
+}
+.rarity-tabs .tab::before { content:"";position:absolute;inset:0;background:linear-gradient(115deg,transparent 16%,rgba(255,255,255,.38) 36%,transparent 52%);transform:translateX(-95%);opacity:.56; }
+.rarity-tabs #tab-rare { background:linear-gradient(180deg,#7bd9ff 0%,#218fd1 45%,#07528c 100%) !important; }
+.rarity-tabs #tab-epic { background:linear-gradient(180deg,#d38cff 0%,#8c3ac2 46%,#4d126f 100%) !important; }
+.rarity-tabs #tab-legendary { background:linear-gradient(180deg,#ffd078 0%,#e68227 46%,#8c3d0e 100%) !important; }
+.rarity-tabs #tab-mythic { background:linear-gradient(180deg,#fff0a0 0%,#e2ae2f 46%,#81610a 100%) !important; }
+.rarity-tabs #tab-unowned { background:linear-gradient(180deg,#9ca9b8,#4f5d6d 50%,#222c37) !important; }
+.rarity-tabs #tab-unmastered { background:linear-gradient(180deg,#a8e9d5,#438d78 50%,#1c493d) !important; }
+.rarity-tabs .tab[aria-selected="true"] { transform:translateY(-1px) scale(1.025);outline:2px solid rgba(255,255,255,.86);outline-offset:-3px;filter:saturate(1.12) brightness(1.08); }
+.rarity-tabs .tab[aria-selected="true"]::before { animation:v141-tab-shine 2.9s ease-in-out infinite; }
+.rarity-tabs .tab small,.rarity-tabs .tab[aria-selected="true"] small { color:#fff !important; }
+@keyframes v141-tab-shine { 0%,55%{transform:translateX(-105%)} 82%,100%{transform:translateX(115%)} }
+
+/* Owner control stays out of the content and away from Home. */
+.floating-admin-toggle { left:max(12px,env(safe-area-inset-left,0px)) !important;right:auto !important; }
+
+/* Archive is viewing-only and contains only owned cards (filtered in app.js). */
+body.vault-view .page-backdrop {
+  background-image:linear-gradient(180deg,rgba(2,14,17,.18),rgba(2,10,13,.67)),url("assets/feature-backgrounds/feature-bg-meadow-v139.webp") !important;
+}
+body.vault-view .season-vault-page-head > span { color:#ddc47b !important; }
+body.vault-view .season-vault-page-head h2 { color:#e4ebef !important;text-shadow:0 2px 0 #20262d,0 0 20px rgba(224,235,241,.32) !important; }
+
+/* Three equal Quick Add columns; everything is on one page. */
+.sprite-compass-page .compass-target-list {
+  display:grid !important;grid-template-columns:repeat(3,minmax(0,1fr)) !important;gap:8px !important;align-items:start !important;
+}
+.sprite-compass-page .compass-family-card {
+  min-width:0 !important;grid-template-columns:40px minmax(0,1fr) 24px !important;gap:6px !important;padding:8px !important;
+}
+.sprite-compass-page .compass-target-thumb { width:40px !important;height:40px !important; }
+.sprite-compass-page .compass-family-card strong { display:block;overflow:hidden;font-size:10px !important;text-overflow:ellipsis;white-space:nowrap; }
+.sprite-compass-page .compass-quick-add { width:24px !important;min-width:24px !important;padding:0 !important;border:0 !important;background:transparent !important;box-shadow:none !important;font-size:25px !important; }
+.compass-quick-add-pager { display:none !important; }
+.sprite-compass-page .compass-family-card[data-expanded="true"] { grid-column:span 1;grid-row:span var(--quick-add-span,6); }
+
+/* Journal is four focused views instead of one oversized page. */
+.journal-view-tabs { width:min(100%,900px);display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;margin:0 auto 13px;padding:5px;border:1px solid rgba(255,255,255,.13);border-radius:18px;background:rgba(4,10,24,.66);backdrop-filter:blur(13px); }
+.journal-view-tabs button { min-width:0;min-height:40px;padding:7px 5px;color:#bdc9d7;border:0;border-radius:13px;background:transparent;font-size:10px;font-weight:950; }
+.journal-view-tabs button[aria-pressed="true"] { color:#06111d;background:linear-gradient(180deg,#b8edff,#70bce6);box-shadow:inset 0 1px #fff,0 6px 16px rgba(0,0,0,.25); }
+.journal-insights[hidden],.journal-location-chart[hidden],.journal-history[hidden],.journal-history-controls[hidden] { display:none !important; }
+
+/* One-tap A1–J8 map shared by Adventure and Journal. */
+.location-grid-map { position:relative;width:100%;overflow:hidden;border:1px solid rgba(184,225,255,.32);border-radius:18px;background:#071325;box-shadow:0 12px 30px rgba(0,0,0,.35); }
+.location-grid-map img { display:block;width:100%;height:auto;aspect-ratio:16/9;object-fit:cover;opacity:.86; }
+.location-grid-buttons { position:absolute;inset:0;display:grid;grid-template-columns:repeat(10,1fr);grid-template-rows:repeat(8,1fr); }
+.location-grid-buttons button { min-width:0;min-height:0;padding:0;color:rgba(255,255,255,.72);border:1px solid rgba(255,255,255,.13);border-radius:0;background:rgba(2,10,23,.025);font:850 clamp(6px,1.6vw,10px)/1 var(--font-body);text-shadow:0 1px 2px #000; }
+.location-grid-buttons button:focus-visible,.location-grid-buttons button:hover { color:#fff;background:rgba(79,192,255,.24);outline:1px solid #a8e9ff; }
+.location-grid-buttons button.is-selected { color:#06111e;background:rgba(114,232,255,.7);box-shadow:inset 0 0 0 2px #fff; }
+.location-grid-selection { margin:8px 0 0;color:#b9d8ed;font-size:11px;text-align:center; }
+.location-dialog-map { margin-bottom:11px; }
+.location-found-fields .location-grid-map { grid-column:1/-1; }
+.adventure-start-map { margin-top:10px; }
+
+@media (max-width:620px) {
+  .rarity-tabs { padding-left:8px !important; }
+  .sprite-compass-page .compass-target-list { gap:6px !important; }
+  .sprite-compass-page .compass-family-card { grid-template-columns:34px minmax(0,1fr) 20px !important;padding:6px !important; }
+  .sprite-compass-page .compass-target-thumb { width:34px !important;height:34px !important; }
+  .sprite-compass-page .compass-family-card strong { font-size:8.5px !important; }
+  .sprite-compass-page .compass-quick-add { width:20px !important;min-width:20px !important;font-size:22px !important; }
+  .journal-view-tabs { gap:3px;padding:4px; }
+  .journal-view-tabs button { min-height:38px;padding-inline:2px;font-size:8px; }
+}
+
+@media (max-width:365px) {
+  .sprite-compass-page .compass-target-list { grid-template-columns:repeat(3,minmax(0,1fr)) !important; }
+  .sprite-compass-page .compass-family-card { grid-template-columns:30px minmax(0,1fr) 18px !important;gap:3px !important;padding:5px !important; }
+  .sprite-compass-page .compass-target-thumb { width:30px !important;height:30px !important; }
+  .sprite-compass-page .compass-family-card strong { font-size:7.5px !important; }
+}
+
+@media (prefers-reduced-motion:reduce) { .rarity-tabs .tab::before { animation:none !important; } }

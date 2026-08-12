@@ -25,13 +25,13 @@
   const APP_VIEW_PROFILE = 'profile';
   const APP_VIEW_SETTINGS = 'settings';
   const APP_VIEW_COMING_SOON = 'coming-soon';
-  const COMPASS_QUICK_ADD_PAGE_SIZE = 20;
+  const COMPASS_QUICK_ADD_PAGE_SIZE = Number.POSITIVE_INFINITY;
   const HELP_COPY_DEFAULTS = Object.freeze({
     adventure:'Start an Adventure when you begin playing. Pick a drop spot once, use Quick Add for every Sprite you find, and finish for a timed recap.',
     'hot-drop':'Hottest Drop uses anonymous totals from signed-in collectors during the past hour. It never shows usernames or individual activity, and it waits for at least three collectors before naming a location.',
     journal:'Your Journal records collection, mastery, Adventure, and location changes. Use Edit location beside an entry whenever a drop spot needs correcting.',
     profile:'Your profile holds your Meadow Code, selected collection stats, favorite Sprites, and account save status. Share the code so another collector can visit.',
-    meadow:'Sprite Meadow is a clean gallery of the Sprites already in your collection. Change the selected season to revisit older collections.',
+    meadow:'Sprite Archive is a clean gallery of the Sprites already in your collection. Change the selected season to revisit older collections.',
     settings:'Settings controls background motion, reduced motion, your default tracker view, account access, and DEV owner tools.'
   });
   const FEATURE_STATES = new Set(['hidden','coming-soon','preview','public']);
@@ -40,7 +40,7 @@
     ? window.SPRITE_FEATURE_CONFIG
     : { ownerUserIds:[],features:{} };
   const defaultFeatureDefinitions = {
-    spriteVault:{ state:'public',label:'Sprite Meadow',implemented:true },
+    spriteVault:{ state:'public',label:'Sprite Archive',implemented:true },
     collectionJournal:{ state:'public',label:'Collection Journal',implemented:true },
     spriteRunHistory:{ state:'public',label:'Sprite Adventure',implemented:true },
     spriteDust:{ state:'public',label:'Sprite Dust',implemented:true },
@@ -742,6 +742,7 @@
   let currentHelpKey = '';
   let hottestDropRequest = null;
   let hottestDropLoadedAt = 0;
+  let journalView = 'timeline';
 
   const tabsEl = document.getElementById('rarityTabs');
   const collectionsEl = document.getElementById('collections');
@@ -815,6 +816,10 @@
   const journalMemoryPhoto = document.getElementById('journalMemoryPhoto');
   const journalMemoryPhotoPreview = document.getElementById('journalMemoryPhotoPreview');
   const journalMemoryStatus = document.getElementById('journalMemoryStatus');
+  const journalViewTabs = document.getElementById('journalViewTabs');
+  const journalInsightsPanel = document.getElementById('journalInsightsPanel');
+  const journalLocationsPanel = document.getElementById('journalLocationsPanel');
+  const journalHistoryPanel = document.getElementById('journalHistoryPanel');
   const locationFoundDialog = document.getElementById('locationFoundDialog');
   const locationFoundForm = document.getElementById('locationFoundForm');
   const locationFoundTitle = document.getElementById('locationFoundTitle');
@@ -842,6 +847,10 @@
   const spriteSearchStartForm = document.getElementById('spriteSearchStartForm');
   const spriteSearchStartTitle = document.getElementById('spriteSearchStartTitle');
   const spriteSearchLocation = document.getElementById('spriteSearchLocation');
+  const adventureLocationGrid = document.getElementById('adventureLocationGrid');
+  const adventureStartLocationGrid = document.getElementById('adventureStartLocationGrid');
+  const journalLocationGrid = document.getElementById('journalLocationGrid');
+  const adventureGridSelection = document.getElementById('adventureGridSelection');
   const spriteSearchRecapDialog = document.getElementById('spriteSearchRecapDialog');
   const spriteSearchRecapTitle = document.getElementById('spriteSearchRecapTitle');
   const spriteSearchRecapSummary = document.getElementById('spriteSearchRecapSummary');
@@ -1624,7 +1633,7 @@
     if (changed) playAppViewTransition();
     if (announce && changed) {
       const label = appView === APP_VIEW_VAULT
-        ? 'Sprite Meadow'
+        ? 'Sprite Archive'
         : (appView === APP_VIEW_JOURNAL
             ? 'Collection Journal'
             : (appView === APP_VIEW_HUNTS
@@ -2636,8 +2645,28 @@
     }
   }
 
+  function applyJournalView() {
+    const timeline = journalView === 'timeline';
+    const adventures = journalView === 'adventures';
+    const story = journalView === 'story';
+    const insights = journalView === 'insights';
+    if (journalInsightsPanel) journalInsightsPanel.hidden = !insights;
+    if (journalLocationsPanel) journalLocationsPanel.hidden = !insights;
+    if (journalHistoryPanel) journalHistoryPanel.hidden = insights;
+    journalViewTabs?.querySelectorAll('[data-journal-view]').forEach((button) => {
+      const active = button.dataset.journalView === journalView;
+      button.setAttribute('aria-pressed',String(active));
+    });
+    const controls = journalHistoryPanel?.querySelector('.journal-history-controls');
+    if (controls) controls.hidden = adventures;
+    const historyTitle = document.getElementById('journalHistoryTitle');
+    if (historyTitle) historyTitle.textContent = adventures ? 'Adventures' : (story ? 'Collection Story' : 'Timeline');
+    if (!timeline && journalActionFilter) journalActionFilter.value = 'all';
+  }
+
   function renderJournal() {
     if (!collectionJournalPage) return;
+    applyJournalView();
     const visibleEntries = (journalReady ? journalEntries : pendingJournalEntries)
       .filter((entry) => !entry.undone)
       .sort((a,b) => journalEntryTimestamp(b) - journalEntryTimestamp(a));
@@ -2683,8 +2712,10 @@
       button.setAttribute('aria-pressed',String(active));
     });
 
-    const filter = journalActionFilter?.value || 'all';
-    const filtered = activityEntries.filter((entry) => {
+    const filter = journalView === 'story'
+      ? 'story'
+      : (journalView === 'timeline' ? (journalActionFilter?.value || 'all') : 'all');
+    const filtered = (journalView === 'adventures' ? [] : activityEntries).filter((entry) => {
       if (!journalFilterMatches(entry,filter)) return false;
       if (!journalLocationFilter) return true;
       return locationZone(entry.after?.locationFound) === journalLocationFilter;
@@ -2692,7 +2723,9 @@
     journalMemoryList.replaceChildren();
     journalMemoryEmpty.hidden = true;
     journalEntryList.replaceChildren();
-    const adventureRecaps = filter === 'all' ? normalizeHuntHistory(huntHistory).slice(0,20) : [];
+    const adventureRecaps = journalView === 'adventures'
+      ? normalizeHuntHistory(huntHistory).slice(0,50)
+      : (journalView === 'timeline' && filter === 'all' ? normalizeHuntHistory(huntHistory).slice(0,20) : []);
     journalEmptyState.hidden = Boolean(filtered.length || adventureRecaps.length);
     if (!journalReady && !filtered.length) {
       journalEmptyState.querySelector('strong').textContent = 'Opening your journal…';
@@ -2963,16 +2996,16 @@
       const base = variants.find((variant) => variant.id === 'base') || variants[0];
       return [{ family,group,familyName,base,availableVariants }];
     }).sort((left,right) => sortDirection * left.familyName.localeCompare(right.familyName,undefined,{ sensitivity:'base',numeric:true }));
-    const pageCount = Math.max(1,Math.ceil(matching.length / COMPASS_QUICK_ADD_PAGE_SIZE));
+    const pageCount = 1;
     if (compassExpandedFamilyId && !matching.some((entry) => entry.family.id === compassExpandedFamilyId)) compassExpandedFamilyId = '';
     compassQuickAddPage = Math.max(0,Math.min(compassQuickAddPage,pageCount - 1));
-    const pageStart = compassQuickAddPage * COMPASS_QUICK_ADD_PAGE_SIZE;
-    const available = matching.slice(pageStart,pageStart + COMPASS_QUICK_ADD_PAGE_SIZE);
+    const pageStart = 0;
+    const available = matching;
     compassTargetTotal.textContent = String(huntCart.length);
     compassTargetList.replaceChildren();
     compassTargetEmpty.hidden = Boolean(available.length);
     if (compassQuickAddPager) {
-      compassQuickAddPager.hidden = matching.length <= COMPASS_QUICK_ADD_PAGE_SIZE;
+      compassQuickAddPager.hidden = true;
       compassQuickAddPrev.disabled = compassQuickAddPage === 0;
       compassQuickAddNext.disabled = compassQuickAddPage >= pageCount - 1;
       compassQuickAddPageInfo.textContent = matching.length
@@ -3311,6 +3344,63 @@
     return Number.isFinite(date.getTime()) ? date.toISOString() : '';
   }
 
+  function buildLocationGrid(container,onSelect) {
+    if (!container || container.childElementCount) return;
+    const columns = 'ABCDEFGHIJ'.split('');
+    for (let row = 1; row <= 8; row += 1) {
+      columns.forEach((column) => {
+        const cell = `${column}${row}`;
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.dataset.mapCell = cell;
+        button.setAttribute('aria-label',`Map square ${cell}`);
+        button.textContent = cell;
+        button.addEventListener('click',() => onSelect(cell));
+        container.appendChild(button);
+      });
+    }
+  }
+
+  function selectLocationGrid(container,cell) {
+    container?.querySelectorAll('[data-map-cell]').forEach((button) => {
+      const selected = button.dataset.mapCell === cell;
+      button.classList.toggle('is-selected',selected);
+      button.setAttribute('aria-pressed',String(selected));
+    });
+  }
+
+  function setSelectToMapCell(select,cell) {
+    if (!select || !cell) return;
+    let option = [...select.options].find((item) => item.value === cell);
+    if (!option) {
+      option = document.createElement('option');
+      option.value = cell;
+      option.textContent = `Map square ${cell}`;
+      select.appendChild(option);
+    }
+    select.value = cell;
+  }
+
+  function initializeLocationGrids() {
+    buildLocationGrid(adventureStartLocationGrid,(cell) => {
+      setSelectToMapCell(spriteSearchLocation,cell);
+      selectLocationGrid(adventureStartLocationGrid,cell);
+      selectLocationGrid(adventureLocationGrid,cell);
+      if (adventureGridSelection) adventureGridSelection.textContent = `Next Adventure location: ${cell}`;
+    });
+    buildLocationGrid(adventureLocationGrid,(cell) => {
+      setSelectToMapCell(spriteSearchLocation,cell);
+      selectLocationGrid(adventureStartLocationGrid,cell);
+      selectLocationGrid(adventureLocationGrid,cell);
+      if (adventureGridSelection) adventureGridSelection.textContent = `Next Adventure location: ${cell}`;
+    });
+    buildLocationGrid(journalLocationGrid,(cell) => {
+      setSelectToMapCell(locationFoundSelect,cell);
+      locationFoundCustomLabel.hidden = true;
+      selectLocationGrid(journalLocationGrid,cell);
+    });
+  }
+
   function openLocationDetails(family,variant,journalEntryId = '',{ newlyCollected = false } = {}) {
     const current = variantState(family.id,variant.id);
     if (!current.collected) return;
@@ -3329,6 +3419,7 @@
     locationFoundSelect.value = builtInLocation ? savedLocation : (savedLocation ? 'Other' : '');
     locationFoundCustom.value = savedLocation && !builtInLocation ? savedLocation : '';
     locationFoundCustomLabel.hidden = locationFoundSelect.value !== 'Other';
+    selectLocationGrid(journalLocationGrid,/^[A-J][1-8]$/.test(savedLocation) ? savedLocation : '');
     locationCollectedAt.value = isoToLocalDateTime(current.collectedAt || new Date().toISOString());
     locationMasteredAt.value = isoToLocalDateTime(current.masteredAt || '');
     locationMasteredAtLabel.hidden = !current.mastered;
@@ -4874,6 +4965,10 @@
         const rowVariants = variantsForSeason(family).filter(
           (variant) => !variantFilter || variantFilter(family,variant)
         );
+        if (appView === APP_VIEW_VAULT) {
+          const ownedVariants = rowVariants.filter((variant) => variantState(family.id,variant.id).collected);
+          rowVariants.splice(0,rowVariants.length,...ownedVariants);
+        }
         if (!rowVariants.length && !spriteEditMode) return;
         if (currentSpriteViewMode() === 'sheet') {
           if (!rowVariants.length) return;
@@ -6693,6 +6788,12 @@
   });
   document.getElementById('comingSoonHomeBtn').addEventListener('click',() => goHomeToRare());
   journalActionFilter.addEventListener('change',renderJournal);
+  journalViewTabs?.addEventListener('click',(event) => {
+    const button = event.target.closest('[data-journal-view]');
+    if (!button) return;
+    journalView = button.dataset.journalView || 'timeline';
+    renderJournal();
+  });
   clearJournalActivityBtn.addEventListener('click',clearJournalActivity);
   addCollectionStoryBtn?.addEventListener('click',() => openCollectionStory());
   collectionStoryForm?.addEventListener('submit',saveCollectionStory);
@@ -6844,6 +6945,7 @@
       catch { locationFoundCustom.focus(); }
     }
   });
+  initializeLocationGrids();
   window.addEventListener('sprite-account-bridge-ready',() => {
     renderFloatingAdmin();
     if (appView === APP_VIEW_HUNTS) loadHottestDrop({ force:true });

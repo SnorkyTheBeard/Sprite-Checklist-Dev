@@ -18,7 +18,7 @@ window.SPRITE_FEATURE_CONFIG = Object.freeze({
   features:Object.freeze({
     spriteVault:Object.freeze({
       state:'public',
-      label:'Sprite Meadow',
+      label:'Sprite Archive',
       route:'vault',
       implemented:true
     }),
