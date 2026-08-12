@@ -296,6 +296,7 @@
 <link rel="stylesheet" href="v136.css?v=136">
 <link rel="stylesheet" href="v137.css?v=137">
 <link rel="stylesheet" href="v138.css?v=138">
+<link rel="stylesheet" href="v139.css?v=139">
 </head>
 <body>
   <div class="app-launch-screen" aria-hidden="true">
@@ -312,6 +313,8 @@
     <span class="page-motion-effect motion-rare-glow"></span>
     <span class="page-motion-effect motion-epic-stars motion-epic-stars-a"></span>
     <span class="page-motion-effect motion-epic-stars motion-epic-stars-b"></span>
+    <span class="page-motion-effect motion-feature-motes motion-feature-motes-a"></span>
+    <span class="page-motion-effect motion-feature-motes motion-feature-motes-b"></span>
   </div>
 
   <div class="app-shell">
@@ -459,7 +462,7 @@
     <section class="season-vault-page" id="seasonVaultPage" aria-labelledby="seasonVaultPageTitle" hidden>
       <header class="season-vault-page-head">
         <span>Your collection world</span>
-        <h2 id="seasonVaultPageTitle">Sprite Meadow</h2>
+        <div class="feature-title-row"><h2 id="seasonVaultPageTitle">Sprite Meadow</h2><button class="context-help-button" type="button" data-help-key="meadow" aria-label="How Sprite Meadow works">?</button></div>
       </header>
       <section class="season-vault-bar" aria-label="Selected Meadow season" aria-live="polite">
         <div class="season-vault-heading">
@@ -493,7 +496,7 @@
 
     <section class="collection-journal-page" id="collectionJournalPage" aria-labelledby="collectionJournalTitle" hidden>
       <header class="collection-journal-head">
-        <h2 id="collectionJournalTitle">Collection Journal</h2>
+        <div class="feature-title-row"><h2 id="collectionJournalTitle">Collection Journal</h2><button class="context-help-button" type="button" data-help-key="journal" aria-label="How Collection Journal works">?</button></div>
       </header>
 
       <section class="journal-insights" aria-label="Collection journal overview">
@@ -544,7 +547,7 @@
     <section class="hunt-history-page sprite-compass-page" id="huntHistoryPage" aria-labelledby="huntHistoryTitle" hidden>
       <header class="feature-page-head">
         <span>Your play-session companion</span>
-        <h2 id="huntHistoryTitle">Sprite Adventure</h2>
+        <div class="feature-title-row"><h2 id="huntHistoryTitle">Sprite Adventure</h2><button class="context-help-button" type="button" data-help-key="adventure" aria-label="How Sprite Adventure works">?</button></div>
       </header>
       <section class="sprite-compass-overview" aria-label="Sprite Adventure overview">
         <article class="sprite-compass-next-target">
@@ -557,6 +560,20 @@
         <article><span>Adventures</span><strong id="huntHistoryTotal">0</strong></article>
         <article><span>Sprites found</span><strong id="huntHistorySpriteTotal">0</strong></article>
         <article><span>Dust earned</span><strong id="huntHistoryDustTotal">0</strong></article>
+      </section>
+
+      <section class="hot-drop-panel" id="hotDropPanel" aria-labelledby="hotDropTitle">
+        <div class="hot-drop-copy">
+          <span>Community activity · past hour</span>
+          <div class="feature-title-row feature-title-row-small"><h3 id="hotDropTitle">Hottest Drop!</h3><button class="context-help-button" type="button" data-help-key="hot-drop" aria-label="How Hottest Drop works">?</button></div>
+          <strong id="hotDropLocation">Waiting for enough Adventures</strong>
+          <p id="hotDropCount">Hottest Drop appears after at least three collectors report a location.</p>
+        </div>
+        <div class="hot-drop-sprite" id="hotDropSprite" hidden>
+          <img id="hotDropSpriteImage" alt="" width="96" height="96">
+          <span>Most found</span>
+          <strong id="hotDropSpriteName">Sprite</strong>
+        </div>
       </section>
 
       <section class="sprite-search-list-panel" aria-labelledby="spriteSearchListTitle">
@@ -625,7 +642,7 @@
 
     <section class="sprite-profile-page" id="spriteProfilePage" aria-labelledby="spriteProfilePageTitle" hidden>
       <header class="feature-page-head sprite-profile-page-head">
-        <h2 id="spriteProfilePageTitle">My Sprite Profile</h2>
+        <div class="feature-title-row"><h2 id="spriteProfilePageTitle">My Sprite Profile</h2><button class="context-help-button" type="button" data-help-key="profile" aria-label="How Sprite Profiles work">?</button></div>
       </header>
 
       <section class="profile-meadow-hero" id="profileOwnerHero" hidden>
@@ -713,7 +730,7 @@
     </section>
 
     <section class="settings-page" id="settingsPage" aria-labelledby="settingsPageTitle" hidden>
-      <header class="feature-page-head settings-page-head"><span>Make the tracker yours</span><h2 id="settingsPageTitle">Settings</h2></header>
+      <header class="feature-page-head settings-page-head"><span>Make the tracker yours</span><div class="feature-title-row"><h2 id="settingsPageTitle">Settings</h2><button class="context-help-button" type="button" data-help-key="settings" aria-label="How Settings work">?</button></div></header>
       <section class="settings-card" aria-labelledby="settingsExperienceTitle">
         <div class="journal-section-heading"><div><span>Display</span><h3 id="settingsExperienceTitle">Experience</h3></div></div>
         <label class="settings-row"><span><strong>Animated backgrounds</strong><small>Snow, stars, and rarity motion effects.</small></span><input id="settingsAnimationToggle" type="checkbox" checked></label>
@@ -864,6 +881,11 @@
     </svg>
   </button>
 
+  <button class="floating-admin-toggle" id="floatingAdminToggle" type="button" aria-label="Enter Admin Mode" aria-pressed="false" title="Enter Admin Mode" hidden>
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 2.8 19 6v5.4c0 4.7-2.7 8-7 9.8-4.3-1.8-7-5.1-7-9.8V6Z"></path><path d="M9 12h6M12 9v6"></path></svg>
+    <span>Admin</span>
+  </button>
+
   <img class="custom-art art-left" id="leftCustomArt" alt="" hidden>
   <img class="custom-art art-right" id="rightCustomArt" alt="" hidden>
 
@@ -1010,7 +1032,7 @@
       <div class="location-found-fields">
         <label for="locationFoundSelect">
           <span>Location found</span>
-      <select id="locationFoundSelect">
+          <select id="locationFoundSelect">
             <option value="">Not added</option>
             <option value="Lifty Lodge">Lifty Lodge</option>
             <option value="Latte Landing">Latte Landing</option>
@@ -1022,6 +1044,10 @@
             <option value="Boss Encounter">Boss Encounter</option>
             <option value="Other">Other / not listed</option>
           </select>
+        </label>
+        <label for="locationFoundCustom" id="locationFoundCustomLabel" hidden>
+          <span>Custom drop spot</span>
+          <input id="locationFoundCustom" type="text" maxlength="60" autocomplete="off" placeholder="Enter the location name">
         </label>
         <label for="locationCollectedAt">
           <span>Collected date &amp; time</span>
@@ -1162,15 +1188,26 @@
     </div>
   </dialog>
 
+  <dialog class="context-help-dialog" id="contextHelpDialog" aria-labelledby="contextHelpTitle">
+    <form method="dialog" class="context-help-card">
+      <button class="context-help-close" value="close" type="submit" aria-label="Close help">×</button>
+      <span>Quick guide</span>
+      <h2 id="contextHelpTitle">How it works</h2>
+      <p id="contextHelpCopy"></p>
+      <label class="context-help-editor" id="contextHelpEditor" hidden>Admin description<textarea id="contextHelpInput" maxlength="360" rows="5"></textarea></label>
+      <button class="context-help-save" id="contextHelpSave" type="button" hidden>Save description</button>
+    </form>
+  </dialog>
+
   <div class="status-toast" id="statusToast" role="status" aria-live="polite"></div>
   <noscript>This checklist needs JavaScript enabled to save progress.</noscript>
 
   <script src="data.js?v=82"></script>
   <script src="state-schema-v127.js?v=127"></script>
-  <script src="feature-config-v129.js?v=138"></script>
-  <script src="app.js?v=138"></script>
+  <script src="feature-config-v129.js?v=139"></script>
+  <script src="app.js?v=139"></script>
   <script src="cloud-config-v128.js?v=128"></script>
   <script src="cloud-v128.js?v=135"></script>
-  <script src="profile-v133.js?v=135"></script>
+  <script src="profile-v133.js?v=139"></script>
 </body>
 </html>

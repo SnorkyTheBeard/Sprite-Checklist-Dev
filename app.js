@@ -26,6 +26,14 @@
   const APP_VIEW_SETTINGS = 'settings';
   const APP_VIEW_COMING_SOON = 'coming-soon';
   const COMPASS_QUICK_ADD_PAGE_SIZE = 20;
+  const HELP_COPY_DEFAULTS = Object.freeze({
+    adventure:'Start an Adventure when you begin playing. Pick a drop spot once, use Quick Add for every Sprite you find, and finish for a timed recap.',
+    'hot-drop':'Hottest Drop uses anonymous totals from signed-in collectors during the past hour. It never shows usernames or individual activity, and it waits for at least three collectors before naming a location.',
+    journal:'Your Journal records collection, mastery, Adventure, and location changes. Use Edit location beside an entry whenever a drop spot needs correcting.',
+    profile:'Your profile holds your Meadow Code, selected collection stats, favorite Sprites, and account save status. Share the code so another collector can visit.',
+    meadow:'Sprite Meadow is a clean gallery of the Sprites already in your collection. Change the selected season to revisit older collections.',
+    settings:'Settings controls background motion, reduced motion, your default tracker view, account access, and DEV owner tools.'
+  });
   const FEATURE_STATES = new Set(['hidden','coming-soon','preview','public']);
   const DEV_BUILD = /dev/i.test(document.querySelector('meta[name="apple-mobile-web-app-title"]')?.content || '');
   const featureConfig = window.SPRITE_FEATURE_CONFIG && typeof window.SPRITE_FEATURE_CONFIG === 'object'
@@ -69,8 +77,17 @@
     return {
       animations:saved.animations !== false,
       reduceMotion:saved.reduceMotion === true,
-      defaultView:['card','list','sheet'].includes(saved.defaultView) ? saved.defaultView : 'card'
+      defaultView:['card','list','sheet'].includes(saved.defaultView) ? saved.defaultView : 'card',
+      helpCopy:cleanHelpCopy(saved.helpCopy)
     };
+  }
+
+  function cleanHelpCopy(value) {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+    return Object.fromEntries(Object.keys(HELP_COPY_DEFAULTS).flatMap((key) => {
+      const copy = String(value[key] || '').trim().replace(/\s+/g,' ').slice(0,360);
+      return copy ? [[key,copy]] : [];
+    }));
   }
   const RECENT_MISSING_KEY = `galaxy_sprite_tracker_recent_missing_v1_${STORAGE_SCOPE}`;
   const SEASON_VIEW_KEY = `galaxy_sprite_tracker_season_view_v1_${STORAGE_SCOPE}`;
@@ -701,6 +718,9 @@
   let dustLedger = loadStoredArray(DUST_LEDGER_KEY,normalizeDustLedger);
   let experienceSettings = loadExperienceSettings();
   let welcomeIndex = 0;
+  let currentHelpKey = '';
+  let hottestDropRequest = null;
+  let hottestDropLoadedAt = 0;
 
   const tabsEl = document.getElementById('rarityTabs');
   const collectionsEl = document.getElementById('collections');
@@ -761,6 +781,8 @@
   const locationFoundTitle = document.getElementById('locationFoundTitle');
   const locationFoundSpriteName = document.getElementById('locationFoundSpriteName');
   const locationFoundSelect = document.getElementById('locationFoundSelect');
+  const locationFoundCustomLabel = document.getElementById('locationFoundCustomLabel');
+  const locationFoundCustom = document.getElementById('locationFoundCustom');
   const locationCollectedAt = document.getElementById('locationCollectedAt');
   const locationMasteredAt = document.getElementById('locationMasteredAt');
   const locationMasteredAtLabel = document.getElementById('locationMasteredAtLabel');
@@ -824,6 +846,18 @@
   const clearDataForm = document.getElementById('clearDataForm');
   const clearDataTitle = document.getElementById('clearDataTitle');
   const floatingHomeBtn = document.getElementById('floatingHomeBtn');
+  const floatingAdminToggle = document.getElementById('floatingAdminToggle');
+  const contextHelpDialog = document.getElementById('contextHelpDialog');
+  const contextHelpTitle = document.getElementById('contextHelpTitle');
+  const contextHelpCopy = document.getElementById('contextHelpCopy');
+  const contextHelpEditor = document.getElementById('contextHelpEditor');
+  const contextHelpInput = document.getElementById('contextHelpInput');
+  const contextHelpSave = document.getElementById('contextHelpSave');
+  const hotDropLocation = document.getElementById('hotDropLocation');
+  const hotDropCount = document.getElementById('hotDropCount');
+  const hotDropSprite = document.getElementById('hotDropSprite');
+  const hotDropSpriteImage = document.getElementById('hotDropSpriteImage');
+  const hotDropSpriteName = document.getElementById('hotDropSpriteName');
   const spriteSearchForm = document.getElementById('spriteSearchForm');
   const spriteSearchInput = document.getElementById('spriteSearchInput');
   const spriteSearchResults = document.getElementById('spriteSearchResults');
@@ -1305,6 +1339,18 @@
         dust:info.dust
       });
     });
+    const completedLocation = cleanLocation(huntMode.location);
+    if (completedLocation) {
+      historyItems.forEach((item) => reportSpriteLocationEvent({
+        familyId:item.familyId,
+        variantId:item.variantId,
+        familyName:item.familyName,
+        variantName:item.variantName,
+        rarity:item.rarity,
+        location:completedLocation,
+        collectedAt:completedAt
+      }));
+    }
     const dustEarned = historyItems.reduce((total,item) => total + item.dust,0);
     const hunt = huntHistoryEntry(historyItems,dustEarned);
     huntHistory.unshift(hunt);
@@ -1479,6 +1525,7 @@
     comingSoonPage.hidden = !comingSoonOpen;
     if (profileOpen) window.dispatchEvent(new Event('sprite-profile-view-opened'));
     if (settingsOpen) renderSettings();
+    if (huntsOpen) loadHottestDrop();
     if (comingSoonOpen) renderComingSoonPage();
     tabsEl.hidden = featureOpen;
     document.getElementById('mainContent').hidden = featureOpen;
@@ -1541,6 +1588,7 @@
                 : (appView === APP_VIEW_DUST ? 'Sprite Dust' : (appView === APP_VIEW_PROFILE ? 'My Sprite Profile' : (appView === APP_VIEW_SETTINGS ? 'Settings' : 'Current Tracker')))));
       showToast(label);
     }
+    window.setTimeout(wakeBackgroundMotion,40);
   }
 
   function goHomeToRare({ focusSearch = false, announce = true } = {}) {
@@ -3030,13 +3078,10 @@
     locationFoundTitle.textContent = newlyCollected ? 'Where did you find it?' : 'Edit collection details';
     locationFoundSpriteName.textContent = name;
     const savedLocation = cleanLocation(current.locationFound);
-    if (savedLocation && ![...locationFoundSelect.options].some((option) => option.value === savedLocation)) {
-      const option = document.createElement('option');
-      option.value = savedLocation;
-      option.textContent = savedLocation;
-      locationFoundSelect.appendChild(option);
-    }
-    locationFoundSelect.value = savedLocation;
+    const builtInLocation = [...locationFoundSelect.options].some((option) => option.value === savedLocation && option.value !== 'Other');
+    locationFoundSelect.value = builtInLocation ? savedLocation : (savedLocation ? 'Other' : '');
+    locationFoundCustom.value = savedLocation && !builtInLocation ? savedLocation : '';
+    locationFoundCustomLabel.hidden = locationFoundSelect.value !== 'Other';
     locationCollectedAt.value = isoToLocalDateTime(current.collectedAt || new Date().toISOString());
     locationMasteredAt.value = isoToLocalDateTime(current.masteredAt || '');
     locationMasteredAtLabel.hidden = !current.mastered;
@@ -3067,7 +3112,7 @@
     current.collectedAt = collectedAt;
     if (current.mastered) current.masteredAt = masteredAt;
     else delete current.masteredAt;
-    const location = cleanLocation(locationFoundSelect.value);
+    const location = cleanLocation(locationFoundSelect.value === 'Other' ? locationFoundCustom.value : locationFoundSelect.value);
     if (location) current.locationFound = location;
     else delete current.locationFound;
     if (journalEntryId && newlyCollected) {
@@ -3076,6 +3121,15 @@
       recordJournalEntry('details',family,variant,before,current,{ timestamp:new Date().toISOString() });
     }
     saveProgress();
+    if (location) {
+      const familyInfo = familyView(family);
+      const variantInfo = variantView(family,variant);
+      reportSpriteLocationEvent({
+        familyId,variantId,
+        familyName:familyInfo.name,variantName:variantInfo.name,
+        rarity:family.rarity,location,collectedAt
+      });
+    }
     closeLocationDetails();
     renderJournal();
     showToast(location ? `Location saved: ${location}` : 'Collection time saved');
@@ -4695,6 +4749,7 @@
     renderHuntHistory();
     renderDustAccount();
     applyHuntMode();
+    renderFloatingAdmin();
     queueFutureStateSync();
   }
 
@@ -4717,6 +4772,7 @@
     activeTab?.scrollIntoView({ block:'nearest', inline:'center' });
     if (options.focusTab) activeTab?.focus();
     if (options.announce && changed) showToast(`${rarity} page`);
+    window.setTimeout(wakeBackgroundMotion,40);
   }
 
   function setMissingView(view,options = {}) {
@@ -4886,6 +4942,125 @@
     toastTimer = setTimeout(() => statusToast.classList.remove('show'),2400);
   }
 
+  function renderFloatingAdmin() {
+    if (!floatingAdminToggle) return;
+    const available = DEV_BUILD || ownerPreviewActive();
+    floatingAdminToggle.hidden = !available;
+    floatingAdminToggle.setAttribute('aria-pressed',String(spriteEditMode));
+    const label = spriteEditMode ? 'Exit Admin Mode' : 'Enter Admin Mode';
+    floatingAdminToggle.setAttribute('aria-label',label);
+    floatingAdminToggle.title = label;
+    const text = floatingAdminToggle.querySelector('span');
+    if (text) text.textContent = spriteEditMode ? 'Exit' : 'Admin';
+  }
+
+  function helpCopyFor(key) {
+    return experienceSettings.helpCopy?.[key] || HELP_COPY_DEFAULTS[key] || 'More details will be added here.';
+  }
+
+  function openContextHelp(key) {
+    if (!contextHelpDialog || !HELP_COPY_DEFAULTS[key]) return;
+    currentHelpKey = key;
+    const trigger = Array.from(document.querySelectorAll('[data-help-key]')).find((button) => button.dataset.helpKey === key);
+    contextHelpTitle.textContent = trigger?.getAttribute('aria-label')?.replace(/^How\s+/i,'') || 'How it works';
+    contextHelpCopy.textContent = helpCopyFor(key);
+    const canEdit = DEV_BUILD || ownerPreviewActive();
+    contextHelpEditor.hidden = !canEdit;
+    contextHelpSave.hidden = !canEdit;
+    contextHelpInput.value = helpCopyFor(key);
+    if (!contextHelpDialog.open) contextHelpDialog.showModal();
+  }
+
+  function saveContextHelp() {
+    if (!currentHelpKey || (!DEV_BUILD && !ownerPreviewActive())) return;
+    const copy = String(contextHelpInput.value || '').trim().replace(/\s+/g,' ').slice(0,360);
+    if (!copy) return showToast('Add a short help description first.');
+    experienceSettings.helpCopy = { ...cleanHelpCopy(experienceSettings.helpCopy),[currentHelpKey]:copy };
+    contextHelpCopy.textContent = copy;
+    saveExperienceSettings();
+    showToast('Help description saved to your account preferences');
+  }
+
+  function hottestDropSpriteInfo(row) {
+    return searchableSprites().find((entry) => entry.familyId === row?.top_family_id && entry.variantId === row?.top_variant_id)
+      || searchableSprites().find((entry) => entry.familyName === row?.top_family_name && entry.variantName === row?.top_variant_name)
+      || null;
+  }
+
+  function renderHottestDrop(row = null) {
+    if (!hotDropLocation) return;
+    const count = Math.max(0,Number(row?.sprite_count) || 0);
+    if (!row?.location || count < 1) {
+      hotDropLocation.textContent = 'Waiting for enough Adventures';
+      hotDropCount.textContent = 'Hottest Drop appears after at least three collectors report a location.';
+      hotDropSprite.hidden = true;
+      return;
+    }
+    hotDropLocation.textContent = String(row.location).slice(0,60);
+    hotDropCount.textContent = `${count.toLocaleString()} ${count === 1 ? 'Sprite' : 'Sprites'} collected in the past hour`;
+    const info = hottestDropSpriteInfo(row);
+    const image = displayImageSource(info?.image);
+    hotDropSpriteName.textContent = info ? `${info.familyName} · ${info.variantName}` : String(row.top_sprite_name || 'Sprite').slice(0,90);
+    if (image) {
+      hotDropSpriteImage.src = image;
+      hotDropSpriteImage.alt = '';
+      hotDropSprite.hidden = false;
+    } else {
+      hotDropSprite.hidden = true;
+    }
+  }
+
+  async function loadHottestDrop({ force = false } = {}) {
+    if (hottestDropRequest) return hottestDropRequest;
+    if (!force && (Date.now() - hottestDropLoadedAt) < 60000) return;
+    const account = window.SPRITE_ACCOUNT_BRIDGE;
+    if (!account?.configured?.()) return renderHottestDrop();
+    hottestDropRequest = (async () => {
+      try {
+        const rows = await account.request('/rest/v1/rpc/get_sprite_hottest_drop',{ method:'POST',body:{ minutes_back:60 } });
+        hottestDropLoadedAt = Date.now();
+        renderHottestDrop(Array.isArray(rows) ? rows[0] : rows);
+      } catch {
+        renderHottestDrop();
+      } finally {
+        hottestDropRequest = null;
+      }
+    })();
+    return hottestDropRequest;
+  }
+
+  async function reportSpriteLocationEvent({ familyId,variantId,familyName,variantName,rarity,location,collectedAt }) {
+    const account = window.SPRITE_ACCOUNT_BRIDGE;
+    const currentSession = account?.session?.();
+    const foundAt = validIsoDate(collectedAt);
+    const place = cleanLocation(location);
+    if (!account?.configured?.() || !currentSession?.user?.id || !foundAt || !place) return;
+    const eventKey = `${familyId}:${variantId}:${foundAt}`.slice(0,300);
+    try {
+      const token = await account.accessToken();
+      await account.request('/rest/v1/sprite_location_events?on_conflict=user_id,event_key',{
+        method:'POST',
+        token,
+        headers:{ Prefer:'resolution=merge-duplicates,return=minimal' },
+        body:{
+          user_id:currentSession.user.id,
+          event_key:eventKey,
+          family_id:String(familyId || '').slice(0,200),
+          variant_id:String(variantId || '').slice(0,200),
+          family_name:String(familyName || 'Sprite').slice(0,80),
+          variant_name:String(variantName || 'Variant').slice(0,80),
+          rarity:String(rarity || '').slice(0,20),
+          location:place,
+          collected_at:foundAt,
+          reported_at:new Date().toISOString()
+        }
+      });
+      if (appView === APP_VIEW_HUNTS) loadHottestDrop({ force:true });
+    } catch {
+      /* Community reporting is optional and never blocks collection saving. */
+    }
+  }
+
   function saveExperienceSettings() {
     try { localStorage.setItem(EXPERIENCE_SETTINGS_KEY,JSON.stringify(experienceSettings)); } catch { /* Keep this visit's preferences. */ }
     noteLocalSaveChange('preferences');
@@ -5000,7 +5175,8 @@
     return {
       animations:source.animations !== false,
       reduceMotion:source.reduceMotion === true,
-      defaultView:['card','list','sheet'].includes(source.defaultView) ? source.defaultView : 'card'
+      defaultView:['card','list','sheet'].includes(source.defaultView) ? source.defaultView : 'card',
+      helpCopy:cleanHelpCopy(source.helpCopy)
     };
   }
 
@@ -6118,6 +6294,7 @@
     document.body.classList.toggle('sprite-edit-mode',spriteEditMode);
     spriteEditorToggle.setAttribute('aria-pressed',String(spriteEditMode));
     spriteEditorToggle.textContent = spriteEditMode ? 'Exit Admin Mode' : 'Enter Admin Mode';
+    renderFloatingAdmin();
     renderCollections();
     updateCounters();
     showToast(spriteEditMode ? 'Sprite editing on' : 'Sprite editing off');
@@ -6133,6 +6310,7 @@
       publishSpritesBtn.hidden = false;
       spriteEditorToggle.setAttribute('aria-pressed',String(spriteEditMode));
       spriteEditorToggle.textContent = spriteEditMode ? 'Exit Admin Mode' : 'Enter Admin Mode';
+      renderFloatingAdmin();
       return;
     }
     spriteEditorToggle.hidden = unownedPage || vaultPage;
@@ -6143,6 +6321,7 @@
     document.body.classList.remove('sprite-edit-mode');
     spriteEditorToggle.setAttribute('aria-pressed','false');
     spriteEditorToggle.textContent = 'Enter Admin Mode';
+    renderFloatingAdmin();
   }
 
   appMenuBtn.addEventListener('click',openAppMenu);
@@ -6273,6 +6452,31 @@
     document.body.classList.remove('hunt-checkout-open');
   });
   floatingHomeBtn.addEventListener('click',() => goHomeToRare());
+  floatingAdminToggle?.addEventListener('click',() => {
+    if (spriteEditMode) return setSpriteEditMode(false);
+    if (appView !== APP_VIEW_TRACKER || isUnownedPage()) goHomeToRare({ announce:false });
+    setSpriteEditMode(true);
+  });
+  document.querySelectorAll('[data-help-key]').forEach((button) => {
+    button.addEventListener('click',() => openContextHelp(button.dataset.helpKey || ''));
+  });
+  contextHelpSave?.addEventListener('click',saveContextHelp);
+  contextHelpDialog?.addEventListener('close',() => { currentHelpKey = ''; });
+  locationFoundSelect.addEventListener('change',() => {
+    locationFoundCustomLabel.hidden = locationFoundSelect.value !== 'Other';
+    if (!locationFoundCustomLabel.hidden) {
+      try { locationFoundCustom.focus({ preventScroll:true }); }
+      catch { locationFoundCustom.focus(); }
+    }
+  });
+  window.addEventListener('sprite-account-bridge-ready',() => {
+    renderFloatingAdmin();
+    if (appView === APP_VIEW_HUNTS) loadHottestDrop({ force:true });
+  });
+  window.addEventListener('sprite-cloud-session-changed',() => {
+    renderFloatingAdmin();
+    if (appView === APP_VIEW_HUNTS) loadHottestDrop({ force:true });
+  });
   spriteDustBalanceBtn.addEventListener('click',() => setAppView(APP_VIEW_DUST));
   document.getElementById('clearHuntHistoryBtn').addEventListener('click',() => {
     if (!huntHistory.length) return;
@@ -6311,6 +6515,12 @@
     backgroundMotionFrame = requestAnimationFrame(() => {
       backgroundMotionFrame = requestAnimationFrame(() => {
         root.classList.remove('background-motion-reset');
+        document.querySelectorAll('.page-motion-effect').forEach((effect) => {
+          if (getComputedStyle(effect).visibility !== 'visible') return;
+          effect.getAnimations?.().forEach((animation) => {
+            try { animation.play(); } catch { /* CSS animation remains the fallback. */ }
+          });
+        });
         backgroundMotionFrame = 0;
       });
     });
@@ -6558,7 +6768,7 @@
                             : (isUnownedPage() ? `#${missingView}` : `#${activeRarity.toLowerCase()}`)))))));
   if (location.hash !== activeHash) history.replaceState({ rarity:activeRarity },'',activeHash);
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./service-worker.js?v=135',{ updateViaCache:'none' }).then((registration) => registration.update()).catch(() => {});
+    navigator.serviceWorker.register('./service-worker.js?v=139',{ updateViaCache:'none' }).then((registration) => registration.update()).catch(() => {});
   }
   const signalAppRendered = () => window.dispatchEvent(new Event('sprite-app-rendered'));
   if (document.fonts?.ready) {

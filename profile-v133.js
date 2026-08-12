@@ -429,7 +429,26 @@
     if (pageStatus && !page.hidden) setStatus('Loading your Sprite Profile…');
     try {
       const token = await account.accessToken();
-      const rows = await account.request(`/rest/v1/${profileTable}?select=meadow_code,display_name,avatar_key,profile_image_path,bio,privacy,favorites,collection_stats,updated_at&user_id=eq.${encodeURIComponent(currentSession.user.id)}&limit=1`,{ token });
+      let rows = await account.request(`/rest/v1/${profileTable}?select=meadow_code,display_name,avatar_key,profile_image_path,bio,privacy,favorites,collection_stats,updated_at&user_id=eq.${encodeURIComponent(currentSession.user.id)}&limit=1`,{ token });
+      if (!Array.isArray(rows) || !rows[0]?.meadow_code) {
+        let defaultName = cleanText(currentSession.user.user_metadata?.display_name || currentSession.user.email?.split('@')[0] || 'Sprite Collector',40);
+        if (defaultName.length < 2) defaultName = 'Sprite Collector';
+        rows = await account.request(`/rest/v1/${profileTable}?on_conflict=user_id`,{
+          method:'POST',
+          token,
+          headers:{ Prefer:'resolution=merge-duplicates,return=representation' },
+          body:{
+            user_id:currentSession.user.id,
+            display_name:defaultName,
+            avatar_key:'sprite',
+            profile_image_path:'',
+            bio:'',
+            privacy:'code',
+            favorites:[],
+            collection_stats:localStats(defaultStats)
+          }
+        });
+      }
       if (requestId !== loadSequence) return;
       ownProfile = normalizeProfile(Array.isArray(rows) ? rows[0] : null);
       ownProfileUserId = currentSession.user.id;

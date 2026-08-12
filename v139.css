@@ -1,0 +1,274 @@
+/* V139 · responsive feature pages, reliable motion, quick admin, and community activity */
+
+/* One responsive app: center-safe artwork scales to desktop and crops cleanly on phones. */
+body.hunt-history-view .page-backdrop {
+  background-color:#06152d !important;
+  background-image:linear-gradient(180deg,rgba(3,10,27,.2),rgba(3,9,22,.64)),url("assets/feature-backgrounds/feature-bg-adventure-v139.webp") !important;
+  background-position:center center !important;
+  background-size:cover !important;
+}
+
+body.sprite-profile-view .page-backdrop {
+  background-color:#102361 !important;
+  background-image:linear-gradient(180deg,rgba(9,21,68,.24),rgba(5,11,37,.68)),url("assets/feature-backgrounds/feature-bg-profile-v139.webp") !important;
+  background-position:center center !important;
+  background-size:cover !important;
+}
+
+body.settings-view .page-backdrop {
+  background-color:#07121f !important;
+  background-image:linear-gradient(180deg,rgba(2,8,15,.3),rgba(2,7,14,.74)),url("assets/feature-backgrounds/feature-bg-settings-v139.webp") !important;
+  background-position:center center !important;
+  background-size:cover !important;
+}
+
+body.vault-view .page-backdrop {
+  background-color:#07191b !important;
+  background-image:linear-gradient(180deg,rgba(2,14,17,.22),rgba(2,10,13,.63)),url("assets/feature-backgrounds/feature-bg-meadow-v139.webp") !important;
+  background-position:center center !important;
+  background-size:cover !important;
+}
+
+/* Avoid a WebKit compositor dead-zone seen after mobile tab restores. */
+.page-motion-layer {
+  contain:none !important;
+  isolation:auto !important;
+  overflow:hidden !important;
+}
+
+.page-motion-effect {
+  -webkit-transform-style:preserve-3d;
+  transform-style:preserve-3d;
+}
+
+.motion-feature-motes {
+  inset:-80px;
+  visibility:hidden;
+  opacity:.26;
+  background-repeat:repeat;
+  background-image:
+    radial-gradient(circle at 11% 18%,rgba(255,255,255,.88) 0 1px,transparent 2.4px),
+    radial-gradient(circle at 68% 32%,rgba(129,229,255,.72) 0 1.2px,transparent 2.7px),
+    radial-gradient(circle at 36% 76%,rgba(255,219,123,.7) 0 1px,transparent 2.5px),
+    radial-gradient(circle at 87% 84%,rgba(227,179,255,.68) 0 .9px,transparent 2.2px);
+  background-size:260px 300px;
+  animation:feature-motes-drift-v139 14s linear infinite;
+}
+
+.motion-feature-motes-b {
+  opacity:.18;
+  background-position:71px 39px;
+  background-size:360px 410px;
+  animation-duration:22s;
+  animation-direction:reverse;
+}
+
+body.hunt-history-view .motion-feature-motes,
+body.sprite-profile-view .motion-feature-motes,
+body.settings-view .motion-feature-motes,
+body.vault-view .motion-feature-motes {
+  visibility:visible;
+  animation-play-state:running;
+}
+
+@keyframes feature-motes-drift-v139 {
+  from { transform:translate3d(-5px,-36px,0);-webkit-transform:translate3d(-5px,-36px,0); }
+  to { transform:translate3d(5px,36px,0);-webkit-transform:translate3d(5px,36px,0); }
+}
+
+.feature-title-row {
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:9px;
+  min-width:0;
+}
+
+.feature-title-row h2,
+.feature-title-row h3 { min-width:0; }
+
+.feature-title-row-small { justify-content:flex-start; }
+
+.context-help-button {
+  flex:0 0 auto;
+  width:28px;
+  height:28px;
+  display:grid;
+  place-items:center;
+  padding:0;
+  color:#f7fbff;
+  border:1px solid rgba(202,235,255,.54);
+  border-radius:50%;
+  background:rgba(5,13,26,.52);
+  box-shadow:inset 0 1px rgba(255,255,255,.14),0 0 14px rgba(105,205,255,.13);
+  -webkit-backdrop-filter:blur(9px);
+  backdrop-filter:blur(9px);
+  font:950 14px/1 var(--font-body,system-ui,sans-serif);
+}
+
+.context-help-dialog {
+  width:min(90vw,460px);
+  padding:0;
+  color:#f4f9ff;
+  border:1px solid rgba(173,226,255,.34);
+  border-radius:24px;
+  background:transparent;
+  box-shadow:0 24px 70px rgba(0,0,0,.65);
+}
+
+.context-help-dialog::backdrop { background:rgba(1,5,12,.72);-webkit-backdrop-filter:blur(5px);backdrop-filter:blur(5px); }
+
+.context-help-card {
+  position:relative;
+  display:grid;
+  gap:10px;
+  padding:25px;
+  border-radius:inherit;
+  background:linear-gradient(155deg,rgba(18,38,67,.98),rgba(5,11,24,.98));
+}
+
+.context-help-card > span { color:#88ddff;font-size:10px;font-weight:950;letter-spacing:.14em;text-transform:uppercase; }
+.context-help-card h2,.context-help-card p { margin:0; }
+.context-help-card h2 { font-family:var(--font-heading);font-size:32px;line-height:1; }
+.context-help-card p { color:#d4e0ec;font-size:14px;line-height:1.5; }
+.context-help-close { position:absolute;top:11px;right:11px;width:36px;height:36px;padding:0;color:#fff;border:1px solid rgba(255,255,255,.2);border-radius:50%;background:rgba(255,255,255,.07);font-size:24px; }
+.context-help-editor { display:grid;gap:6px;color:#9edfff;font-size:11px;font-weight:900; }
+.context-help-editor textarea { width:100%;padding:11px;color:#fff;border:1px solid rgba(255,255,255,.22);border-radius:12px;background:#081223;resize:vertical;font:inherit; }
+.context-help-save { justify-self:start;min-height:39px;padding:8px 14px;color:#07121f;border:0;border-radius:999px;background:#91e1ff;font-weight:950; }
+
+/* Compact, width-safe Journal. */
+body.journal-view .app-shell {
+  width:100% !important;
+  max-width:100% !important;
+  padding-inline:clamp(9px,3vw,22px) !important;
+  overflow-x:clip !important;
+}
+
+.collection-journal-page {
+  width:min(100%,920px) !important;
+  max-width:100% !important;
+  margin-inline:auto !important;
+  padding-inline:0 !important;
+  overflow:visible !important;
+}
+
+.collection-journal-page *,
+.collection-journal-page *::before,
+.collection-journal-page *::after { box-sizing:border-box;min-width:0; }
+
+.collection-journal-page h2,
+.collection-journal-page h3,
+.collection-journal-page h4,
+.collection-journal-page p,
+.collection-journal-page strong,
+.collection-journal-page span { overflow-wrap:anywhere; }
+
+.collection-journal-page select,
+.collection-journal-page input,
+.collection-journal-page textarea { max-width:100%; }
+
+.collection-journal-head h2 { font-size:clamp(38px,8.5vw,66px) !important; }
+.journal-insights { grid-template-columns:repeat(3,minmax(0,1fr)) !important;gap:9px !important; }
+.journal-insight-card { min-width:0 !important;min-height:86px !important;padding:13px !important;border-radius:17px !important; }
+.journal-insight-card strong { overflow-wrap:anywhere;font-size:clamp(20px,4.8vw,34px) !important; }
+.journal-top-location { grid-column:auto !important; }
+.journal-location-chart,.journal-history { width:100% !important;max-width:100% !important;padding:clamp(11px,2.6vw,18px) !important;overflow:hidden !important; }
+.journal-drop-spot-list { grid-template-columns:repeat(2,minmax(0,1fr)) !important; }
+.journal-drop-spot { min-width:0 !important; }
+.journal-drop-spot > div,.journal-section-heading > div,.journal-entry-copy { min-width:0 !important; }
+.journal-entry { width:100% !important;max-width:100% !important; }
+.journal-entry-actions { flex-wrap:wrap;justify-content:flex-end; }
+
+/* Hottest Drop uses anonymous aggregate activity only. */
+.hot-drop-panel {
+  width:min(100%,900px);
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  align-items:center;
+  gap:18px;
+  margin:0 auto 18px;
+  padding:18px;
+  color:#fff;
+  border:1px solid rgba(255,151,75,.42);
+  border-radius:24px;
+  background:linear-gradient(135deg,rgba(107,35,13,.72),rgba(9,18,37,.82));
+  box-shadow:inset 0 1px rgba(255,255,255,.14),0 14px 34px rgba(0,0,0,.28),0 0 24px rgba(255,126,53,.08);
+  -webkit-backdrop-filter:blur(15px);
+  backdrop-filter:blur(15px);
+}
+
+.hot-drop-copy { min-width:0; }
+.hot-drop-copy > span { color:#ffbd86;font-size:10px;font-weight:950;letter-spacing:.12em;text-transform:uppercase; }
+.hot-drop-copy h3 { margin:3px 0 0;font-family:var(--font-heading);font-size:clamp(28px,6vw,43px);line-height:1; }
+.hot-drop-copy > strong { display:block;margin-top:9px;color:#fff1bf;font-size:clamp(20px,4vw,30px);overflow-wrap:anywhere; }
+.hot-drop-copy p { margin:3px 0 0;color:#d8e0e9;font-size:12px; }
+.hot-drop-sprite { width:116px;display:grid;justify-items:center;gap:2px;text-align:center; }
+.hot-drop-sprite img { width:88px;height:88px;object-fit:contain;border-radius:18px;background:rgba(0,0,0,.18); }
+.hot-drop-sprite span { color:#ffbd86;font-size:9px;font-weight:950;text-transform:uppercase; }
+.hot-drop-sprite strong { max-width:116px;overflow:hidden;font-size:11px;text-overflow:ellipsis;white-space:nowrap; }
+
+/* Small owner control beside the permanent Home button. */
+.floating-admin-toggle {
+  position:fixed;
+  z-index:2147482999;
+  left:calc(50% + 72px);
+  bottom:max(19px,calc(15px + env(safe-area-inset-bottom,0px)));
+  width:67px;
+  height:42px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:4px;
+  padding:6px 8px;
+  color:#f6fbff;
+  border:1px solid rgba(255,255,255,.26);
+  border-radius:999px;
+  background:rgba(7,13,25,.62);
+  box-shadow:inset 0 1px rgba(255,255,255,.14),0 7px 20px rgba(0,0,0,.32);
+  -webkit-backdrop-filter:blur(12px);
+  backdrop-filter:blur(12px);
+  font:900 9px/1 var(--font-button,var(--font-body));
+}
+
+.floating-admin-toggle svg { width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round; }
+.floating-admin-toggle[aria-pressed="true"] { color:#dcffe8;border-color:rgba(107,255,158,.72);background:rgba(20,106,55,.72);box-shadow:0 0 18px rgba(74,244,135,.28); }
+
+#locationFoundCustomLabel input { min-width:0; }
+
+@media (max-width:700px) {
+  body.hunt-history-view .page-backdrop,
+  body.sprite-profile-view .page-backdrop,
+  body.settings-view .page-backdrop,
+  body.vault-view .page-backdrop { background-position:center center !important; }
+
+  .journal-insights { grid-template-columns:repeat(2,minmax(0,1fr)) !important; }
+  .journal-top-location { grid-column:1 / -1 !important; }
+  .journal-drop-spot-list { grid-template-columns:1fr !important; }
+  .journal-entry { grid-template-columns:46px minmax(0,1fr) !important;gap:9px !important;padding:10px !important;border-radius:15px !important; }
+  .journal-entry-thumb { width:46px !important;height:46px !important;border-radius:11px !important; }
+  .journal-entry-actions { grid-column:1 / -1 !important;justify-content:flex-start !important; }
+  .journal-entry-actions button { min-height:34px !important;padding-inline:10px !important;font-size:10px !important; }
+  .journal-section-heading { flex-wrap:wrap !important; }
+  .journal-history-controls { width:100%;justify-content:flex-start; }
+  .journal-filter-label { min-width:0;flex:1; }
+  .journal-filter-label select { width:100%;max-width:100% !important; }
+  .hot-drop-panel { grid-template-columns:minmax(0,1fr) 86px;gap:10px;padding:14px;border-radius:19px; }
+  .hot-drop-sprite { width:86px; }
+  .hot-drop-sprite img { width:70px;height:70px; }
+  .feature-title-row { gap:7px; }
+  .context-help-button { width:25px;height:25px;font-size:12px; }
+}
+
+@media (max-width:390px) {
+  body.journal-view .app-shell { padding-inline:7px !important; }
+  .collection-journal-head h2 { font-size:36px !important; }
+  .journal-insight-card { min-height:78px !important;padding:10px !important; }
+  .journal-insight-card > span { font-size:9px !important; }
+  .journal-insight-card strong { font-size:20px !important; }
+  .hot-drop-sprite { display:none !important; }
+  .hot-drop-panel { grid-template-columns:1fr; }
+}
+
+@media (prefers-reduced-motion:reduce) {
+  .motion-feature-motes { animation:none !important; }
+}
