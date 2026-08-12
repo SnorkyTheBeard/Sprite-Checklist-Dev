@@ -43,6 +43,14 @@
     return { reference, storage:'repository' };
   }
 
+  function normalizeDustLevels(value) {
+    const source = isRecord(value) ? value : {};
+    return Object.fromEntries([1,2,3,4,5].flatMap((level) => {
+      const amount = Number(source[level] ?? source[String(level)]);
+      return Number.isFinite(amount) && amount >= 0 ? [[String(level),Math.min(1000000,Math.round(amount))]] : [];
+    }));
+  }
+
   function normalizeSeasons(value,currentSeasonId) {
     const seasons = [];
     const seen = new Set();
@@ -107,6 +115,7 @@
           deleted:variant?.deleted === true,
           sortOrder:Number.isFinite(Number(variant?.sortOrder)) ? Number(variant.sortOrder) : variantIndex,
           rarityPercentage:cleanText(variant?.rarityPercentage,40),
+          dustLevels:normalizeDustLevels(variant?.dustLevels),
           imageRef:asset.reference,
           imageStorage:asset.storage
         });
@@ -280,7 +289,8 @@
         preferences:{
           viewModes:cloneJson(isRecord(source.viewModes) ? source.viewModes : {},{}),
           missingView:source.missingView === 'unmastered' ? 'unmastered' : 'unowned',
-          seasonView:cleanId(source.seasonView,currentSeasonId)
+          seasonView:cleanId(source.seasonView,currentSeasonId),
+          experience:cloneJson(isRecord(source.experience) ? source.experience : {},{})
         },
         social:previousPlayerSection(previous,'social',{ friends:[], incomingRequests:[], outgoingRequests:[] }),
         showcase:previousPlayerSection(previous,'showcase',{ favoriteSpriteIds:[], topSpriteIds:[] }),

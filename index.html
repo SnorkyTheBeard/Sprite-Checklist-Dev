@@ -297,6 +297,7 @@
 <link rel="stylesheet" href="v137.css?v=137">
 <link rel="stylesheet" href="v138.css?v=138">
 <link rel="stylesheet" href="v139.css?v=139">
+<link rel="stylesheet" href="v140.css?v=140">
 </head>
 <body>
   <div class="app-launch-screen" aria-hidden="true">
@@ -510,7 +511,7 @@
       </section>
 
       <section class="journal-location-chart" aria-labelledby="journalLocationChartTitle">
-        <div class="journal-section-heading"><div><span>Your personal route</span><h3 id="journalLocationChartTitle">Drop Spots</h3></div></div>
+        <div class="journal-section-heading"><div><span>Your personal route</span><h3 id="journalLocationChartTitle">Drop Spots</h3></div><button class="journal-manage-button" id="managePersonalRouteBtn" type="button">Add a stop</button></div>
         <div class="journal-drop-spot-list" id="journalDropSpotList"></div>
         <p class="journal-empty-copy" id="journalLocationEmpty">Locations added during an Adventure will build your route here.</p>
         <div hidden aria-hidden="true"><strong id="journalZoneTopCount">0</strong><strong id="journalZoneBottomCount">0</strong><strong id="journalZoneBossCount">0</strong><div id="journalMemoryList"></div><div id="journalMemoryEmpty"></div></div>
@@ -531,8 +532,10 @@
                 <option value="mastered">Mastered</option>
                 <option value="removed">Removed</option>
                 <option value="details">Location edited</option>
+                <option value="story">Collection story</option>
               </select>
             </label>
+            <button class="journal-add-story" id="addCollectionStoryBtn" type="button">Add Story</button>
             <button class="journal-clear-activity" id="clearJournalActivityBtn" type="button">Clear Activity</button>
           </div>
         </div>
@@ -673,10 +676,10 @@
       </section>
 
       <section class="profile-owner-panel" id="profileOwnerPanel" hidden>
-        <section class="profile-account-rail" id="profileAccountRail" aria-label="Account and cloud status">
-          <i id="profileCloudStateDot" aria-hidden="true"></i>
-          <div><strong id="profileAccountName">Sprite Collector</strong><span id="profileAccountEmail">Signed-in account</span><small id="profileCloudStateText">Checking account progress…</small></div>
-          <button id="profileManageAccountBtn" type="button">Account</button>
+        <section class="profile-public-favorites" aria-labelledby="profileOwnerFavoritesTitle">
+          <div class="profile-section-title"><h3 id="profileOwnerFavoritesTitle">Favorite Sprites</h3></div>
+          <div class="profile-favorite-showcase" id="profileOwnerFavorites"></div>
+          <p id="profileOwnerFavoritesEmpty">No favorite Sprites selected yet.</p>
         </section>
 
         <article class="profile-display profile-owner-display">
@@ -700,14 +703,19 @@
           <div class="profile-stats-strip" id="profileOwnerStats" aria-label="Your selected collection statistics"></div>
         </section>
 
-        <section class="profile-public-favorites" aria-labelledby="profileOwnerFavoritesTitle">
-          <div class="profile-section-title"><span>Personal picks</span><h3 id="profileOwnerFavoritesTitle">Favorite Sprites</h3></div>
-          <div class="profile-favorite-showcase" id="profileOwnerFavorites"></div>
-          <p id="profileOwnerFavoritesEmpty">No favorite Sprites selected yet.</p>
+        <section class="profile-account-rail" id="profileAccountRail" aria-label="Account and cloud status">
+          <i id="profileCloudStateDot" aria-hidden="true"></i>
+          <div><strong id="profileAccountName">Sprite Collector</strong><span id="profileAccountEmail">Signed-in account</span><small id="profileCloudStateText">Checking account progress…</small></div>
+          <button id="profileManageAccountBtn" type="button">Account</button>
         </section>
       </section>
 
       <section class="profile-visitor-panel" id="profileVisitorPanel" hidden>
+        <section class="profile-public-favorites" aria-labelledby="profileVisitorFavoritesTitle">
+          <div class="profile-section-title"><h3 id="profileVisitorFavoritesTitle">Favorite Sprites</h3></div>
+          <div class="profile-favorite-showcase" id="profileVisitorFavorites"></div>
+          <p id="profileVisitorFavoritesEmpty">No favorite Sprites shared yet.</p>
+        </section>
         <article class="profile-display profile-visitor-display">
           <div class="profile-avatar" id="profileVisitorAvatar" data-avatar="sprite" aria-hidden="true"></div>
           <div class="profile-identity-copy">
@@ -721,11 +729,6 @@
           <div class="profile-section-title"><span>Collection snapshot</span><h3 id="profileVisitorStatsTitle">Stats</h3></div>
           <div class="profile-stats-strip" id="profileVisitorStats" aria-label="Collector statistics"></div>
         </section>
-        <section class="profile-public-favorites" aria-labelledby="profileVisitorFavoritesTitle">
-          <div class="profile-section-title"><span>Personal picks</span><h3 id="profileVisitorFavoritesTitle">Favorite Sprites</h3></div>
-          <div class="profile-favorite-showcase" id="profileVisitorFavorites"></div>
-          <p id="profileVisitorFavoritesEmpty">No favorite Sprites shared yet.</p>
-        </section>
       </section>
     </section>
 
@@ -736,6 +739,17 @@
         <label class="settings-row"><span><strong>Animated backgrounds</strong><small>Snow, stars, and rarity motion effects.</small></span><input id="settingsAnimationToggle" type="checkbox" checked></label>
         <label class="settings-row"><span><strong>Reduce motion</strong><small>Keep the artwork still and transitions gentle.</small></span><input id="settingsReduceMotionToggle" type="checkbox"></label>
         <label class="settings-row"><span><strong>Default tracker view</strong><small>Used when you open a rarity for the first time.</small></span><select id="settingsDefaultView"><option value="card">Card</option><option value="list">List</option><option value="sheet">Sheet</option></select></label>
+        <label class="settings-row"><span><strong>Sprite event notices</strong><small>Show an in-app notice when Mastery Monday or another configured Sprite event begins.</small></span><input id="settingsEventNoticesToggle" type="checkbox" checked></label>
+      </section>
+      <section class="settings-card settings-mode-guide" aria-labelledby="settingsModeGuideTitle">
+        <div class="journal-section-heading"><div><span>Quick reference</span><h3 id="settingsModeGuideTitle">App Modes</h3></div></div>
+        <p class="settings-mode-notice">Tap a mode below whenever you need a reminder of what it does.</p>
+        <details><summary>Card View</summary><p>Full artwork cards with collection and mastery controls.</p></details>
+        <details><summary>List View</summary><p>A compact vertical layout with a smaller image and the same tracking controls.</p></details>
+        <details><summary>Sheet View</summary><p>The smallest checklist layout, built for scanning many Sprite variants quickly.</p></details>
+        <details><summary>Sprite Adventure</summary><p>Time a play session, Quick Add the Sprites you find, and finish with a recap.</p></details>
+        <details><summary>Collection Journal</summary><p>Review activity, correct drop spots, build a personal route, and add your own collection stories.</p></details>
+        <details><summary>Sprite Meadow</summary><p>A quiet collection display for viewing the Sprites you already own.</p></details>
       </section>
       <section class="settings-card" aria-labelledby="settingsAccountTitle">
         <div class="journal-section-heading"><div><span>Automatic protection</span><h3 id="settingsAccountTitle">Account &amp; Data</h3></div></div>
@@ -1167,6 +1181,52 @@
     </form>
   </dialog>
 
+  <dialog class="reset-dialog collection-story-dialog" id="collectionStoryDialog" aria-labelledby="collectionStoryTitle">
+    <form id="collectionStoryForm">
+      <h2 id="collectionStoryTitle" tabindex="-1">Add to Your Collection Story</h2>
+      <input id="collectionStoryId" type="hidden">
+      <label class="add-sprite-label" for="collectionStoryName">Title</label>
+      <input id="collectionStoryName" type="text" maxlength="80" required placeholder="A collection milestone">
+      <label class="add-sprite-label" for="collectionStoryNote">Story <span>(optional)</span></label>
+      <textarea id="collectionStoryNote" maxlength="400" rows="4" placeholder="What happened?"></textarea>
+      <label class="add-sprite-label" for="collectionStoryLocation">Location <span>(optional)</span></label>
+      <input id="collectionStoryLocation" type="text" maxlength="60" placeholder="Where did it happen?">
+      <label class="add-sprite-label" for="collectionStoryDate">Date &amp; time</label>
+      <input id="collectionStoryDate" type="datetime-local" required>
+      <div class="dialog-actions">
+        <button id="cancelCollectionStoryBtn" type="button">Cancel</button>
+        <button class="primary-btn" type="submit">Save Story</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog class="reset-dialog personal-route-dialog" id="personalRouteDialog" aria-labelledby="personalRouteTitle">
+    <form id="personalRouteForm">
+      <h2 id="personalRouteTitle" tabindex="-1">Add a Route Stop</h2>
+      <input id="personalRouteId" type="hidden">
+      <input id="personalRouteOriginalName" type="hidden">
+      <label class="add-sprite-label" for="personalRouteName">Drop spot</label>
+      <input id="personalRouteName" type="text" maxlength="60" required placeholder="Location name">
+      <label class="add-sprite-label" for="personalRouteNote">Route note <span>(optional)</span></label>
+      <textarea id="personalRouteNote" maxlength="180" rows="3" placeholder="Why is this stop useful?"></textarea>
+      <div class="dialog-actions personal-route-actions">
+        <button class="danger-btn" id="deletePersonalRouteBtn" type="button" hidden>Delete</button>
+        <button id="cancelPersonalRouteBtn" type="button">Cancel</button>
+        <button class="primary-btn" type="submit">Save Stop</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog class="reset-dialog sprite-event-dialog" id="spriteEventDialog" aria-labelledby="spriteEventTitle">
+    <form method="dialog">
+      <span class="sprite-event-eyebrow">Sprite event active</span>
+      <h2 id="spriteEventTitle" tabindex="-1">Mastery Monday</h2>
+      <p id="spriteEventCopy"></p>
+      <small id="spriteEventTime"></small>
+      <div class="dialog-actions"><button class="primary-btn" value="close" type="submit">Got it</button></div>
+    </form>
+  </dialog>
+
   <dialog class="reset-dialog clear-data-dialog" id="clearDataDialog" aria-labelledby="clearDataTitle">
     <form id="clearDataForm">
       <h2 id="clearDataTitle" tabindex="-1">Are you sure?</h2>
@@ -1203,11 +1263,12 @@
   <noscript>This checklist needs JavaScript enabled to save progress.</noscript>
 
   <script src="data.js?v=82"></script>
+  <script src="sprite-events-v140.js?v=140"></script>
   <script src="state-schema-v127.js?v=127"></script>
-  <script src="feature-config-v129.js?v=139"></script>
-  <script src="app.js?v=139"></script>
+  <script src="feature-config-v129.js?v=140"></script>
+  <script src="app.js?v=140"></script>
   <script src="cloud-config-v128.js?v=128"></script>
   <script src="cloud-v128.js?v=135"></script>
-  <script src="profile-v133.js?v=139"></script>
+  <script src="profile-v133.js?v=140"></script>
 </body>
 </html>

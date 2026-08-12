@@ -71,6 +71,7 @@
   const MISSING_VIEW_KEY = `galaxy_sprite_tracker_missing_view_v1_${STORAGE_SCOPE}`;
   const EXPERIENCE_SETTINGS_KEY = `galaxy_sprite_tracker_experience_v1_${STORAGE_SCOPE}`;
   const WELCOME_KEY = `galaxy_sprite_tracker_welcome_v1_${STORAGE_SCOPE}`;
+  const EVENT_NOTICE_KEY = `galaxy_sprite_tracker_event_notices_v1_${STORAGE_SCOPE}`;
 
   function loadExperienceSettings() {
     const saved = readJson(EXPERIENCE_SETTINGS_KEY) || {};
@@ -78,8 +79,26 @@
       animations:saved.animations !== false,
       reduceMotion:saved.reduceMotion === true,
       defaultView:['card','list','sheet'].includes(saved.defaultView) ? saved.defaultView : 'card',
+      eventNotices:saved.eventNotices !== false,
+      personalRoute:normalizePersonalRoute(saved.personalRoute),
       helpCopy:cleanHelpCopy(saved.helpCopy)
     };
+  }
+
+  function normalizePersonalRoute(value) {
+    if (!Array.isArray(value)) return [];
+    const seen = new Set();
+    return value.slice(0,80).flatMap((entry) => {
+      const name = String(entry?.name || '').trim().replace(/\s+/g,' ').slice(0,60);
+      if (!name || seen.has(name.toLowerCase())) return [];
+      seen.add(name.toLowerCase());
+      return [{
+        id:String(entry?.id || `route-${Date.now()}-${Math.random().toString(36).slice(2,8)}`).slice(0,100),
+        name,
+        note:String(entry?.note || '').trim().replace(/\s+/g,' ').slice(0,180),
+        hidden:entry?.hidden === true
+      }];
+    });
   }
 
   function cleanHelpCopy(value) {
@@ -715,6 +734,8 @@
   let huntHistory = loadStoredArray(HUNT_HISTORY_KEY,normalizeHuntHistory);
   let searchTargets = loadStoredArray(SEARCH_TARGETS_KEY,normalizeSearchTargets);
   let compassQuickAddPage = 0;
+  let compassExpandedFamilyId = '';
+  let compassSwipeStartX = 0;
   let dustLedger = loadStoredArray(DUST_LEDGER_KEY,normalizeDustLedger);
   let experienceSettings = loadExperienceSettings();
   let welcomeIndex = 0;
@@ -764,6 +785,24 @@
   const journalMapZones = [...document.querySelectorAll('[data-journal-map-zone]')];
   const journalActionFilter = document.getElementById('journalActionFilter');
   const clearJournalActivityBtn = document.getElementById('clearJournalActivityBtn');
+  const addCollectionStoryBtn = document.getElementById('addCollectionStoryBtn');
+  const collectionStoryDialog = document.getElementById('collectionStoryDialog');
+  const collectionStoryForm = document.getElementById('collectionStoryForm');
+  const collectionStoryTitle = document.getElementById('collectionStoryTitle');
+  const collectionStoryId = document.getElementById('collectionStoryId');
+  const collectionStoryName = document.getElementById('collectionStoryName');
+  const collectionStoryNote = document.getElementById('collectionStoryNote');
+  const collectionStoryLocation = document.getElementById('collectionStoryLocation');
+  const collectionStoryDate = document.getElementById('collectionStoryDate');
+  const managePersonalRouteBtn = document.getElementById('managePersonalRouteBtn');
+  const personalRouteDialog = document.getElementById('personalRouteDialog');
+  const personalRouteForm = document.getElementById('personalRouteForm');
+  const personalRouteTitle = document.getElementById('personalRouteTitle');
+  const personalRouteId = document.getElementById('personalRouteId');
+  const personalRouteOriginalName = document.getElementById('personalRouteOriginalName');
+  const personalRouteName = document.getElementById('personalRouteName');
+  const personalRouteNote = document.getElementById('personalRouteNote');
+  const deletePersonalRouteBtn = document.getElementById('deletePersonalRouteBtn');
   const journalEntryList = document.getElementById('journalEntryList');
   const journalEmptyState = document.getElementById('journalEmptyState');
   const journalMemoryList = document.getElementById('journalMemoryList');
@@ -909,6 +948,11 @@
   const settingsAnimationToggle = document.getElementById('settingsAnimationToggle');
   const settingsReduceMotionToggle = document.getElementById('settingsReduceMotionToggle');
   const settingsDefaultView = document.getElementById('settingsDefaultView');
+  const settingsEventNoticesToggle = document.getElementById('settingsEventNoticesToggle');
+  const spriteEventDialog = document.getElementById('spriteEventDialog');
+  const spriteEventTitle = document.getElementById('spriteEventTitle');
+  const spriteEventCopy = document.getElementById('spriteEventCopy');
+  const spriteEventTime = document.getElementById('spriteEventTime');
   const settingsSaveStatus = document.getElementById('settingsSaveStatus');
   const settingsManageAccountBtn = document.getElementById('settingsManageAccountBtn');
   const welcomeDialog = document.getElementById('welcomeDialog');
@@ -1825,6 +1869,7 @@
             name:variantInfo.name || variant.name || variant.id,
             image:variantInfo.image || '',
             rarityPercentage:variantInfo.rarityPercentage || '',
+            dustLevels:variantInfo.dustLevels,
             seasonId:spriteSeasonId(family,variant),
             visible:variantInfo.visible,
             deleted:variantInfo.deleted,
@@ -1848,6 +1893,7 @@
         hasUnpublishedChanges:Boolean((spriteCardEdits.customFamilies || []).length || Object.keys(spriteCardEdits.families || {}).length)
       },
       viewModes:spriteViewModes,
+      experience:sanitizeExperienceSettings(experienceSettings),
       missingView,
       seasonView:vaultSeasonView,
       journalReady,
@@ -2177,7 +2223,7 @@
       if (!entry || typeof entry !== 'object' || !safeBackupKey(entry.familyId) || !safeBackupKey(entry.variantId)) return [];
       const timestamp = validIsoDate(entry.timestamp);
       if (!timestamp) return [];
-      const type = ['collected','recollected','uncollected','mastered','unmastered','details'].includes(entry.type) ? entry.type : '';
+      const type = ['collected','recollected','uncollected','mastered','unmastered','details','story'].includes(entry.type) ? entry.type : '';
       if (!type) return [];
       return [{
         id:String(entry.id || journalId()).slice(0,160),
@@ -2195,6 +2241,9 @@
         memoryNote:String(entry.memoryNote || '').trim().slice(0,400),
         memoryPhoto:cleanMemoryPhoto(entry.memoryPhoto),
         memorySavedAt:validIsoDate(entry.memorySavedAt),
+        storyTitle:String(entry.storyTitle || '').trim().slice(0,80),
+        storyNote:String(entry.storyNote || '').trim().slice(0,400),
+        storyLocation:cleanLocation(entry.storyLocation),
         activityCleared:entry.activityCleared === true,
         undone:entry.undone === true,
         undoneAt:validIsoDate(entry.undoneAt)
@@ -2254,7 +2303,7 @@
     const storedEntries = journalReady ? journalEntries : pendingJournalEntries;
     if (!storedEntries.length) return;
     requestClearConfirmation(async () => {
-      const memories = storedEntries.filter((entry) => entry.memory === true).map((entry) => ({ ...entry, activityCleared:true }));
+      const memories = storedEntries.filter((entry) => entry.memory === true || entry.type === 'story').map((entry) => ({ ...entry, activityCleared:entry.type !== 'story' }));
       pendingJournalEntries = [];
       journalActionFilter.value = 'all';
       journalLocationFilter = '';
@@ -2318,7 +2367,8 @@
       uncollected:'Removed from collection',
       mastered:'Marked Mastered',
       unmastered:'Mastery removed',
-      details:'Collection details updated'
+      details:'Collection details updated',
+      story:'Collection story'
     })[type] || 'Collection updated';
   }
 
@@ -2351,6 +2401,126 @@
     });
     const ranked = [...counts.entries()].sort((left,right) => right[1] - left[1] || left[0].localeCompare(right[0]));
     return { logged,ranked,counts };
+  }
+
+  function allPersonalRouteStops(locationStats = journalCurrentLocationStats()) {
+    const customByName = new Map(normalizePersonalRoute(experienceSettings.personalRoute).map((entry) => [entry.name.toLowerCase(),entry]));
+    const hiddenNames = new Set([...customByName].filter(([,entry]) => entry.hidden).map(([name]) => name));
+    const names = new Set([...locationStats.ranked.map(([name]) => name.toLowerCase()).filter((name) => !hiddenNames.has(name)),...[...customByName.keys()].filter((name) => !hiddenNames.has(name))]);
+    return [...names].map((key) => {
+      const custom = customByName.get(key);
+      const recorded = locationStats.ranked.find(([name]) => name.toLowerCase() === key);
+      return {
+        id:custom?.id || `recorded-${key.replace(/[^a-z0-9]+/g,'-')}`,
+        name:custom?.name || recorded?.[0] || 'Drop spot',
+        note:custom?.note || '',
+        count:recorded?.[1] || 0
+      };
+    }).sort((left,right) => right.count - left.count || left.name.localeCompare(right.name,undefined,{ sensitivity:'base' }));
+  }
+
+  function openPersonalRouteEditor(stop = null) {
+    const current = stop || { id:'',name:'',note:'' };
+    personalRouteId.value = current.id || '';
+    personalRouteOriginalName.value = current.name || '';
+    personalRouteName.value = current.name || '';
+    personalRouteNote.value = current.note || '';
+    personalRouteTitle.textContent = current.name ? 'Edit Route Stop' : 'Add a Route Stop';
+    deletePersonalRouteBtn.hidden = !current.name;
+    document.documentElement.classList.add('v140-form-dialog-open');
+    document.body.classList.add('v140-form-dialog-open');
+    if (!personalRouteDialog.open) personalRouteDialog.showModal();
+    requestAnimationFrame(() => personalRouteName.focus());
+  }
+
+  function savePersonalRoute(event) {
+    event.preventDefault();
+    const name = cleanLocation(personalRouteName.value);
+    if (!name) return;
+    const originalName = cleanLocation(personalRouteOriginalName.value);
+    const id = personalRouteId.value || `route-${journalId()}`;
+    const route = normalizePersonalRoute(experienceSettings.personalRoute).filter((entry) => (
+      entry.id !== id
+      && entry.name.toLowerCase() !== name.toLowerCase()
+      && (!originalName || entry.name.toLowerCase() !== originalName.toLowerCase())
+    ));
+    route.push({ id,name,note:String(personalRouteNote.value || '').trim().replace(/\s+/g,' ').slice(0,180) });
+    experienceSettings.personalRoute = normalizePersonalRoute(route);
+    if (originalName && originalName.toLowerCase() !== name.toLowerCase()) {
+      Object.values(state || {}).forEach((variants) => Object.values(variants || {}).forEach((current) => {
+        if (cleanLocation(current?.locationFound).toLowerCase() === originalName.toLowerCase()) current.locationFound = name;
+      }));
+      saveProgress();
+    }
+    saveExperienceSettings();
+    personalRouteDialog.close();
+    renderJournal();
+    showToast('Personal Route updated');
+  }
+
+  function deletePersonalRoute() {
+    const id = personalRouteId.value;
+    const originalName = cleanLocation(personalRouteOriginalName.value);
+    personalRouteDialog.close();
+    requestClearConfirmation(() => {
+      const recordedCount = journalCurrentLocationStats().ranked.find(([name]) => name.toLowerCase() === originalName.toLowerCase())?.[1] || 0;
+      const route = normalizePersonalRoute(experienceSettings.personalRoute).filter((entry) => entry.id !== id && entry.name.toLowerCase() !== originalName.toLowerCase());
+      if (recordedCount) route.push({ id:`hidden-${journalId()}`,name:originalName,note:'',hidden:true });
+      experienceSettings.personalRoute = normalizePersonalRoute(route);
+      saveExperienceSettings();
+      renderJournal();
+      showToast('Route note deleted; collected Sprite locations were kept');
+    });
+  }
+
+  function openCollectionStory(entry = null) {
+    const story = entry?.type === 'story' ? entry : null;
+    collectionStoryId.value = story?.id || '';
+    collectionStoryName.value = story?.storyTitle || '';
+    collectionStoryNote.value = story?.storyNote || '';
+    collectionStoryLocation.value = story?.storyLocation || '';
+    collectionStoryDate.value = isoToLocalDateTime(story?.timestamp || new Date().toISOString());
+    collectionStoryTitle.textContent = story ? 'Edit Your Collection Story' : 'Add to Your Collection Story';
+    document.documentElement.classList.add('v140-form-dialog-open');
+    document.body.classList.add('v140-form-dialog-open');
+    if (!collectionStoryDialog.open) collectionStoryDialog.showModal();
+    requestAnimationFrame(() => collectionStoryName.focus());
+  }
+
+  function saveCollectionStory(event) {
+    event.preventDefault();
+    const title = String(collectionStoryName.value || '').trim().replace(/\s+/g,' ').slice(0,80);
+    if (!title) return;
+    const timestamp = localDateTimeToIso(collectionStoryDate.value) || new Date().toISOString();
+    let entry = [...pendingJournalEntries,...journalEntries].find((item) => item.id === collectionStoryId.value && item.type === 'story');
+    if (!entry) {
+      entry = {
+        id:journalId(),timestamp,type:'story',familyId:'collection-story',variantId:`story-${Date.now()}`,
+        familyName:'Collection Story',variantName:title,rarity:defaultRarity,seasonId:CURRENT_SEASON_ID,
+        before:{},after:{},undone:false,undoneAt:''
+      };
+      if (journalReady) journalEntries.unshift(entry); else pendingJournalEntries.unshift(entry);
+    }
+    entry.timestamp = timestamp;
+    entry.variantName = title;
+    entry.storyTitle = title;
+    entry.storyNote = String(collectionStoryNote.value || '').trim().slice(0,400);
+    entry.storyLocation = cleanLocation(collectionStoryLocation.value);
+    entry.activityCleared = false;
+    if (journalReady) scheduleJournalSave();
+    collectionStoryDialog.close();
+    renderJournal();
+    showToast('Collection Story saved');
+  }
+
+  function deleteCollectionStory(entryId) {
+    requestClearConfirmation(() => {
+      journalEntries = journalEntries.filter((entry) => entry.id !== entryId);
+      pendingJournalEntries = pendingJournalEntries.filter((entry) => entry.id !== entryId);
+      renderJournal();
+      if (journalReady) scheduleJournalSave();
+      showToast('Story deleted');
+    });
   }
 
   function makeJournalMemoryCard(entry) {
@@ -2471,7 +2641,7 @@
     const visibleEntries = (journalReady ? journalEntries : pendingJournalEntries)
       .filter((entry) => !entry.undone)
       .sort((a,b) => journalEntryTimestamp(b) - journalEntryTimestamp(a));
-    const activityEntries = visibleEntries.filter((entry) => entry.activityCleared !== true);
+    const activityEntries = visibleEntries.filter((entry) => entry.type === 'story' || entry.activityCleared !== true);
     const locationStats = journalCurrentLocationStats();
     const top = locationStats.ranked[0];
     journalTopLocation.textContent = top?.[0] || 'No drop spots yet';
@@ -2480,13 +2650,14 @@
       : 'Your most-used location will appear here.';
     journalLocationsLogged.textContent = String(locationStats.logged);
     journalEntryCount.textContent = String(activityEntries.length);
-    clearJournalActivityBtn.disabled = !journalReady || !journalEntries.some((entry) => entry.activityCleared !== true);
+    clearJournalActivityBtn.disabled = !journalReady || !journalEntries.some((entry) => entry.type !== 'story' && entry.activityCleared !== true);
     journalZoneTopCount.textContent = String(locationStats.counts.get('Top of Map') || 0);
     journalZoneBottomCount.textContent = String(locationStats.counts.get('Bottom of Map') || 0);
     journalZoneBossCount.textContent = String(locationStats.counts.get('Boss Fight') || 0);
-    journalLocationEmpty.hidden = Boolean(locationStats.ranked.length);
     journalDropSpotList.replaceChildren();
-    locationStats.ranked.slice(0,8).forEach(([place,count],index) => {
+    const routeStops = allPersonalRouteStops(locationStats);
+    journalLocationEmpty.hidden = Boolean(routeStops.length);
+    routeStops.slice(0,20).forEach((stop,index) => {
       const row = document.createElement('article');
       row.className = 'journal-drop-spot';
       const rank = document.createElement('span');
@@ -2494,10 +2665,16 @@
       const name = document.createElement('strong');
       const total = document.createElement('small');
       rank.textContent = String(index + 1);
-      name.textContent = place;
-      total.textContent = `${count} ${count === 1 ? 'Sprite' : 'Sprites'}`;
+      name.textContent = stop.name;
+      total.textContent = `${stop.count} ${stop.count === 1 ? 'Sprite' : 'Sprites'}${stop.note ? ` · ${stop.note}` : ''}`;
       copy.append(name,total);
-      row.append(rank,copy);
+      const edit = document.createElement('button');
+      edit.type = 'button';
+      edit.className = 'journal-route-edit';
+      edit.textContent = 'Edit';
+      edit.setAttribute('aria-label',`Edit ${stop.name} in your Personal Route`);
+      edit.addEventListener('click',() => openPersonalRouteEditor(stop));
+      row.append(rank,copy,edit);
       journalDropSpotList.appendChild(row);
     });
     journalMapZones.forEach((button) => {
@@ -2549,6 +2726,45 @@
     });
 
     filtered.forEach((entry) => {
+      if (entry.type === 'story') {
+        const row = document.createElement('article');
+        row.className = 'journal-entry journal-story-entry';
+        const thumb = document.createElement('div');
+        thumb.className = 'journal-entry-thumb';
+        thumb.textContent = '✦';
+        const copy = document.createElement('div');
+        copy.className = 'journal-entry-copy';
+        const name = document.createElement('h4');
+        name.textContent = entry.storyTitle || entry.variantName || 'Collection Story';
+        const action = document.createElement('strong');
+        action.textContent = 'Collection story';
+        const time = document.createElement('time');
+        time.dateTime = entry.timestamp;
+        time.textContent = formatJournalDate(entry.timestamp);
+        copy.append(name,action,time);
+        if (entry.storyLocation) {
+          const place = document.createElement('span');
+          place.className = 'journal-entry-location';
+          place.textContent = entry.storyLocation;
+          copy.appendChild(place);
+        }
+        if (entry.storyNote) {
+          const note = document.createElement('p');
+          note.className = 'journal-story-note';
+          note.textContent = entry.storyNote;
+          copy.appendChild(note);
+        }
+        const actions = document.createElement('div');
+        actions.className = 'journal-entry-actions';
+        const edit = document.createElement('button');
+        edit.type = 'button';edit.textContent = 'Edit';edit.addEventListener('click',() => openCollectionStory(entry));
+        const remove = document.createElement('button');
+        remove.type = 'button';remove.className = 'journal-story-delete';remove.textContent = 'Delete';remove.addEventListener('click',() => deleteCollectionStory(entry.id));
+        actions.append(edit,remove);
+        row.append(thumb,copy,actions);
+        journalEntryList.appendChild(row);
+        return;
+      }
       const { family,variant } = journalSprite(entry);
       const current = state[entry.familyId]?.[entry.variantId];
       const familyInfo = family ? familyView(family) : null;
@@ -2732,15 +2948,23 @@
   function renderSpriteCompass() {
     const query = normalizeSearchText(compassTargetInput.value || '');
     const sortDirection = compassTargetSort?.value === 'za' ? -1 : 1;
-    const matching = searchableSprites()
-      .filter((entry) => entry.seasonId === CURRENT_SEASON_ID)
-      .filter((entry) => !variantState(entry.familyId,entry.variantId).collected)
-      .filter((entry) => !query || entry.searchText.includes(query))
-      .sort((left,right) => sortDirection * (
-        left.groupName.localeCompare(right.groupName,undefined,{ sensitivity:'base',numeric:true })
-        || left.variantName.localeCompare(right.variantName,undefined,{ sensitivity:'base',numeric:true })
-      ));
+    const matching = allFamilies().flatMap((family) => {
+      const group = familyView(family);
+      if (group.deleted || !group.visible) return [];
+      const variants = orderedVariants(family).filter((variant) => {
+        const view = variantView(family,variant);
+        return !view.deleted && view.visible && spriteSeasonId(family,variant) === CURRENT_SEASON_ID;
+      });
+      const availableVariants = variants.filter((variant) => !variantState(family.id,variant.id).collected);
+      if (!availableVariants.length) return [];
+      const familyName = group.name || family.name || 'Sprite';
+      const searchText = normalizeSearchText([familyName,...variants.map((variant) => variantView(family,variant).name || variant.name)].join(' '));
+      if (query && !searchText.includes(query)) return [];
+      const base = variants.find((variant) => variant.id === 'base') || variants[0];
+      return [{ family,group,familyName,base,availableVariants }];
+    }).sort((left,right) => sortDirection * left.familyName.localeCompare(right.familyName,undefined,{ sensitivity:'base',numeric:true }));
     const pageCount = Math.max(1,Math.ceil(matching.length / COMPASS_QUICK_ADD_PAGE_SIZE));
+    if (compassExpandedFamilyId && !matching.some((entry) => entry.family.id === compassExpandedFamilyId)) compassExpandedFamilyId = '';
     compassQuickAddPage = Math.max(0,Math.min(compassQuickAddPage,pageCount - 1));
     const pageStart = compassQuickAddPage * COMPASS_QUICK_ADD_PAGE_SIZE;
     const available = matching.slice(pageStart,pageStart + COMPASS_QUICK_ADD_PAGE_SIZE);
@@ -2756,37 +2980,60 @@
         : '0 Sprites';
     }
     available.forEach((entry) => {
-      const info = searchTargetInfo({ familyId:entry.familyId,variantId:entry.variantId,addedAt:'' });
-      if (!info) return;
       const row = document.createElement('article');
-      row.className = 'compass-target-card';
+      row.className = 'compass-target-card compass-family-card';
+      row.dataset.expanded = String(compassExpandedFamilyId === entry.family.id);
       const thumb = document.createElement('span');
       thumb.className = 'compass-target-thumb';
-      if (info.image) {
+      const baseImage = displayImageSource(entry.base ? variantView(entry.family,entry.base).image : '');
+      if (baseImage) {
         const image = document.createElement('img');
-        image.src = info.image;
+        image.src = baseImage;
         image.alt = '';
         thumb.appendChild(image);
       } else {
-        thumb.textContent = (info.entry.groupName || 'S').slice(0,1).toUpperCase();
+        thumb.textContent = entry.familyName.slice(0,1).toUpperCase();
       }
       const copy = document.createElement('div');
       const name = document.createElement('strong');
-      name.textContent = `${info.entry.groupName} · ${info.entry.variantName}`;
+      name.textContent = entry.familyName;
       copy.append(name);
       const actions = document.createElement('div');
       const add = document.createElement('button');
-      const alreadyAdded = huntCart.some((item) => item.familyId === entry.familyId && item.variantId === entry.variantId);
       add.type = 'button';
       add.className = 'compass-quick-add';
       add.textContent = '+';
-      add.setAttribute('aria-label',alreadyAdded
-        ? `${entry.groupName} ${entry.variantName} is already in this Adventure`
-        : `Add ${entry.groupName} ${entry.variantName} to this Adventure`);
-      add.disabled = !huntMode.active || alreadyAdded;
-      add.addEventListener('click',() => addSpriteToHuntCart(info.family,info.variant));
+      add.setAttribute('aria-expanded',String(compassExpandedFamilyId === entry.family.id));
+      add.setAttribute('aria-label',`Show ${entry.familyName} variants`);
+      add.addEventListener('click',() => {
+        compassExpandedFamilyId = compassExpandedFamilyId === entry.family.id ? '' : entry.family.id;
+        renderSpriteCompass();
+      });
       actions.append(add);
       row.append(thumb,copy,actions);
+      if (compassExpandedFamilyId === entry.family.id) {
+        row.style.setProperty('--quick-add-span',String(Math.max(3,entry.availableVariants.length + 2)));
+        const variants = document.createElement('div');
+        variants.className = 'compass-family-variants';
+        entry.availableVariants.forEach((variant) => {
+          const variantInfo = variantView(entry.family,variant);
+          const item = document.createElement('div');
+          const label = document.createElement('span');
+          label.textContent = variantInfo.name || variant.name || 'Variant';
+          const variantAdd = document.createElement('button');
+          const alreadyAdded = huntCart.some((cartItem) => cartItem.familyId === entry.family.id && cartItem.variantId === variant.id);
+          variantAdd.type = 'button';
+          variantAdd.textContent = '+';
+          variantAdd.disabled = !huntMode.active || alreadyAdded;
+          variantAdd.setAttribute('aria-label',alreadyAdded
+            ? `${entry.familyName} ${label.textContent} is already in this Adventure`
+            : `Add ${entry.familyName} ${label.textContent} to this Adventure`);
+          variantAdd.addEventListener('click',() => addSpriteToHuntCart(entry.family,variant));
+          item.append(label,variantAdd);
+          variants.appendChild(item);
+        });
+        row.appendChild(variants);
+      }
       compassTargetList.appendChild(row);
     });
 
@@ -3287,6 +3534,31 @@
     }));
   }
 
+  function saveSpriteDustLevels(family,variant,inputs) {
+    const values = {};
+    let invalid = false;
+    inputs.forEach((input,index) => {
+      const raw = String(input.value || '').trim();
+      if (!raw) return;
+      const amount = Number(raw.replace(/,/g,''));
+      if (!Number.isFinite(amount) || amount < 0 || amount > 1000000) invalid = true;
+      else values[String(index + 1)] = Math.round(amount);
+    });
+    if (invalid) {
+      showToast('Use whole Sprite Dust amounts from 0 to 1,000,000.');
+      return false;
+    }
+    const previousEdits = cloneJson(spriteCardEdits);
+    const edits = familyCardEdits(family.id);
+    if (Object.keys(values).length) edits.dustLevels[variant.id] = values;
+    else delete edits.dustLevels[variant.id];
+    if (!saveCardEditOrRestore(previousEdits)) return false;
+    renderCollections();
+    renderExtractionDust(activeThemeRarity());
+    showToast(Object.keys(values).length ? `${variantView(family,variant).name}: Sprite Dust saved` : 'Sprite Dust values removed');
+    return true;
+  }
+
   function rarityDustRewards(rarity) {
     const rewardCounts = Object.fromEntries([1,2,3,4,5].map((level) => [String(level),new Map()]));
     allFamilies().filter((family) => familyRarity(family) === rarity).forEach((family) => {
@@ -3308,6 +3580,8 @@
 
   function spriteDustAtLevel(family,variant,level = 1) {
     const normalizedLevel = String(Math.max(1,Math.min(5,Number(level) || 1)));
+    const saved = Number(variantView(family,variant).dustLevels[normalizedLevel]);
+    if (Number.isFinite(saved) && saved >= 0) return saved;
     return Number(rarityDustRewards(familyRarity(family))[normalizedLevel]) || 0;
   }
 
@@ -4263,6 +4537,33 @@
     percentageInput.setAttribute('aria-label',`Rarity percentage for ${view.name || 'sprite'} ${familyInfo.name || ''}`.trim());
     percentageEditor.append(percentageEditorLabel,percentageInput);
 
+    const dustEditor = document.createElement('section');
+    dustEditor.className = 'sprite-dust-editor';
+    const dustEditorTitle = document.createElement('strong');
+    dustEditorTitle.textContent = 'Sprite Dust by level';
+    const dustFields = document.createElement('div');
+    const dustInputs = [1,2,3,4,5].map((level) => {
+      const label = document.createElement('label');
+      label.textContent = `Lv ${level}`;
+      const input = document.createElement('input');
+      input.type = 'number';
+      input.min = '0';
+      input.max = '1000000';
+      input.step = '1';
+      input.inputMode = 'numeric';
+      input.placeholder = '—';
+      input.value = hasOwn(view.dustLevels,String(level)) ? String(view.dustLevels[String(level)]) : '';
+      input.setAttribute('aria-label',`${view.name || 'Sprite'} level ${level} Sprite Dust`);
+      label.appendChild(input);
+      dustFields.appendChild(label);
+      return input;
+    });
+    const saveDust = document.createElement('button');
+    saveDust.type = 'button';
+    saveDust.textContent = 'Save Sprite Dust';
+    saveDust.addEventListener('click',() => saveSpriteDustLevels(family,variant,dustInputs));
+    dustEditor.append(dustEditorTitle,dustFields,saveDust);
+
     const variantLine = document.createElement('div');
     variantLine.className = 'sprite-variant-line';
     const rarityPercentage = document.createElement('span');
@@ -4308,7 +4609,7 @@
 
     const masterLabel = document.createElement('div');
     masterLabel.className = 'master-label';
-    card.append(crown,seasonBadge,imageWrap,editorTools,percentageEditor,variantLine,listLabel,collect,huntCartButton,masterLabel);
+    card.append(crown,seasonBadge,imageWrap,editorTools,percentageEditor,dustEditor,variantLine,listLabel,collect,huntCartButton,masterLabel);
 
     const toggleCollected = () => {
       if (huntMode.active) return;
@@ -5072,6 +5373,52 @@
     settingsAnimationToggle.checked = experienceSettings.animations;
     settingsReduceMotionToggle.checked = experienceSettings.reduceMotion;
     settingsDefaultView.value = experienceSettings.defaultView;
+    if (settingsEventNoticesToggle) settingsEventNoticesToggle.checked = experienceSettings.eventNotices !== false;
+  }
+
+  function eventNoticeHistory() {
+    try {
+      const value = JSON.parse(localStorage.getItem(EVENT_NOTICE_KEY) || '[]');
+      return Array.isArray(value) ? value.map(String).slice(-100) : [];
+    } catch { return []; }
+  }
+
+  function activeSpriteEventOccurrence(event,now = new Date()) {
+    if (!event || event.enabled === false) return null;
+    const schedule = event.schedule || {};
+    if (schedule.type === 'weekly') {
+      const day = Math.max(0,Math.min(6,Number(schedule.day) || 0));
+      if (now.getDay() !== day) return null;
+      const startHour = Math.max(0,Math.min(23,Number(schedule.startHour) || 0));
+      const durationHours = Math.max(1,Math.min(168,Number(schedule.durationHours) || 24));
+      const start = new Date(now);start.setHours(startHour,0,0,0);
+      const end = new Date(start.getTime() + durationHours * 3600000);
+      if (now < start || now >= end) return null;
+      return { key:`${event.id}:${start.toISOString().slice(0,10)}`,start,end };
+    }
+    const start = new Date(schedule.start || '');
+    const end = new Date(schedule.end || '');
+    if (!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime()) || now < start || now >= end) return null;
+    return { key:`${event.id}:${start.toISOString()}`,start,end };
+  }
+
+  function maybeShowSpriteEventNotice() {
+    if (!experienceSettings.eventNotices || !spriteEventDialog || document.hidden || spriteEventDialog.open) return;
+    if (document.querySelector('dialog[open]')) {
+      window.setTimeout(maybeShowSpriteEventNotice,1500);
+      return;
+    }
+    const events = Array.isArray(window.SPRITE_EVENTS) ? window.SPRITE_EVENTS : [];
+    const seen = eventNoticeHistory();
+    const active = events.map((event) => ({ event,occurrence:activeSpriteEventOccurrence(event) }))
+      .find(({ occurrence }) => occurrence && !seen.includes(occurrence.key));
+    if (!active) return;
+    spriteEventTitle.textContent = String(active.event.title || 'Sprite Event').slice(0,80);
+    spriteEventCopy.textContent = String(active.event.description || 'A Sprite event is active now.').slice(0,360);
+    spriteEventTime.textContent = `Active until ${new Intl.DateTimeFormat(undefined,{ weekday:'short',hour:'numeric',minute:'2-digit' }).format(active.occurrence.end)}`;
+    try { localStorage.setItem(EVENT_NOTICE_KEY,JSON.stringify([...seen,active.occurrence.key].slice(-100))); } catch { /* Storage is optional. */ }
+    spriteEventDialog.showModal();
+    requestAnimationFrame(() => spriteEventTitle.focus());
   }
 
   function formatSettingsSaveTime(value) {
@@ -5176,6 +5523,8 @@
       animations:source.animations !== false,
       reduceMotion:source.reduceMotion === true,
       defaultView:['card','list','sheet'].includes(source.defaultView) ? source.defaultView : 'card',
+      eventNotices:source.eventNotices !== false,
+      personalRoute:normalizePersonalRoute(source.personalRoute),
       helpCopy:cleanHelpCopy(source.helpCopy)
     };
   }
@@ -6345,6 +6694,17 @@
   document.getElementById('comingSoonHomeBtn').addEventListener('click',() => goHomeToRare());
   journalActionFilter.addEventListener('change',renderJournal);
   clearJournalActivityBtn.addEventListener('click',clearJournalActivity);
+  addCollectionStoryBtn?.addEventListener('click',() => openCollectionStory());
+  collectionStoryForm?.addEventListener('submit',saveCollectionStory);
+  document.getElementById('cancelCollectionStoryBtn')?.addEventListener('click',() => collectionStoryDialog.close());
+  managePersonalRouteBtn?.addEventListener('click',() => openPersonalRouteEditor());
+  personalRouteForm?.addEventListener('submit',savePersonalRoute);
+  deletePersonalRouteBtn?.addEventListener('click',deletePersonalRoute);
+  document.getElementById('cancelPersonalRouteBtn')?.addEventListener('click',() => personalRouteDialog.close());
+  [collectionStoryDialog,personalRouteDialog].forEach((dialog) => dialog?.addEventListener('close',() => {
+    document.documentElement.classList.remove('v140-form-dialog-open');
+    document.body.classList.remove('v140-form-dialog-open');
+  }));
   journalMapZones.forEach((button) => {
     button.addEventListener('click',() => {
       const zone = button.dataset.journalMapZone || '';
@@ -6414,6 +6774,7 @@
   });
   compassTargetInput.addEventListener('input',() => {
     compassQuickAddPage = 0;
+    compassExpandedFamilyId = '';
     closeCompassTargetResults();
     renderSpriteCompass();
   });
@@ -6425,18 +6786,32 @@
   });
   compassTargetSort?.addEventListener('change',() => {
     compassQuickAddPage = 0;
+    compassExpandedFamilyId = '';
     renderSpriteCompass();
   });
   compassQuickAddPrev?.addEventListener('click',() => {
     compassQuickAddPage = Math.max(0,compassQuickAddPage - 1);
+    compassExpandedFamilyId = '';
     renderSpriteCompass();
     compassTargetList.scrollIntoView({ block:'nearest',behavior:'smooth' });
   });
   compassQuickAddNext?.addEventListener('click',() => {
     compassQuickAddPage += 1;
+    compassExpandedFamilyId = '';
     renderSpriteCompass();
     compassTargetList.scrollIntoView({ block:'nearest',behavior:'smooth' });
   });
+  compassTargetList?.addEventListener('touchstart',(event) => {
+    compassSwipeStartX = event.changedTouches?.[0]?.clientX || 0;
+  },{ passive:true });
+  compassTargetList?.addEventListener('touchend',(event) => {
+    if (!compassSwipeStartX || event.target.closest('button')) return;
+    const delta = (event.changedTouches?.[0]?.clientX || 0) - compassSwipeStartX;
+    compassSwipeStartX = 0;
+    if (Math.abs(delta) < 55) return;
+    if (delta < 0 && !compassQuickAddNext.disabled) compassQuickAddNext.click();
+    if (delta > 0 && !compassQuickAddPrev.disabled) compassQuickAddPrev.click();
+  },{ passive:true });
   document.addEventListener('pointerdown',(event) => {
     if (!event.target.closest('.compass-target-form') && !event.target.closest('.compass-target-results')) closeCompassTargetResults();
   });
@@ -6503,6 +6878,7 @@
   });
   document.addEventListener('visibilitychange',() => {
     if (!document.hidden && huntMode.active) updateHuntTimer();
+    if (!document.hidden) window.setTimeout(maybeShowSpriteEventNotice,250);
   });
   let backgroundMotionFrame = 0;
   function wakeBackgroundMotion() {
@@ -6629,6 +7005,11 @@
     experienceSettings.defaultView = settingsDefaultView.value;
     saveExperienceSettings();
     showToast(`Default view: ${experienceSettings.defaultView}`);
+  });
+  settingsEventNoticesToggle?.addEventListener('change',() => {
+    experienceSettings.eventNotices = settingsEventNoticesToggle.checked;
+    saveExperienceSettings();
+    if (experienceSettings.eventNotices) window.setTimeout(maybeShowSpriteEventNotice,50);
   });
   settingsManageAccountBtn.addEventListener('click',() => window.SPRITE_ACCOUNT_BRIDGE?.openAccount?.());
   window.addEventListener('sprite-cloud-status-changed',renderSettings);
@@ -6768,7 +7149,7 @@
                             : (isUnownedPage() ? `#${missingView}` : `#${activeRarity.toLowerCase()}`)))))));
   if (location.hash !== activeHash) history.replaceState({ rarity:activeRarity },'',activeHash);
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./service-worker.js?v=139',{ updateViaCache:'none' }).then((registration) => registration.update()).catch(() => {});
+    navigator.serviceWorker.register('./service-worker.js?v=140',{ updateViaCache:'none' }).then((registration) => registration.update()).catch(() => {});
   }
   const signalAppRendered = () => window.dispatchEvent(new Event('sprite-app-rendered'));
   if (document.fonts?.ready) {
@@ -6780,5 +7161,6 @@
     signalAppRendered();
   }
   applyExperienceSettings();
+  window.setTimeout(maybeShowSpriteEventNotice,1100);
   window.setTimeout(maybeOpenWelcome,700);
 })();

@@ -1,0 +1,73 @@
+/* V140 · Admin Dust editor, collection stories, routes, event notices, Quick Add, profile order */
+
+html.v140-form-dialog-open,body.v140-form-dialog-open { overflow:hidden !important;overscroll-behavior:none; }
+
+.journal-manage-button,.journal-add-story,.journal-route-edit {
+  min-height:36px;
+  padding:0 12px;
+  color:#eaf8ff;
+  border:1px solid rgba(141,222,255,.32);
+  border-radius:11px;
+  background:rgba(40,127,177,.17);
+  font:900 10px/1 var(--font-button,var(--font-body));
+}
+
+.journal-drop-spot { grid-template-columns:auto minmax(0,1fr) auto !important; }
+.journal-route-edit { min-height:32px;padding:0 10px; }
+.journal-story-entry { border-color:rgba(255,212,106,.31) !important;background:linear-gradient(135deg,rgba(255,211,99,.09),rgba(255,255,255,.035)) !important; }
+.journal-story-entry .journal-entry-thumb { color:#ffe295;background:rgba(255,204,73,.13); }
+.journal-story-note { margin:6px 0 0;color:#cbd6e4;font-size:11px;line-height:1.45; }
+.journal-story-delete { color:#ffb5b5 !important;border-color:rgba(255,113,113,.28) !important; }
+.collection-story-dialog input,.collection-story-dialog textarea,.personal-route-dialog input,.personal-route-dialog textarea {
+  box-sizing:border-box;width:100%;margin-top:6px;padding:11px 12px;color:#fff;border:1px solid rgba(160,214,244,.28);border-radius:11px;outline:0;background:rgba(1,6,16,.75);font:700 13px/1.3 var(--font-body);
+}
+.collection-story-dialog textarea,.personal-route-dialog textarea { resize:vertical; }
+.personal-route-actions .danger-btn { margin-right:auto; }
+
+.settings-mode-notice { margin:0 0 10px;color:#aabbd0;font-size:11px;line-height:1.5; }
+.settings-mode-guide details { border-top:1px solid rgba(255,255,255,.1); }
+.settings-mode-guide summary { padding:13px 2px;color:#f6fbff;cursor:pointer;font-weight:900; }
+.settings-mode-guide details p { margin:-4px 0 13px;color:#aebdd0;font-size:11px;line-height:1.5; }
+
+.sprite-event-dialog form { text-align:center; }
+.sprite-event-eyebrow { display:block;color:#8ce7ff;font-size:10px;font-weight:950;letter-spacing:.15em;text-transform:uppercase; }
+.sprite-event-dialog h2 { margin:7px 0;color:#fff;font-family:var(--font-heading);font-size:clamp(34px,9vw,50px); }
+.sprite-event-dialog p { color:#d6e1ef;line-height:1.55; }
+.sprite-event-dialog small { display:block;color:#9fb1c7; }
+
+.sprite-compass-page .compass-target-list { align-items:start; }
+.sprite-compass-page .compass-family-card { align-self:start; }
+.sprite-compass-page .compass-family-card[data-expanded="true"] { grid-row:span var(--quick-add-span,6); }
+.sprite-compass-page .compass-family-variants {
+  grid-column:1/-1;display:grid;gap:4px;margin-top:3px;padding-top:6px;border-top:1px solid rgba(255,255,255,.1);
+}
+.sprite-compass-page .compass-family-variants > div { display:grid;grid-template-columns:minmax(0,1fr) 24px;align-items:center;gap:6px;min-height:30px;padding-left:4px;color:#dce9f7;font-size:10px;font-weight:850; }
+.sprite-compass-page .compass-family-variants button { width:24px;min-width:24px;min-height:26px;padding:0;color:#72f0ae;border:0;background:transparent;font:300 25px/1 Arial,sans-serif; }
+.sprite-compass-page .compass-family-variants button:disabled { color:#758394;opacity:.35; }
+
+.profile-owner-panel > .profile-public-favorites,.profile-visitor-panel > .profile-public-favorites { margin-top:0; }
+.profile-owner-panel > .profile-account-rail { margin-top:22px;margin-bottom:0; }
+.profile-section-title h3 { white-space:nowrap; }
+#profileOwnerFavoritesTitle,#profileVisitorFavoritesTitle { font-size:clamp(24px,5vw,32px); }
+.profile-identity-copy h3 { overflow:hidden !important;overflow-wrap:normal !important;text-overflow:ellipsis;white-space:nowrap; }
+.profile-display { padding-bottom:clamp(23px,5vw,38px) !important; }
+.profile-code-chip {
+  position:relative !important;right:auto !important;bottom:auto !important;left:auto !important;transform:none !important;grid-column:3;grid-row:2;justify-self:stretch;justify-content:center;margin-top:-8px;
+}
+.profile-owner-actions { align-self:center; }
+.profile-lookup-panel { margin-top:22px; }
+
+body.sprite-edit-mode .sprite-dust-editor { position:relative;z-index:8; }
+
+@media (max-width:680px) {
+  .journal-history-controls { flex-wrap:wrap; }
+  .journal-manage-button,.journal-add-story { min-height:34px;padding-inline:10px; }
+  .profile-code-chip { grid-column:1/-1;grid-row:auto;justify-self:center;margin-top:0; }
+}
+
+@media (max-width:430px) {
+  .profile-display { grid-template-columns:auto minmax(0,1fr) !important;text-align:left !important;gap:12px !important; }
+  .profile-avatar { width:72px !important;margin:0 !important; }
+  .profile-owner-actions { grid-column:1/-1 !important; }
+  .profile-code-chip { grid-column:1/-1;justify-self:stretch;justify-content:center; }
+}

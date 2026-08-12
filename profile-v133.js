@@ -28,6 +28,7 @@
   if (!page) return;
 
   const lookupForm = document.getElementById('profileLookupForm');
+  const lookupPanel = document.querySelector('.profile-lookup-panel');
   const lookupCode = document.getElementById('profileLookupCode');
   const showMineButton = document.getElementById('profileShowMineBtn');
   const status = document.getElementById('profileStatus');
@@ -360,6 +361,7 @@
     setAvatar(ownerAvatar,profile.avatar,profile.imagePath,profile.updatedAt);
     setAvatar(heroAvatar,profile.avatar,profile.imagePath,profile.updatedAt);
     ownerName.textContent = profile.displayName || 'Sprite Collector';
+    fitProfileName(ownerName);
     ownerBio.textContent = profile.bio || '';
     ownerBio.hidden = !profile.bio;
     heroCode.textContent = profile.meadowCode || 'Creating…';
@@ -376,22 +378,40 @@
   function renderVisitor(profile) {
     setAvatar(visitorAvatar,profile.avatar,profile.imagePath,profile.updatedAt);
     visitorName.textContent = profile.displayName || 'Sprite Collector';
+    fitProfileName(visitorName);
     visitorBio.textContent = profile.bio || 'This collector has not added a bio yet.';
     visitorCode.textContent = profile.meadowCode;
     renderStats(visitorStats,profile.stats);
     renderFavoriteShowcase(visitorFavorites,visitorFavoritesEmpty,profile.favorites);
   }
 
+  function fitProfileName(element) {
+    if (!element) return;
+    element.style.fontSize = '';
+    requestAnimationFrame(() => {
+      const available = element.parentElement?.clientWidth || 0;
+      if (!available) return;
+      let size = parseFloat(getComputedStyle(element).fontSize) || 48;
+      while (element.scrollWidth > available && size > 20) {
+        size -= 1;
+        element.style.fontSize = `${size}px`;
+      }
+    });
+  }
+
   function showOwnerMode() {
     const signedIn = Boolean(session());
     setupNotice.hidden = configured();
     signedOut.hidden = signedIn;
-    ownerHero.hidden = !signedIn;
+    ownerHero.hidden = true;
     ownerPanel.hidden = !signedIn;
     visitorPanel.hidden = true;
     showMineButton.hidden = true;
     shownVisitorCode = '';
-    if (signedIn) renderOwner();
+    if (signedIn) {
+      if (lookupPanel && ownerPanel.nextElementSibling !== lookupPanel) page.insertBefore(ownerPanel,lookupPanel);
+      renderOwner();
+    }
     else renderQuickAvatar();
     renderCloudState();
   }
@@ -404,6 +424,7 @@
     visitorPanel.hidden = false;
     showMineButton.hidden = !session();
     shownVisitorCode = profile.meadowCode;
+    if (lookupPanel && visitorPanel.nextElementSibling !== lookupPanel) page.insertBefore(visitorPanel,lookupPanel);
     renderVisitor(profile);
     renderQuickAvatar();
   }
