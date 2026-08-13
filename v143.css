@@ -1,0 +1,164 @@
+/* V143 — stable crowns, neon tracker headings, Match/Session Assistant, Collection History. */
+
+/* The app name is deliberately identical on every rarity page. */
+#headerTitle {
+  color:#fff !important;
+  background:none !important;
+  background-image:none !important;
+  -webkit-background-clip:border-box !important;
+  background-clip:border-box !important;
+  -webkit-text-fill-color:#fff !important;
+  -webkit-text-stroke:.55px rgba(224,239,255,.72) !important;
+  filter:none !important;
+  text-shadow:
+    0 3px 0 rgba(0,0,0,.9),
+    0 0 8px rgba(255,255,255,.78),
+    0 0 20px rgba(185,220,255,.5),
+    0 0 38px rgba(104,174,255,.28) !important;
+}
+
+/* Rarity headings stay readable but are brighter, larger neon instead of metal. */
+body:not(.vault-view) #activePageTitle {
+  font-size:clamp(38px,9.6vw,62px) !important;
+  line-height:.95 !important;
+  color:color-mix(in srgb,var(--v142-rarity) 86%,white 14%) !important;
+  letter-spacing:.01em;
+  text-shadow:
+    0 3px 0 rgba(0,0,0,.92),
+    0 0 6px color-mix(in srgb,var(--v142-rarity) 94%,white),
+    0 0 17px color-mix(in srgb,var(--v142-rarity) 82%,transparent),
+    0 0 34px color-mix(in srgb,var(--v142-rarity) 62%,transparent) !important;
+}
+
+/* Crown button never changes its own geometry. Only the SVG shines. */
+.crown-button,
+.sheet-crown-button,
+.crown-button[aria-pressed="true"],
+.sheet-crown-button[aria-pressed="true"] {
+  background:transparent !important;
+  background-image:none !important;
+  box-shadow:none !important;
+  backdrop-filter:none !important;
+  -webkit-backdrop-filter:none !important;
+  filter:none !important;
+  outline-offset:3px;
+}
+.crown-button.crown-celebrate,
+.sheet-crown-button.crown-celebrate { animation:none !important; }
+.crown-button.crown-celebrate svg,
+.sheet-crown-button.crown-celebrate svg {
+  transform-origin:50% 55%;
+  animation:v143CrownJewel .86s cubic-bezier(.18,1.55,.28,1) both !important;
+}
+.card.mastered .crown-button svg,
+.sheet-crown-button[aria-pressed="true"] svg {
+  filter:
+    drop-shadow(0 0 5px #fff7bd)
+    drop-shadow(0 0 13px rgba(255,193,34,.98))
+    drop-shadow(0 3px 2px rgba(64,32,0,.76)) !important;
+}
+.crown-dust-burst { z-index:30; }
+.crown-dust-burst i {
+  width:8px !important;
+  height:8px !important;
+  background:radial-gradient(circle,#fff 0 17%,#fff8bd 19% 34%,#ffd22e 38% 65%,transparent 69%) !important;
+  box-shadow:0 0 8px #fff,0 0 15px #ffd432 !important;
+  animation-duration:.92s !important;
+}
+@keyframes v143CrownJewel {
+  0% { transform:scale(.86);filter:brightness(.8); }
+  42% { transform:scale(1.35);filter:brightness(1.85) saturate(1.35); }
+  68% { transform:scale(.98);filter:brightness(1.3); }
+  100% { transform:scale(1.12);filter:brightness(1); }
+}
+@keyframes v142CrownDust {
+  8% { opacity:1; }
+  100% { opacity:0;transform:rotate(var(--particle-angle)) translateX(67px) scale(.04); }
+}
+
+/* Collection Journal UI is retired. Its old data nodes remain hidden for save compatibility. */
+.collection-journal-page > .journal-view-tabs,
+.collection-journal-page > .journal-insights,
+.collection-journal-page > .journal-location-chart,
+.collection-journal-page > .journal-history { display:none !important; }
+.collection-journal-page { width:min(100% - 22px,980px);margin:0 auto;padding:clamp(20px,4vw,38px) 0 120px; }
+.collection-journal-head { text-align:center;margin-bottom:22px; }
+.collection-history-panel {
+  padding:clamp(16px,3.6vw,26px);
+  border:1px solid rgba(164,217,255,.27);
+  border-radius:27px;
+  background:linear-gradient(145deg,rgba(10,29,56,.87),rgba(5,11,27,.78));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.1),0 18px 48px rgba(0,0,0,.25);
+  backdrop-filter:blur(18px);
+  -webkit-backdrop-filter:blur(18px);
+}
+.collection-history-heading { display:flex;align-items:end;justify-content:space-between;gap:14px;margin-bottom:17px; }
+.collection-history-heading span { color:#82d9ff;font:800 11px/1 var(--font-button);letter-spacing:.13em;text-transform:uppercase; }
+.collection-history-heading h3 { margin:5px 0 0;color:#fff;font-size:clamp(23px,5.6vw,34px); }
+.collection-history-heading button,
+.collection-history-match header button {
+  flex:0 0 auto;min-height:37px;padding:0 13px;color:#fff;border:1px solid rgba(255,255,255,.22);border-radius:999px;background:rgba(255,255,255,.07);font:800 11px var(--font-button);
+}
+.collection-history-list { display:grid;gap:13px; }
+.collection-history-match { padding:15px;border:1px solid rgba(255,255,255,.16);border-radius:21px;background:rgba(2,8,22,.58); }
+.collection-history-match header { display:flex;align-items:center;justify-content:space-between;gap:12px; }
+.collection-history-match h3 { margin:0;color:#fff;font-size:21px; }
+.collection-history-match header span { display:block;margin-top:3px;color:rgba(255,255,255,.62);font-size:11px; }
+.collection-history-sprites { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:13px; }
+.collection-history-sprites > span { display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0;padding:10px 11px;border-left:3px solid var(--v142-rarity);border-radius:12px;background:rgba(255,255,255,.055); }
+.collection-history-sprites b { min-width:0;overflow:hidden;color:#fff;font-size:12px;text-overflow:ellipsis;white-space:nowrap; }
+.collection-history-sprites small { flex:0 0 auto;color:rgba(255,255,255,.67);font-size:10px; }
+.collection-history-sprites > span[data-rarity="Rare"] { --v142-rarity:#4fc0ff; }
+.collection-history-sprites > span[data-rarity="Epic"] { --v142-rarity:#ca63ff; }
+.collection-history-sprites > span[data-rarity="Legendary"] { --v142-rarity:#ff9e3d; }
+.collection-history-sprites > span[data-rarity="Mythic"] { --v142-rarity:#ffd55b; }
+.collection-history-empty { margin:22px 0 3px;color:rgba(255,255,255,.68);text-align:center; }
+
+/* Sprite Assistant primary actions. */
+.assistant-start-actions { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:13px; }
+.sprite-compass-next-target .assistant-start-actions .primary-btn { position:static !important;width:100%;min-height:39px;padding:0 9px;font-size:11px; }
+.secondary-session-btn { color:#fff !important;border-color:rgba(167,129,255,.55) !important;background:linear-gradient(145deg,#6456c7,#30236d) !important; }
+
+/* Match review can add forgotten Sprites without leaving the modal. */
+.hunt-checkout-quick-add { display:grid;gap:6px;margin:13px 0 8px;color:rgba(255,255,255,.72);font:800 11px var(--font-button); }
+.hunt-checkout-quick-add input { width:100%;min-height:45px;padding:0 14px;color:#fff;border:1px solid rgba(132,207,255,.35);border-radius:14px;background:rgba(3,10,24,.72);font:600 15px var(--font-body); }
+.hunt-checkout-quick-results { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;max-height:190px;overflow:auto;margin-bottom:10px; }
+.hunt-checkout-quick-results button { display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-rows:auto auto;gap:1px 8px;align-items:center;min-width:0;padding:9px 10px;color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:12px;background:rgba(255,255,255,.055);text-align:left; }
+.hunt-checkout-quick-results strong,.hunt-checkout-quick-results span { min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+.hunt-checkout-quick-results strong { font-size:11px; }.hunt-checkout-quick-results span { color:rgba(255,255,255,.65);font-size:10px; }
+.hunt-checkout-quick-results b { grid-column:2;grid-row:1 / 3;color:#73d8ff;font-size:22px; }
+
+/* Multi-match review. */
+.session-review-dialog { width:min(94vw,700px); }
+.session-review-dialog form { max-height:min(84dvh,760px);overflow:auto; }
+.session-review-matches { display:grid;gap:11px;margin:14px 0; }
+.session-review-match { padding:13px;border:1px solid rgba(255,255,255,.16);border-radius:18px;background:rgba(4,11,27,.67); }
+.session-review-match header { display:flex;align-items:center;justify-content:space-between;gap:10px; }
+.session-review-match header span { display:block;color:rgba(255,255,255,.62);font-size:10px; }
+.session-review-match header button { min-height:34px;padding:0 13px;color:#fff;border:1px solid rgba(255,255,255,.2);border-radius:999px;background:rgba(255,255,255,.07);font:800 11px var(--font-button); }
+.session-review-items { display:flex;flex-wrap:wrap;gap:7px;margin-top:11px;color:rgba(255,255,255,.62);font-size:11px; }
+.session-review-items > span { display:flex;align-items:center;gap:7px;padding:7px 7px 7px 10px;border-radius:999px;background:rgba(255,255,255,.07); }
+.session-review-items b { font-size:10px; }.session-review-items button { width:24px;height:24px;padding:0;color:#fff;border:0;border-radius:50%;background:rgba(255,87,112,.35);font-size:18px; }
+.session-review-actions { display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px; }
+.session-review-actions button { min-height:43px;padding:0 9px;border-radius:14px;font:800 11px var(--font-button); }
+
+/* Finalized match duplicates appear only inside the Archive pedestal. */
+body.vault-view .archive-match-plaque {
+  position:absolute;z-index:9;right:34%;bottom:12px;left:34%;display:grid;place-items:center;height:23px;color:#fff6d0;border:1px solid rgba(255,236,161,.75);border-radius:999px;background:linear-gradient(180deg,rgba(57,44,18,.95),rgba(15,12,8,.98));box-shadow:inset 0 1px 0 rgba(255,255,255,.34),0 0 11px rgba(255,205,65,.42);font:900 12px/1 var(--font-button);text-shadow:0 1px 2px #000;animation:v143PlaqueGlow 2.4s ease-in-out infinite;
+}
+body.vault-view .archive-match-plaque[hidden] { display:none !important; }
+body:not(.vault-view) .archive-match-plaque { display:none !important; }
+@keyframes v143PlaqueGlow { 50% { box-shadow:inset 0 1px 0 rgba(255,255,255,.46),0 0 18px rgba(255,205,65,.67); } }
+
+@media (max-width:600px) {
+  .collection-history-sprites { grid-template-columns:1fr; }
+  .collection-history-heading { align-items:flex-start; }
+  .collection-history-heading h3 { max-width:210px; }
+  .session-review-actions { grid-template-columns:1fr 1fr; }
+  .session-review-actions .primary-btn { grid-column:1 / -1; }
+}
+
+@media (prefers-reduced-motion:reduce) {
+  .crown-button.crown-celebrate svg,.sheet-crown-button.crown-celebrate svg,.archive-match-plaque { animation:none !important; }
+  .crown-dust-burst { display:none !important; }
+}

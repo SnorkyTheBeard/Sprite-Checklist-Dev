@@ -27,9 +27,9 @@
   const APP_VIEW_COMING_SOON = 'coming-soon';
   const COMPASS_QUICK_ADD_PAGE_SIZE = 500;
   const HELP_COPY_DEFAULTS = Object.freeze({
-    adventure:'Start an Adventure when you begin playing. Pick a drop spot once, use Quick Add for every Sprite you find, and finish for a timed recap.',
+    adventure:'Use Match Start for one game or Session Start for several games. Quick Add what you found, review it, and finalize when you are ready.',
     'hot-drop':'Hottest Drop uses anonymous totals from signed-in collectors during the past hour. It never shows usernames or individual activity, and it waits for at least three collectors before naming a location.',
-    journal:'Your Journal records collection, mastery, Adventure, and location changes. Use Edit location beside an entry whenever a drop spot needs correcting.',
+    journal:'Collection History groups the Sprites you finalized by match. It does not include ordinary checklist taps.',
     profile:'Your profile holds your Meadow Code, selected collection stats, favorite Sprites, and account save status. Share the code so another collector can visit.',
     meadow:'Sprite Archive is a clean gallery of the Sprites already in your collection. Change the selected season to revisit older collections.',
     settings:'Settings controls background motion, reduced motion, your default tracker view, account access, and DEV owner tools.'
@@ -41,8 +41,8 @@
     : { ownerUserIds:[],features:{} };
   const defaultFeatureDefinitions = {
     spriteVault:{ state:'public',label:'Sprite Archive',implemented:true },
-    collectionJournal:{ state:'public',label:'Collection Journal',implemented:true },
-    spriteRunHistory:{ state:'public',label:'Sprite Adventure',implemented:true },
+    collectionJournal:{ state:'public',label:'Collection History',implemented:true },
+    spriteRunHistory:{ state:'public',label:'Sprite Assistant',implemented:true },
     spriteDust:{ state:'public',label:'Sprite Dust',implemented:true },
     profiles:{ state:'public',label:'Profiles',implemented:true },
     sheetView:{ state:'hidden',label:'Sheet View',implemented:true }
@@ -301,7 +301,11 @@
       startedAt,
       sessionStartedAt,
       lastDurationMs,
-      location:cleanLocation(saved.location)
+      location:cleanLocation(saved.location),
+      mode:saved.mode === 'session' ? 'session' : 'match',
+      matchNumber:Math.max(1,Math.min(100,Math.round(Number(saved.matchNumber) || 1))),
+      editingMatchIndex:Number.isInteger(saved.editingMatchIndex) ? saved.editingMatchIndex : -1,
+      sessionMatches:normalizeSessionMatches(saved.sessionMatches)
     };
   }
 
@@ -319,6 +323,21 @@
         level:Math.max(1,Math.min(5,Math.round(Number(item.level) || 1))),
         mastered:item.mastered === true,
         addedAt:validIsoDate(item.addedAt) || new Date().toISOString()
+      }];
+    });
+  }
+
+  function normalizeSessionMatches(value) {
+    if (!Array.isArray(value)) return [];
+    return value.slice(0,100).flatMap((match,index) => {
+      if (!match || typeof match !== 'object') return [];
+      return [{
+        id:String(match.id || `session-match-${Date.now()}-${index}`).slice(0,200),
+        startedAt:validIsoDate(match.startedAt),
+        completedAt:validIsoDate(match.completedAt) || new Date().toISOString(),
+        durationMs:Math.max(0,Math.min(24 * 60 * 60 * 1000,Number(match.durationMs) || 0)),
+        location:cleanLocation(match.location),
+        items:normalizeHuntCart(match.items)
       }];
     });
   }
@@ -349,6 +368,9 @@
         location:cleanLocation(hunt.location),
         durationMs:Math.max(0,Math.min(7 * 24 * 60 * 60 * 1000,Number(hunt.durationMs) || 0)),
         dustEarned:Math.max(0,Math.min(100000000,Math.round(Number(hunt.dustEarned) || 0))),
+        mode:hunt.mode === 'session' ? 'session' : 'match',
+        sessionId:String(hunt.sessionId || '').slice(0,200),
+        matchNumber:Math.max(1,Math.min(100,Math.round(Number(hunt.matchNumber) || 1))),
         items
       }];
     });
@@ -769,6 +791,8 @@
   let currentHelpKey = '';
   let hottestDropRequest = null;
   let hottestDropLoadedAt = 0;
+  let pendingHuntStartMode = 'match';
+  let pendingHuntStartReturnView = APP_VIEW_TRACKER;
 
   const tabsEl = document.getElementById('rarityTabs');
   const collectionsEl = document.getElementById('collections');
@@ -792,6 +816,9 @@
   const closeAppMenuBtn = document.getElementById('closeAppMenuBtn');
   const seasonVaultPage = document.getElementById('seasonVaultPage');
   const collectionJournalPage = document.getElementById('collectionJournalPage');
+  const collectionHistoryList = document.getElementById('collectionHistoryList');
+  const collectionHistoryEmpty = document.getElementById('collectionHistoryEmpty');
+  const clearCollectionHistoryBtn = document.getElementById('clearCollectionHistoryBtn');
   const huntHistoryPage = document.getElementById('huntHistoryPage');
   const spriteDustPage = document.getElementById('spriteDustPage');
   const spriteProfilePage = document.getElementById('spriteProfilePage');
@@ -871,6 +898,15 @@
   const huntCheckoutDustTotal = document.getElementById('huntCheckoutDustTotal');
   const huntCheckoutWarning = document.getElementById('huntCheckoutWarning');
   const completeHuntOrderBtn = document.getElementById('completeHuntOrderBtn');
+  const huntCheckoutQuickAddInput = document.getElementById('huntCheckoutQuickAddInput');
+  const huntCheckoutQuickAddResults = document.getElementById('huntCheckoutQuickAddResults');
+  const sessionReviewDialog = document.getElementById('sessionReviewDialog');
+  const sessionReviewForm = document.getElementById('sessionReviewForm');
+  const sessionReviewTitle = document.getElementById('sessionReviewTitle');
+  const sessionReviewSummary = document.getElementById('sessionReviewSummary');
+  const sessionReviewMatches = document.getElementById('sessionReviewMatches');
+  const sessionReviewAddSpriteBtn = document.getElementById('sessionReviewAddSpriteBtn');
+  const sessionReviewAddGameBtn = document.getElementById('sessionReviewAddGameBtn');
   const spriteSearchStartDialog = document.getElementById('spriteSearchStartDialog');
   const spriteSearchStartForm = document.getElementById('spriteSearchStartForm');
   const spriteSearchStartTitle = document.getElementById('spriteSearchStartTitle');
@@ -893,6 +929,7 @@
   const compassSmartHistory = document.getElementById('compassSmartHistory');
   const compassSmartHistoryRow = document.getElementById('compassSmartHistoryRow');
   const compassStartSearchBtn = document.getElementById('compassStartSearchBtn');
+  const compassSessionStartBtn = document.getElementById('compassSessionStartBtn');
   const compassTargetForm = document.getElementById('compassTargetForm');
   const compassTargetInput = document.getElementById('compassTargetInput');
   const compassTargetResults = document.getElementById('compassTargetResults');
@@ -1036,7 +1073,7 @@
     try {
       localStorage.setItem(HUNT_HISTORY_KEY,JSON.stringify(huntHistory));
       noteLocalSaveChange('sprite-search-history');
-    } catch { showToast('Adventure history could not be saved.'); }
+    } catch { showToast('Collection History could not be saved.'); }
   }
 
   function saveSearchTargets() {
@@ -1092,8 +1129,14 @@
     huntTimer.textContent = formatHuntDuration(elapsed);
     huntTimer.hidden = !huntMode.active && !huntMode.lastDurationMs;
     if (compassStartSearchBtn) compassStartSearchBtn.textContent = huntMode.active
-      ? `Finish Adventure · ${formatHuntDuration(elapsed)}`
-      : 'Start Adventure';
+      ? `End Match · ${formatHuntDuration(elapsed)}`
+      : 'Match Start';
+    if (compassSessionStartBtn) {
+      const pendingSession = huntMode.mode === 'session' && Boolean(huntMode.sessionMatches?.length);
+      compassSessionStartBtn.textContent = huntMode.active && huntMode.mode === 'session'
+        ? 'Session Active'
+        : (pendingSession ? 'Review Session' : 'Session Start');
+    }
   }
 
   function applyHuntMode() {
@@ -1101,8 +1144,8 @@
     huntTimerInterval = 0;
     huntModeBtn.classList.toggle('is-active',huntMode.active);
     huntModeBtn.setAttribute('aria-pressed',String(huntMode.active));
-    huntModeBtn.setAttribute('aria-label',huntMode.active ? 'Finish Sprite Adventure' : 'Start Sprite Adventure');
-    huntModeBtn.title = huntMode.active ? 'Finish Sprite Adventure' : 'Start Sprite Adventure';
+    huntModeBtn.setAttribute('aria-label',huntMode.active ? 'End Match' : 'Match Start');
+    huntModeBtn.title = huntMode.active ? 'End Match' : 'Match Start';
     if (spriteViewSelect) spriteViewSelect.disabled = huntMode.active || appView === APP_VIEW_VAULT;
     document.body.classList.toggle('hunt-mode-active',huntMode.active);
     document.querySelectorAll('.card').forEach((card) => {
@@ -1131,15 +1174,26 @@
 
   function toggleHuntMode() {
     if (huntMode.active) {
-      if (huntCart.length) openHuntCheckout();
-      else finishEmptyHunt();
+      openHuntCheckout();
       return;
     }
-    openSpriteSearchStart();
+    if (huntMode.mode === 'session' && huntMode.sessionMatches?.length) {
+      openSessionReview();
+      return;
+    }
+    openSpriteSearchStart('match');
   }
 
-  function openSpriteSearchStart() {
+  function openSpriteSearchStart(mode = 'match') {
+    if (mode !== 'session' && huntMode.mode === 'session' && huntMode.sessionMatches?.length) {
+      openSessionReview();
+      return;
+    }
+    pendingHuntStartMode = mode === 'session' ? 'session' : 'match';
+    pendingHuntStartReturnView = appView;
     spriteSearchLocation.value = cleanLocation(huntMode.location) || '';
+    spriteSearchStartTitle.textContent = pendingHuntStartMode === 'session' ? 'Session Start' : 'Match Start';
+    document.getElementById('beginMatchBtn').textContent = pendingHuntStartMode === 'session' ? 'Begin Session' : 'Begin Match';
     document.documentElement.classList.add('sprite-search-start-open');
     document.body.classList.add('sprite-search-start-open');
     if (!spriteSearchStartDialog.open) spriteSearchStartDialog.showModal();
@@ -1149,8 +1203,9 @@
     });
   }
 
-  function startSpriteSearch(location = '') {
-    const resume = Boolean(huntCart.length && huntMode.lastDurationMs);
+  function startSpriteSearch(location = '',mode = pendingHuntStartMode) {
+    const sessionMode = mode === 'session';
+    const resume = Boolean(huntCart.length && huntMode.lastDurationMs && huntMode.mode === mode);
     if (spriteEditMode) {
       spriteEditMode = false;
       document.body.classList.remove('sprite-edit-mode');
@@ -1164,13 +1219,17 @@
       startedAt:new Date(now - (resume ? huntMode.lastDurationMs : 0)).toISOString(),
       sessionStartedAt:resume ? (huntMode.sessionStartedAt || new Date(now - huntMode.lastDurationMs).toISOString()) : new Date(now).toISOString(),
       lastDurationMs:resume ? huntMode.lastDurationMs : 0,
-      location:cleanLocation(location) || cleanLocation(huntMode.location)
+      location:cleanLocation(location) || cleanLocation(huntMode.location),
+      mode:sessionMode ? 'session' : 'match',
+      matchNumber:sessionMode ? Math.max(1,(huntMode.sessionMatches?.length || 0) + 1) : 1,
+      editingMatchIndex:-1,
+      sessionMatches:sessionMode ? normalizeSessionMatches(huntMode.sessionMatches) : []
     };
     saveHuntMode();
     applyHuntMode();
     if (spriteSearchInput.value.trim()) renderSpriteSearchResults();
     renderHuntHistory();
-    showToast(resume ? 'Sprite Adventure resumed' : 'Sprite Adventure started');
+    showToast(resume ? 'Match resumed' : (sessionMode ? 'Session started · Match 1' : 'Match started'));
   }
 
   function huntItemInfo(item) {
@@ -1200,7 +1259,7 @@
   }
 
   function addSpriteToHuntCart(family,variant) {
-    if (!huntMode.active) return showToast('Start a Sprite Adventure before adding Sprites.');
+    if (!huntMode.active) return showToast('Use Match Start or Session Start before adding Sprites.');
     huntCart.push({
       id:`${Date.now()}-${Math.random().toString(36).slice(2)}`,
       familyId:family.id,
@@ -1219,7 +1278,7 @@
       closeSpriteSearchResults();
       spriteSearchInput.focus({ preventScroll:true });
     }
-    showToast(`${familyView(family).name} · ${variantView(family,variant).name} added to this Adventure`);
+    showToast(`${familyView(family).name} · ${variantView(family,variant).name} added to this match`);
   }
 
   function freezeHuntTimer() {
@@ -1232,6 +1291,7 @@
 
   function resumeHuntFromCheckout() {
     if (huntCheckoutDialog.open) huntCheckoutDialog.close();
+    if (sessionReviewDialog?.open) sessionReviewDialog.close();
     if (huntMode.active) return;
     const elapsed = Math.max(0,huntMode.lastDurationMs || 0);
     huntMode.active = true;
@@ -1239,7 +1299,7 @@
     huntMode.sessionStartedAt ||= new Date(Date.now() - elapsed).toISOString();
     saveHuntMode();
     applyHuntMode();
-    showToast('Sprite Adventure resumed');
+    showToast('Match resumed');
   }
 
   function updateHuntCartLevel(itemId,level) {
@@ -1264,6 +1324,41 @@
     saveHuntCart();
     renderHuntCheckout();
     renderHuntCartTray();
+  }
+
+  function huntQuickAddMatches(query = '') {
+    const tokens = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
+    if (!tokens.length) return [];
+    const matches = [];
+    allFamilies().forEach((family) => {
+      const familyName = familyView(family).name || 'Sprite';
+      orderedVariants(family).forEach((variant) => {
+        const variantName = variantView(family,variant).name || 'Variant';
+        const haystack = `${familyName} ${variantName}`.toLowerCase();
+        if (tokens.every((token) => haystack.includes(token))) matches.push({ family,variant,familyName,variantName });
+      });
+    });
+    return matches.slice(0,12);
+  }
+
+  function renderHuntCheckoutQuickAdd() {
+    huntCheckoutQuickAddResults.replaceChildren();
+    const matches = huntQuickAddMatches(huntCheckoutQuickAddInput.value);
+    matches.forEach(({ family,variant,familyName,variantName }) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.innerHTML = `<strong>${familyName}</strong><span>${variantName}</span><b aria-hidden="true">+</b>`;
+      button.addEventListener('click',() => {
+        const wasActive = huntMode.active;
+        huntMode.active = true;
+        addSpriteToHuntCart(family,variant);
+        huntMode.active = wasActive;
+        saveHuntMode();
+        huntCheckoutQuickAddInput.value = '';
+        renderHuntCheckout();
+      });
+      huntCheckoutQuickAddResults.appendChild(button);
+    });
   }
 
   function renderHuntCheckout() {
@@ -1311,20 +1406,23 @@
       remove.type = 'button';
       remove.className = 'hunt-checkout-remove';
       remove.textContent = '×';
-      remove.setAttribute('aria-label',`Remove ${info.familyName} ${info.variantName} from this Adventure`);
+      remove.setAttribute('aria-label',`Remove ${info.familyName} ${info.variantName} from this match`);
       remove.addEventListener('click',() => removeHuntCartItem(item.id));
       row.append(copy,levelLabel,masteredLabel,dust,remove);
       huntCheckoutItems.appendChild(row);
     });
     const location = cleanLocation(huntMode.location);
-    huntCheckoutDuration.textContent = `Adventure time: ${formatHuntDuration(huntMode.lastDurationMs || huntElapsedMs())}${location ? ` · ${location}` : ''}`;
+    huntCheckoutTitle.textContent = huntMode.mode === 'session' ? `Match ${huntMode.matchNumber} Review` : 'Match Review';
+    huntCheckoutDuration.textContent = `Match time: ${formatHuntDuration(huntMode.lastDurationMs || huntElapsedMs())}${location ? ` · ${location}` : ''}`;
     huntCheckoutDustTotal.textContent = formatDust(huntCartDustTotal());
     huntCheckoutWarning.hidden = !missingDust;
-    completeHuntOrderBtn.disabled = !huntCart.length;
+    completeHuntOrderBtn.disabled = false;
+    completeHuntOrderBtn.textContent = huntMode.mode === 'session' ? 'Save Match' : 'Finish Match';
+    document.getElementById('continueHuntBtn').textContent = 'Keep Match Running';
+    renderHuntCheckoutQuickAdd();
   }
 
   function openHuntCheckout() {
-    if (!huntCart.length) return showToast('Add at least one Sprite to finish this Adventure.');
     freezeHuntTimer();
     renderHuntCheckout();
     document.documentElement.classList.add('hunt-checkout-open');
@@ -1336,37 +1434,32 @@
     });
   }
 
-  function huntHistoryEntry(items,dustEarned) {
-    const completedAt = new Date().toISOString();
+  function huntHistoryEntry(items,dustEarned,options = {}) {
+    const completedAt = validIsoDate(options.completedAt) || new Date().toISOString();
     return {
       id:`hunt-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-      startedAt:huntMode.sessionStartedAt || '',
+      startedAt:validIsoDate(options.startedAt) || huntMode.sessionStartedAt || '',
       completedAt,
-      location:cleanLocation(huntMode.location),
-      durationMs:Math.max(0,huntMode.lastDurationMs || huntElapsedMs()),
+      location:cleanLocation(options.location) || cleanLocation(huntMode.location),
+      durationMs:Math.max(0,Number(options.durationMs ?? huntMode.lastDurationMs ?? huntElapsedMs()) || 0),
       dustEarned:Math.max(0,Math.round(dustEarned || 0)),
+      mode:options.mode === 'session' ? 'session' : 'match',
+      sessionId:String(options.sessionId || ''),
+      matchNumber:Math.max(1,Math.round(Number(options.matchNumber) || 1)),
       items
     };
   }
 
   function resetHuntSession() {
     huntCart = [];
-    huntMode = { active:false, startedAt:'', sessionStartedAt:'', lastDurationMs:0, location:'' };
+    huntMode = { active:false, startedAt:'', sessionStartedAt:'', lastDurationMs:0, location:'',mode:'match',matchNumber:1,editingMatchIndex:-1,sessionMatches:[] };
     saveHuntCart();
     saveHuntMode();
     applyHuntMode();
   }
 
   function finishEmptyHunt() {
-    freezeHuntTimer();
-    const hunt = huntHistoryEntry([],0);
-    huntHistory.unshift(hunt);
-    huntHistory = normalizeHuntHistory(huntHistory);
-    saveHuntHistory();
-    resetHuntSession();
-    renderHuntHistory();
-    openSpriteSearchRecap(hunt);
-    showToast(`Sprite Adventure saved · ${formatHuntDuration(hunt.durationMs)}`);
+    openHuntCheckout();
   }
 
   function openSpriteSearchRecap(hunt) {
@@ -1390,7 +1483,7 @@
     spriteSearchRecapItems.replaceChildren();
     if (!hunt.items.length) {
       const empty = document.createElement('p');
-      empty.textContent = 'Timer-only Adventure · no Sprites were added.';
+      empty.textContent = 'No Sprites were added to this match.';
       spriteSearchRecapItems.appendChild(empty);
     } else {
       hunt.items.forEach((item) => {
@@ -1413,13 +1506,9 @@
     });
   }
 
-  function completeHuntOrder(event) {
-    event.preventDefault();
-    if (!huntCart.length) return;
-    freezeHuntTimer();
-    const completedAt = new Date().toISOString();
+  function commitMatchItems(cartItems,{ completedAt = new Date().toISOString(),location = '' } = {}) {
     const historyItems = [];
-    huntCart.forEach((item) => {
+    cartItems.forEach((item) => {
       const info = huntItemInfo(item);
       if (!info) return;
       const current = variantState(item.familyId,item.variantId);
@@ -1430,8 +1519,8 @@
         current.mastered = true;
         current.masteredAt ||= completedAt;
       }
-      const location = cleanLocation(huntMode.location);
-      if (location) current.locationFound = location;
+      const cleanMatchLocation = cleanLocation(location);
+      if (cleanMatchLocation) current.locationFound = cleanMatchLocation;
       const journalType = item.mastered && !before.mastered
         ? 'mastered'
         : (before.collected ? 'recollected' : 'collected');
@@ -1447,7 +1536,7 @@
         dust:info.dust
       });
     });
-    const completedLocation = cleanLocation(huntMode.location);
+    const completedLocation = cleanLocation(location);
     if (completedLocation) {
       historyItems.forEach((item) => reportSpriteLocationEvent({
         familyId:item.familyId,
@@ -1460,33 +1549,227 @@
       }));
     }
     const dustEarned = historyItems.reduce((total,item) => total + item.dust,0);
-    const hunt = huntHistoryEntry(historyItems,dustEarned);
+    return { historyItems,dustEarned };
+  }
+
+  function finishMatchCommit(cartItems,options = {}) {
+    const completedAt = validIsoDate(options.completedAt) || new Date().toISOString();
+    const committed = commitMatchItems(cartItems,{ completedAt,location:options.location });
+    const hunt = huntHistoryEntry(committed.historyItems,committed.dustEarned,{
+      ...options,
+      completedAt
+    });
     huntHistory.unshift(hunt);
-    huntHistory = normalizeHuntHistory(huntHistory);
-    if (dustEarned > 0) {
+    if (committed.dustEarned > 0) {
       dustLedger.unshift({
         id:`deposit-${Date.now()}-${Math.random().toString(36).slice(2)}`,
         type:'deposit',
-        amount:dustEarned,
-        note:`Sprite Adventure deposit · ${historyItems.length} ${historyItems.length === 1 ? 'Sprite' : 'Sprites'}`,
+        amount:committed.dustEarned,
+        note:`${options.mode === 'session' ? 'Session' : 'Match'} deposit · ${committed.historyItems.length} ${committed.historyItems.length === 1 ? 'Sprite' : 'Sprites'}`,
         createdAt:completedAt,
         huntId:hunt.id
       });
-      dustLedger = normalizeDustLedger(dustLedger);
     }
-    saveProgress();
-    const foundKeys = new Set(historyItems.map((item) => `${item.familyId}:${item.variantId}`));
+    return hunt;
+  }
+
+  function syncMatchTargets(hunts) {
+    const foundKeys = new Set(hunts.flatMap((hunt) => hunt.items.map((item) => `${item.familyId}:${item.variantId}`)));
     searchTargets = searchTargets.filter((target) => !foundKeys.has(`${target.familyId}:${target.variantId}`));
+  }
+
+  function persistFinalizedMatches() {
+    huntHistory = normalizeHuntHistory(huntHistory);
+    dustLedger = normalizeDustLedger(dustLedger);
+    saveProgress();
     saveSearchTargets();
     saveHuntHistory();
     saveDustLedger();
     scheduleJournalSave();
+  }
+
+  function saveCurrentSessionMatch() {
+    const match = {
+      id:`session-match-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      startedAt:huntMode.startedAt || new Date(Date.now() - (huntMode.lastDurationMs || 0)).toISOString(),
+      completedAt:new Date().toISOString(),
+      durationMs:Math.max(0,huntMode.lastDurationMs || 0),
+      location:cleanLocation(huntMode.location),
+      items:normalizeHuntCart(huntCart)
+    };
+    const matches = normalizeSessionMatches(huntMode.sessionMatches);
+    if (huntMode.editingMatchIndex >= 0 && matches[huntMode.editingMatchIndex]) matches[huntMode.editingMatchIndex] = match;
+    else matches.push(match);
+    huntCart = [];
+    huntMode = {
+      ...huntMode,
+      active:false,
+      startedAt:'',
+      lastDurationMs:0,
+      mode:'session',
+      matchNumber:matches.length + 1,
+      editingMatchIndex:-1,
+      sessionMatches:matches
+    };
+    saveHuntCart();
+    saveHuntMode();
+    applyHuntMode();
+  }
+
+  function startNextSessionMatch() {
+    const now = new Date().toISOString();
+    huntCart = [];
+    huntMode = {
+      ...huntMode,
+      active:true,
+      startedAt:now,
+      sessionStartedAt:huntMode.sessionStartedAt || now,
+      lastDurationMs:0,
+      mode:'session',
+      matchNumber:(huntMode.sessionMatches?.length || 0) + 1,
+      editingMatchIndex:-1
+    };
+    saveHuntCart();
+    saveHuntMode();
+    applyHuntMode();
+    if (sessionReviewDialog.open) sessionReviewDialog.close();
+    setAppView(APP_VIEW_HUNTS,{ announce:false });
+    renderHuntHistory();
+    showToast(`Session · Match ${huntMode.matchNumber} started`);
+  }
+
+  function editSessionMatch(index) {
+    const match = huntMode.sessionMatches?.[index];
+    if (!match) return;
+    huntCart = normalizeHuntCart(match.items);
+    huntMode = {
+      ...huntMode,
+      active:true,
+      startedAt:new Date(Date.now() - (match.durationMs || 0)).toISOString(),
+      lastDurationMs:match.durationMs || 0,
+      location:match.location || huntMode.location,
+      mode:'session',
+      matchNumber:index + 1,
+      editingMatchIndex:index
+    };
+    saveHuntCart();
+    saveHuntMode();
+    applyHuntMode();
+    if (sessionReviewDialog.open) sessionReviewDialog.close();
+    setAppView(APP_VIEW_HUNTS,{ announce:false });
+    showToast(`Editing Match ${index + 1}`);
+  }
+
+  function removeSessionMatchItem(matchIndex,itemId) {
+    const matches = normalizeSessionMatches(huntMode.sessionMatches);
+    if (!matches[matchIndex]) return;
+    matches[matchIndex].items = matches[matchIndex].items.filter((item) => item.id !== itemId);
+    huntMode.sessionMatches = matches;
+    saveHuntMode();
+    renderSessionReview();
+  }
+
+  function renderSessionReview() {
+    const matches = normalizeSessionMatches(huntMode.sessionMatches);
+    sessionReviewMatches.replaceChildren();
+    const totalSprites = matches.reduce((total,match) => total + match.items.length,0);
+    sessionReviewSummary.textContent = `${matches.length} ${matches.length === 1 ? 'match' : 'matches'} · ${totalSprites} ${totalSprites === 1 ? 'Sprite' : 'Sprites'}. Add another game, edit a match, or finalize the Session.`;
+    matches.forEach((match,index) => {
+      const card = document.createElement('article');
+      card.className = 'session-review-match';
+      const head = document.createElement('header');
+      const copy = document.createElement('div');
+      const title = document.createElement('strong');
+      const meta = document.createElement('span');
+      const edit = document.createElement('button');
+      title.textContent = `Match ${index + 1}`;
+      meta.textContent = `${formatHuntDuration(match.durationMs)} · ${match.items.length} ${match.items.length === 1 ? 'Sprite' : 'Sprites'}${match.location ? ` · ${match.location}` : ''}`;
+      copy.append(title,meta);
+      edit.type = 'button';
+      edit.textContent = 'Edit';
+      edit.addEventListener('click',() => editSessionMatch(index));
+      head.append(copy,edit);
+      const items = document.createElement('div');
+      items.className = 'session-review-items';
+      const groups = new Map();
+      match.items.forEach((item) => {
+        const info = huntItemInfo(item);
+        if (!info) return;
+        const key = `${item.familyId}:${item.variantId}`;
+        const group = groups.get(key) || { label:`${info.familyName} · ${info.variantName}`,count:0,items:[] };
+        group.count += 1;group.items.push(item);groups.set(key,group);
+      });
+      groups.forEach((group) => {
+        const row = document.createElement('span');
+        const label = document.createElement('b');
+        const remove = document.createElement('button');
+        label.textContent = `${group.label}${group.count > 1 ? ` ×${group.count}` : ''}`;
+        remove.type = 'button';remove.textContent = '−';remove.setAttribute('aria-label',`Remove one ${group.label}`);
+        remove.addEventListener('click',() => removeSessionMatchItem(index,group.items[group.items.length - 1].id));
+        row.append(label,remove);items.appendChild(row);
+      });
+      if (!groups.size) items.textContent = 'No Sprites added.';
+      card.append(head,items);sessionReviewMatches.appendChild(card);
+    });
+    sessionReviewAddSpriteBtn.disabled = !matches.length;
+  }
+
+  function openSessionReview() {
+    renderSessionReview();
+    document.documentElement.classList.add('session-review-open');
+    document.body.classList.add('session-review-open');
+    if (!sessionReviewDialog.open) sessionReviewDialog.showModal();
+    requestAnimationFrame(() => sessionReviewTitle.focus({ preventScroll:true }));
+  }
+
+  function finalizeSession(event) {
+    event?.preventDefault();
+    const matches = normalizeSessionMatches(huntMode.sessionMatches);
+    if (!matches.length) return showToast('Add at least one match before ending the Session.');
+    const sessionId = `session-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    const completedHunts = matches.map((match,index) => finishMatchCommit(match.items,{
+      completedAt:match.completedAt,
+      startedAt:match.startedAt,
+      durationMs:match.durationMs,
+      location:match.location,
+      mode:'session',sessionId,matchNumber:index + 1
+    }));
+    huntHistory = normalizeHuntHistory(huntHistory);
+    dustLedger = normalizeDustLedger(dustLedger);
+    saveProgress();
+    syncMatchTargets(completedHunts);
+    persistFinalizedMatches();
+    if (sessionReviewDialog.open) sessionReviewDialog.close();
+    resetHuntSession();
+    renderAll();
+    setAppView(APP_VIEW_JOURNAL,{ announce:false });
+    const total = completedHunts.reduce((sum,hunt) => sum + hunt.items.length,0);
+    showToast(`Session complete · ${matches.length} matches · ${total} Sprites`);
+  }
+
+  function completeHuntOrder(event) {
+    event.preventDefault();
+    freezeHuntTimer();
+    if (huntMode.mode === 'session') {
+      saveCurrentSessionMatch();
+      if (huntCheckoutDialog.open) huntCheckoutDialog.close();
+      openSessionReview();
+      return;
+    }
+    const hunt = finishMatchCommit(huntCart,{
+      startedAt:huntMode.sessionStartedAt,
+      durationMs:huntMode.lastDurationMs,
+      location:huntMode.location,
+      mode:'match',matchNumber:1
+    });
+    syncMatchTargets([hunt]);
+    persistFinalizedMatches();
     if (huntCheckoutDialog.open) huntCheckoutDialog.close();
     resetHuntSession();
     renderAll();
     goHomeToRare({ focusSearch:true, announce:false });
     openSpriteSearchRecap(hunt);
-    showToast(`Order complete · ${historyItems.length} Sprites · ${formatDust(dustEarned)} Dust`);
+    showToast(`Match complete · ${hunt.items.length} Sprites · ${formatDust(hunt.dustEarned)} Dust`);
   }
 
   function currentSpriteViewMode() {
@@ -1690,9 +1973,9 @@
       const label = appView === APP_VIEW_VAULT
         ? 'Sprite Archive'
         : (appView === APP_VIEW_JOURNAL
-            ? 'Collection Journal'
+            ? 'Collection History'
             : (appView === APP_VIEW_HUNTS
-                ? 'Sprite Adventure'
+                ? 'Sprite Assistant'
                 : (appView === APP_VIEW_DUST ? 'Sprite Dust' : (appView === APP_VIEW_PROFILE ? 'My Sprite Profile' : (appView === APP_VIEW_SETTINGS ? 'Settings' : 'Current Tracker')))));
       showToast(label);
     }
@@ -2702,8 +2985,53 @@
     }
   }
 
+  function renderCollectionHistory() {
+    if (!collectionHistoryList || !collectionHistoryEmpty) return;
+    const matches = normalizeHuntHistory(huntHistory).filter((match) => match.items.length);
+    collectionHistoryList.replaceChildren();
+    collectionHistoryEmpty.hidden = Boolean(matches.length);
+    clearCollectionHistoryBtn.disabled = !matches.length;
+    matches.forEach((match) => {
+      const card = document.createElement('article');
+      card.className = 'collection-history-match';
+      const header = document.createElement('header');
+      const copy = document.createElement('div');
+      const title = document.createElement('h3');
+      const meta = document.createElement('span');
+      const remove = document.createElement('button');
+      title.textContent = match.mode === 'session' ? `Session Match ${match.matchNumber}` : 'Match';
+      meta.textContent = `${formatJournalDate(match.completedAt)} · ${formatHuntDuration(match.durationMs)}${match.location ? ` · ${match.location}` : ''}`;
+      copy.append(title,meta);
+      remove.type = 'button';remove.textContent = 'Delete';
+      remove.setAttribute('aria-label',`Delete match from ${formatJournalDate(match.completedAt)}`);
+      remove.addEventListener('click',() => requestClearConfirmation(() => {
+        huntHistory = huntHistory.filter((entry) => entry.id !== match.id);
+        saveHuntHistory();renderCollectionHistory();renderHuntHistory();renderCollections();
+        showToast('Match removed from Collection History');
+      }));
+      header.append(copy,remove);
+      const list = document.createElement('div');
+      list.className = 'collection-history-sprites';
+      const groups = new Map();
+      match.items.forEach((item) => {
+        const key = `${item.familyId}:${item.variantId}`;
+        const group = groups.get(key) || { ...item,count:0 };
+        group.count += 1;groups.set(key,group);
+      });
+      groups.forEach((item) => {
+        const row = document.createElement('span');
+        row.dataset.rarity = item.rarity;
+        row.innerHTML = `<b>${item.familyName} · ${item.variantName}</b><small>${item.mastered ? 'Mastered' : 'Collected'}${item.count > 1 ? ` · ×${item.count}` : ''}</small>`;
+        list.appendChild(row);
+      });
+      card.append(header,list);collectionHistoryList.appendChild(card);
+    });
+  }
+
   function renderJournal() {
     if (!collectionJournalPage) return;
+    renderCollectionHistory();
+    return;
     journalViewTabs?.querySelectorAll('[data-journal-view]').forEach((button) => {
       button.setAttribute('aria-pressed',String(button.dataset.journalView === journalView));
     });
@@ -3013,14 +3341,13 @@
         const copy = document.createElement('span');
         const name = document.createElement('strong');
         const detail = document.createElement('small');
-        const added = huntCart.some((item) => item.familyId === entry.familyId && item.variantId === entry.variantId);
         const goalActive = searchTargets.some((item) => item.familyId === entry.familyId && item.variantId === entry.variantId);
         button.type = 'button';
         button.role = 'option';
-        button.disabled = huntMode.active && added;
+        button.disabled = false;
         name.textContent = `${entry.groupName} · ${entry.variantName}`;
         detail.textContent = huntMode.active
-          ? (added ? `${entry.rarity} · Added` : `${entry.rarity} · Add to Adventure`)
+          ? `${entry.rarity} · Add to match`
           : `${entry.rarity} · ${goalActive ? 'Remove goal' : 'Set Adventure Goal'}`;
         copy.append(name,detail);
         button.append(copy);
@@ -3165,13 +3492,10 @@
           variantGoal.setAttribute('aria-pressed',String(goalActive));
           variantGoal.setAttribute('aria-label',`${goalActive ? 'Remove' : 'Set'} ${entry.familyName} ${label.textContent} as an Adventure Goal`);
           variantGoal.addEventListener('click',() => toggleAdventureGoal(entry.family,variant));
-          const alreadyAdded = huntCart.some((cartItem) => cartItem.familyId === entry.family.id && cartItem.variantId === variant.id);
           variantAdd.type = 'button';
           variantAdd.textContent = '+';
-          variantAdd.disabled = !huntMode.active || alreadyAdded;
-          variantAdd.setAttribute('aria-label',alreadyAdded
-            ? `${entry.familyName} ${label.textContent} is already in this Adventure`
-            : `Add ${entry.familyName} ${label.textContent} to this Adventure`);
+          variantAdd.disabled = !huntMode.active;
+          variantAdd.setAttribute('aria-label',`Add ${entry.familyName} ${label.textContent} to this match`);
           variantAdd.addEventListener('click',() => addSpriteToHuntCart(entry.family,variant));
           item.append(label,variantGoal,variantAdd);
           variants.appendChild(item);
@@ -3186,7 +3510,7 @@
       ? `${recommendation.info.entry.groupName} · ${recommendation.info.entry.variantName}`
       : 'Collection complete';
     compassNextReason.textContent = recommendation.reason;
-    compassStartSearchBtn.textContent = huntMode.active ? `Finish Adventure · ${formatHuntDuration(huntElapsedMs())}` : 'Start Adventure';
+    updateHuntTimer();
   }
 
   function renderQuickAddHistory() {
@@ -3211,7 +3535,7 @@
       label.textContent = `${familyView(family).name} · ${info.name}`;
       const plus = document.createElement('b'); plus.textContent = '+';
       button.append(label,plus);
-      button.disabled = !huntMode.active || huntCart.some((item) => item.familyId === family.id && item.variantId === variant.id);
+      button.disabled = !huntMode.active;
       button.addEventListener('click',() => addSpriteToHuntCart(family,variant));
       compassSmartHistoryRow.appendChild(button);
     });
@@ -3238,20 +3562,20 @@
       const title = document.createElement('h3');
       const time = document.createElement('time');
       const remove = document.createElement('button');
-      title.textContent = `Sprite Adventure ${huntHistory.length - index}`;
+      title.textContent = hunt.mode === 'session' ? `Session Match ${hunt.matchNumber}` : `Match ${huntHistory.length - index}`;
       time.dateTime = hunt.completedAt;
       time.textContent = formatJournalDate(hunt.completedAt);
       copy.append(title,time);
       remove.type = 'button';
       remove.className = 'hunt-history-delete';
       remove.textContent = 'Delete';
-      remove.setAttribute('aria-label',`Delete Sprite Adventure from ${time.textContent}`);
+      remove.setAttribute('aria-label',`Delete match from ${time.textContent}`);
       remove.addEventListener('click',() => {
         requestClearConfirmation(() => {
           huntHistory = huntHistory.filter((entry) => entry.id !== hunt.id);
           saveHuntHistory();
           renderHuntHistory();
-          showToast('Sprite Adventure deleted');
+          showToast('Match deleted');
         });
       });
       header.append(copy,remove);
@@ -3276,7 +3600,7 @@
       }
       if (!hunt.items.length) {
         const empty = document.createElement('span');
-        empty.textContent = 'Timer-only Sprite Adventure · no Sprites added';
+        empty.textContent = 'No Sprites added to this match';
         items.appendChild(empty);
       } else {
         hunt.items.forEach((item) => {
@@ -4343,14 +4667,17 @@
     const masterLabel = card.querySelector('.master-label');
     masterLabel.textContent = masterText || '';
     masterLabel.hidden = !masterText;
+    const archivePlaque = card.querySelector('.archive-match-plaque');
+    if (archivePlaque) {
+      const count = huntHistory.reduce((total,match) => total + match.items.filter((item) => item.familyId === family.id && item.variantId === variant.id).length,0);
+      archivePlaque.textContent = count > 0 ? `×${count}` : '';
+      archivePlaque.hidden = !vaultDisplay || count < 1;
+      archivePlaque.setAttribute('aria-label',`${count} collected during finalized matches`);
+    }
   }
 
   function celebrateSheetCrown(button) {
-    if (!button || experienceSettings.reduceMotion || !experienceSettings.animations) return;
-    button.classList.remove('crown-celebrate');
-    void button.offsetWidth;
-    button.classList.add('crown-celebrate');
-    window.setTimeout(() => button.classList.remove('crown-celebrate'),750);
+    celebrateCrown(button);
   }
 
   function celebrateCrown(crown) {
@@ -4359,17 +4686,17 @@
     const burst = document.createElement('span');
     burst.className = 'crown-dust-burst';
     burst.setAttribute('aria-hidden','true');
-    for (let index = 0;index < 10;index += 1) {
+    for (let index = 0;index < 20;index += 1) {
       const particle = document.createElement('i');
-      particle.style.setProperty('--particle-angle',`${index * 36}deg`);
-      particle.style.setProperty('--particle-delay',`${index % 3 * 25}ms`);
+      particle.style.setProperty('--particle-angle',`${index * 18}deg`);
+      particle.style.setProperty('--particle-delay',`${index % 4 * 18}ms`);
       burst.appendChild(particle);
     }
     crown.appendChild(burst);
     crown.classList.remove('crown-celebrate');
     void crown.offsetWidth;
     crown.classList.add('crown-celebrate');
-    window.setTimeout(() => { burst.remove();crown.classList.remove('crown-celebrate'); },950);
+    window.setTimeout(() => { burst.remove();crown.classList.remove('crown-celebrate'); },1100);
   }
 
   function saveRecentMissingChanges() {
@@ -4538,13 +4865,25 @@
     }
     saveProgress();
     renderTabs();
-    renderCollections();
     updateCounters();
     queueFutureStateSync();
     const label = variantView(family,variant).name || 'Sprite';
     showToast(type === 'collected'
       ? `${label}: ${current.collected ? 'added to collection' : 'removed from collection'}`
       : `${label}: ${current.mastered ? 'mastered' : 'mastery removed'}`);
+    return current;
+  }
+
+  function syncSheetControls(controls,family,variant) {
+    const current = variantState(family.id,variant.id);
+    const view = variantView(family,variant);
+    const familyName = familyView(family).name || 'Sprite';
+    const collected = controls.querySelector('.sheet-check-button');
+    const mastered = controls.querySelector('.sheet-crown-button');
+    collected.setAttribute('aria-pressed',String(Boolean(current.collected)));
+    collected.setAttribute('aria-label',`${current.collected ? 'Remove' : 'Mark'} ${view.name || 'variant'} ${familyName} ${current.collected ? 'from collection' : 'as collected'}`);
+    mastered.setAttribute('aria-pressed',String(Boolean(current.mastered)));
+    mastered.setAttribute('aria-label',`${current.mastered ? 'Remove mastery from' : 'Mark'} ${view.name || 'variant'} ${familyName}${current.mastered ? '' : ' as mastered'}`);
   }
 
   function sheetStateControls(family,variant) {
@@ -4560,7 +4899,10 @@
     collected.setAttribute('aria-pressed',String(Boolean(current.collected)));
     collected.setAttribute('aria-label',`${current.collected ? 'Remove' : 'Mark'} ${view.name || 'variant'} ${familyName} ${current.collected ? 'from collection' : 'as collected'}`);
     collected.innerHTML = '<span aria-hidden="true">✓</span>';
-    collected.addEventListener('click',() => commitSheetStateChange(family,variant,'collected'));
+    collected.addEventListener('click',() => {
+      commitSheetStateChange(family,variant,'collected');
+      syncSheetControls(controls,family,variant);
+    });
 
     const mastered = document.createElement('button');
     mastered.type = 'button';
@@ -4571,6 +4913,7 @@
     mastered.addEventListener('click',() => {
       const becomingMastered = !variantState(family.id,variant.id).mastered;
       commitSheetStateChange(family,variant,'mastered');
+      syncSheetControls(controls,family,variant);
       if (becomingMastered) celebrateSheetCrown(mastered);
     });
     controls.append(collected,mastered);
@@ -4836,11 +5179,14 @@
     huntCartButton.type = 'button';
     huntCartButton.className = 'hunt-add-cart-button';
     huntCartButton.innerHTML = '<span aria-hidden="true">+</span>';
-    huntCartButton.setAttribute('aria-label',`Add ${view.name || 'sprite'} ${familyInfo.name || ''} to this Adventure`.trim());
+    huntCartButton.setAttribute('aria-label',`Add ${view.name || 'sprite'} ${familyInfo.name || ''} to this match`.trim());
 
     const masterLabel = document.createElement('div');
     masterLabel.className = 'master-label';
-    card.append(crown,seasonBadge,imageWrap,editorTools,percentageEditor,variantLine,listLabel,collect,huntCartButton,masterLabel);
+    const archivePlaque = document.createElement('span');
+    archivePlaque.className = 'archive-match-plaque';
+    archivePlaque.hidden = true;
+    card.append(crown,seasonBadge,imageWrap,editorTools,percentageEditor,variantLine,listLabel,collect,huntCartButton,masterLabel,archivePlaque);
 
     const toggleCollected = () => {
       if (huntMode.active) return;
@@ -5511,7 +5857,7 @@
   function spriteSearchState(entry) {
     if (huntMode.active) {
       const copies = huntCart.filter((item) => item.familyId === entry.familyId && item.variantId === entry.variantId).length;
-      return copies ? `${copies} in Adventure · Add again` : 'Add to Sprite Adventure';
+      return copies ? `${copies} in this match · Add again` : 'Add to this match';
     }
     const current = state[entry.familyId]?.[entry.variantId] || {};
     if (current.mastered) return design.header.masteredLabel || 'Mastered';
@@ -5667,7 +6013,7 @@
     if (!hotDropLocation) return;
     const count = Math.max(0,Number(row?.sprite_count) || 0);
     if (!row?.location || count < 1) {
-      hotDropLocation.textContent = 'Waiting for enough Adventures';
+      hotDropLocation.textContent = 'Waiting for enough Matches';
       hotDropCount.textContent = 'Hottest Drop appears after at least three collectors report a location.';
       hotDropSprite.hidden = true;
       return;
@@ -5815,7 +6161,7 @@
   const welcomeSlides = [
     { icon:'✓',title:'Track your collection',copy:'Tap In Collection on any card, then tap its crown when you master that Sprite.' },
     { icon:'⌕',title:'Find any Sprite fast',copy:'Type a Sprite or variant name. Results update as you type and open the exact card.' },
-    { icon:'↟',title:'Start a Sprite Adventure',copy:'Time a play session, Quick Add what you find, and finish with a clean recap.' },
+    { icon:'↟',title:'Use the Sprite Assistant',copy:'Track one Match or several games in a Session, then review before finalizing.' },
     { icon:'☁',title:'Keep progress protected',copy:'Sign in from your profile and every change saves automatically to your account.' }
   ];
 
@@ -5933,7 +6279,11 @@
       startedAt,
       sessionStartedAt:validIsoDate(source.sessionStartedAt) || startedAt,
       lastDurationMs:Math.max(0,Math.min(7 * 24 * 60 * 60 * 1000,Number(source.lastDurationMs) || 0)),
-      location:cleanLocation(source.location)
+      location:cleanLocation(source.location),
+      mode:source.mode === 'session' ? 'session' : 'match',
+      matchNumber:Math.max(1,Math.min(100,Math.round(Number(source.matchNumber) || 1))),
+      editingMatchIndex:Number.isInteger(source.editingMatchIndex) ? source.editingMatchIndex : -1,
+      sessionMatches:normalizeSessionMatches(source.sessionMatches)
     };
   }
 
@@ -7140,17 +7490,22 @@
   huntModeBtn.addEventListener('pointerup',() => requestAnimationFrame(() => huntModeBtn.blur()));
   compassStartSearchBtn.addEventListener('click',() => {
     if (huntMode.active) {
-      if (huntCart.length) openHuntCheckout();
-      else finishEmptyHunt();
+      openHuntCheckout();
     }
-    else openSpriteSearchStart();
+    else openSpriteSearchStart('match');
+  });
+  compassSessionStartBtn?.addEventListener('click',() => {
+    if (huntMode.mode === 'session' && huntMode.active) return openHuntCheckout();
+    if (huntMode.mode === 'session' && huntMode.sessionMatches?.length) return openSessionReview();
+    openSpriteSearchStart('session');
   });
   spriteSearchStartForm.addEventListener('submit',(event) => {
     event.preventDefault();
     const location = cleanLocation(spriteSearchLocation.value);
     spriteSearchStartDialog.close();
-    startSpriteSearch(location);
-    setAppView(APP_VIEW_HUNTS,{ announce:false });
+    startSpriteSearch(location,pendingHuntStartMode);
+    if (pendingHuntStartReturnView === APP_VIEW_HUNTS) setAppView(APP_VIEW_HUNTS,{ announce:false });
+    else renderAll();
   });
   document.getElementById('cancelSpriteSearchStartBtn').addEventListener('click',() => spriteSearchStartDialog.close());
   spriteSearchStartDialog.addEventListener('close',() => {
@@ -7228,6 +7583,7 @@
   });
   huntCheckoutBtn.addEventListener('click',openHuntCheckout);
   huntCheckoutForm.addEventListener('submit',completeHuntOrder);
+  huntCheckoutQuickAddInput?.addEventListener('input',renderHuntCheckoutQuickAdd);
   document.getElementById('continueHuntBtn').addEventListener('click',resumeHuntFromCheckout);
   huntCheckoutDialog.addEventListener('cancel',(event) => {
     event.preventDefault();
@@ -7236,6 +7592,31 @@
   huntCheckoutDialog.addEventListener('close',() => {
     document.documentElement.classList.remove('hunt-checkout-open');
     document.body.classList.remove('hunt-checkout-open');
+  });
+  sessionReviewForm?.addEventListener('submit',finalizeSession);
+  sessionReviewAddGameBtn?.addEventListener('click',startNextSessionMatch);
+  sessionReviewAddSpriteBtn?.addEventListener('click',() => {
+    const index = (huntMode.sessionMatches?.length || 1) - 1;
+    editSessionMatch(index);
+  });
+  sessionReviewDialog?.addEventListener('cancel',(event) => {
+    event.preventDefault();
+    sessionReviewDialog.close();
+  });
+  sessionReviewDialog?.addEventListener('close',() => {
+    document.documentElement.classList.remove('session-review-open');
+    document.body.classList.remove('session-review-open');
+  });
+  clearCollectionHistoryBtn?.addEventListener('click',() => {
+    if (!huntHistory.length) return;
+    requestClearConfirmation(() => {
+      huntHistory = [];
+      saveHuntHistory();
+      renderCollectionHistory();
+      renderHuntHistory();
+      renderCollections();
+      showToast('Collection History cleared');
+    });
   });
   floatingHomeBtn.addEventListener('click',() => goHomeToRare());
   floatingAdminToggle?.addEventListener('click',() => {
@@ -7270,7 +7651,7 @@
       huntHistory = [];
       saveHuntHistory();
       renderHuntHistory();
-      showToast('Sprite Adventure history cleared');
+      showToast('Match history cleared');
     });
   });
   document.getElementById('recordDustPurchaseBtn').addEventListener('click',openDustPurchaseDialog);
@@ -7560,7 +7941,7 @@
                             : (isUnownedPage() ? `#${missingView}` : `#${activeRarity.toLowerCase()}`)))))));
   if (location.hash !== activeHash) history.replaceState({ rarity:activeRarity },'',activeHash);
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./service-worker.js?v=142',{ updateViaCache:'none' }).then((registration) => registration.update()).catch(() => {});
+    navigator.serviceWorker.register('./service-worker.js?v=143',{ updateViaCache:'none' }).then((registration) => registration.update()).catch(() => {});
   }
   const signalAppRendered = () => window.dispatchEvent(new Event('sprite-app-rendered'));
   if (document.fonts?.ready) {

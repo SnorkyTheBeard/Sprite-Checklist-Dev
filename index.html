@@ -299,6 +299,7 @@
 <link rel="stylesheet" href="v139.css?v=139">
 <link rel="stylesheet" href="v140.css?v=140">
 <link rel="stylesheet" href="v142.css?v=142">
+<link rel="stylesheet" href="v143.css?v=143">
 </head>
 <body>
   <div class="app-launch-screen" aria-hidden="true">
@@ -363,7 +364,7 @@
               <circle cx="16.5" cy="15.5" r="3.5"></circle>
               <path d="M16.5 13.5v2.2l1.5 1"></path>
             </svg>
-            <span>Collection Journal</span>
+            <span>Collection History</span>
           </button>
           <button class="app-menu-item" type="button" data-app-view="hunts" data-feature-id="spriteRunHistory">
             <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -371,7 +372,7 @@
               <path d="m15.8 8.2-2.1 5.5-5.5 2.1 2.1-5.5Z"></path>
               <path d="M12 2v2M12 20v2M2 12h2M20 12h2"></path>
             </svg>
-            <span>Sprite Adventure</span>
+            <span>Sprite Assistant</span>
           </button>
           <button class="app-menu-item" type="button" data-app-view="profile" data-feature-id="profiles" hidden>
             <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -428,7 +429,7 @@
 
     <section class="tracker-tools tracker-primary-view" aria-label="Collection tools">
       <div class="hunt-mode-control">
-        <button id="huntModeBtn" type="button" aria-label="Start Sprite Adventure" aria-pressed="false" title="Start Sprite Adventure">
+        <button id="huntModeBtn" type="button" aria-label="Match Start" aria-pressed="false" title="Match Start">
           <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
             <path d="M8 7V5.8A4 4 0 0 1 12 2a4 4 0 0 1 4 3.8V7"></path>
             <rect x="5" y="7" width="14" height="14" rx="3"></rect>
@@ -455,7 +456,7 @@
 
     <section class="hunt-cart-tray tracker-primary-view" id="huntCartTray" aria-live="polite" hidden>
       <div>
-        <span>Current Adventure</span>
+        <span>Current Match</span>
         <strong id="huntCartSummary">0 Sprites · 0 Dust</strong>
       </div>
       <button id="huntCheckoutBtn" type="button">Checkout</button>
@@ -498,8 +499,17 @@
 
     <section class="collection-journal-page" id="collectionJournalPage" aria-labelledby="collectionJournalTitle" hidden>
       <header class="collection-journal-head">
-        <div class="feature-title-row"><h2 id="collectionJournalTitle">Collection Journal</h2><button class="context-help-button" type="button" data-help-key="journal" aria-label="How Collection Journal works">?</button></div>
+        <div class="feature-title-row"><h2 id="collectionJournalTitle">Collection History</h2><button class="context-help-button" type="button" data-help-key="journal" aria-label="How Collection History works">?</button></div>
       </header>
+
+      <section class="collection-history-panel" aria-labelledby="collectionHistoryHeading">
+        <div class="collection-history-heading">
+          <div><span>Completed matches</span><h3 id="collectionHistoryHeading">Sprites Collected by Match</h3></div>
+          <button id="clearCollectionHistoryBtn" type="button">Clear History</button>
+        </div>
+        <div class="collection-history-list" id="collectionHistoryList" aria-live="polite"></div>
+        <p class="collection-history-empty" id="collectionHistoryEmpty">Finish a Match or Session and its collected Sprites will appear here.</p>
+      </section>
 
       <nav class="journal-view-tabs" id="journalViewTabs" aria-label="Collection Journal sections">
         <button type="button" data-journal-view="adventures" aria-pressed="true">Adventures</button>
@@ -557,17 +567,20 @@
     <section class="hunt-history-page sprite-compass-page" id="huntHistoryPage" aria-labelledby="huntHistoryTitle" hidden>
       <header class="feature-page-head">
         <span>Your play-session companion</span>
-        <div class="feature-title-row"><h2 id="huntHistoryTitle">Sprite Adventure</h2><button class="context-help-button" type="button" data-help-key="adventure" aria-label="How Sprite Adventure works">?</button></div>
+        <div class="feature-title-row"><h2 id="huntHistoryTitle">Sprite Assistant</h2><button class="context-help-button" type="button" data-help-key="adventure" aria-label="How Sprite Assistant works">?</button></div>
       </header>
-      <section class="sprite-compass-overview" aria-label="Sprite Adventure overview">
+      <section class="sprite-compass-overview" aria-label="Sprite Assistant overview">
         <article class="sprite-compass-next-target">
           <span>Suggested Sprite</span>
           <strong id="compassNextTarget">Your collection is ready</strong>
           <small id="compassNextReason">A useful suggestion will appear here.</small>
-          <button class="primary-btn" id="compassStartSearchBtn" type="button">Start Adventure</button>
+          <div class="assistant-start-actions">
+            <button class="primary-btn" id="compassStartSearchBtn" type="button">Match Start</button>
+            <button class="primary-btn secondary-session-btn" id="compassSessionStartBtn" type="button">Session Start</button>
+          </div>
         </article>
         <article><span>Added now</span><strong id="compassTargetTotal">0</strong></article>
-        <article><span>Adventures</span><strong id="huntHistoryTotal">0</strong></article>
+        <article><span>Matches</span><strong id="huntHistoryTotal">0</strong></article>
         <article><span>Sprites found</span><strong id="huntHistorySpriteTotal">0</strong></article>
         <article><span>Dust earned</span><strong id="huntHistoryDustTotal">0</strong></article>
       </section>
@@ -578,14 +591,14 @@
           <strong class="adventure-goal-count" id="adventureGoalCount">0 / 3</strong>
         </div>
         <div class="adventure-goal-list" id="adventureGoalList"></div>
-        <p class="adventure-goal-empty" id="adventureGoalEmpty">Tap a target flag in Quick Add to set a goal for this Adventure.</p>
+        <p class="adventure-goal-empty" id="adventureGoalEmpty">Tap a target flag in Quick Add to set a goal for this Session.</p>
       </section>
 
       <section class="hot-drop-panel" id="hotDropPanel" aria-labelledby="hotDropTitle">
         <div class="hot-drop-copy">
           <span>Community activity · past hour</span>
           <div class="feature-title-row feature-title-row-small"><h3 id="hotDropTitle">Hottest Drop!</h3><button class="context-help-button" type="button" data-help-key="hot-drop" aria-label="How Hottest Drop works">?</button></div>
-          <strong id="hotDropLocation">Waiting for enough Adventures</strong>
+          <strong id="hotDropLocation">Waiting for enough Matches</strong>
           <p id="hotDropCount">Hottest Drop appears after at least three collectors report a location.</p>
         </div>
         <div class="hot-drop-sprite" id="hotDropSprite" hidden>
@@ -772,8 +785,8 @@
         <details><summary>Card View</summary><p>Full artwork cards with collection and mastery controls.</p></details>
         <details><summary>List View</summary><p>A compact vertical layout with a smaller image and the same tracking controls.</p></details>
         <details><summary>Sheet View</summary><p>The smallest checklist layout, built for scanning many Sprite variants quickly.</p></details>
-        <details><summary>Sprite Adventure</summary><p>Time a play session, Quick Add the Sprites you find, and finish with a recap.</p></details>
-        <details><summary>Collection Journal</summary><p>Review activity, correct drop spots, build a personal route, and add your own collection stories.</p></details>
+        <details><summary>Sprite Assistant</summary><p>Track one Match or a multi-match Session, Quick Add what you found, then review before finalizing.</p></details>
+        <details><summary>Collection History</summary><p>See the Sprites finalized during each Match.</p></details>
         <details><summary>Sprite Archive</summary><p>A quiet collection display for viewing the Sprites you already own.</p></details>
       </section>
       <section class="settings-card" aria-labelledby="settingsAccountTitle">
@@ -1114,7 +1127,7 @@
           <input id="locationMasteredAt" type="datetime-local">
         </label>
       </div>
-      <p class="location-found-note">You can skip this now and add or change it later from the Collection Journal.</p>
+      <p class="location-found-note">You can skip this for now.</p>
       <div class="dialog-actions">
         <button id="skipLocationFoundBtn" type="button">Skip</button>
         <button class="primary-btn" type="submit">Save details</button>
@@ -1124,8 +1137,8 @@
 
   <dialog class="reset-dialog sprite-search-start-dialog" id="spriteSearchStartDialog" aria-labelledby="spriteSearchStartTitle">
     <form id="spriteSearchStartForm">
-      <h2 id="spriteSearchStartTitle" tabindex="-1">Start Sprite Adventure</h2>
-      <p>Choose your drop spot once. Every Sprite completed during this Adventure will use it automatically.</p>
+      <h2 id="spriteSearchStartTitle" tabindex="-1">Match Start</h2>
+      <p>Optionally choose a drop spot. Add the Sprites you found when the match ends.</p>
       <label class="add-sprite-label" for="spriteSearchLocation">Drop spot</label>
       <select id="spriteSearchLocation">
         <option value="">Choose later</option>
@@ -1141,15 +1154,20 @@
       </select>
       <div class="dialog-actions">
         <button id="cancelSpriteSearchStartBtn" type="button">Cancel</button>
-        <button class="primary-btn" type="submit">Begin Adventure</button>
+        <button class="primary-btn" id="beginMatchBtn" type="submit">Begin Match</button>
       </div>
     </form>
   </dialog>
 
   <dialog class="reset-dialog hunt-checkout-dialog" id="huntCheckoutDialog" aria-labelledby="huntCheckoutTitle">
     <form id="huntCheckoutForm">
-      <h2 id="huntCheckoutTitle" tabindex="-1">Finish Sprite Adventure</h2>
-      <p id="huntCheckoutDuration">Adventure time: 00:00</p>
+      <h2 id="huntCheckoutTitle" tabindex="-1">Match Review</h2>
+      <p id="huntCheckoutDuration">Match time: 00:00</p>
+      <label class="hunt-checkout-quick-add" for="huntCheckoutQuickAddInput">
+        <span>Add a Sprite from this match</span>
+        <input id="huntCheckoutQuickAddInput" type="search" placeholder="Search Sprites…" autocomplete="off">
+      </label>
+      <div class="hunt-checkout-quick-results" id="huntCheckoutQuickAddResults"></div>
       <div class="hunt-checkout-items" id="huntCheckoutItems"></div>
       <div class="hunt-checkout-total">
         <span>Deposit total</span>
@@ -1157,16 +1175,30 @@
       </div>
       <p class="hunt-checkout-warning" id="huntCheckoutWarning" hidden>Some Sprites do not have a Dust value saved for that level and will add 0 Dust.</p>
       <div class="dialog-actions">
-        <button id="continueHuntBtn" type="button">Continue Adventure</button>
-        <button class="primary-btn" id="completeHuntOrderBtn" type="submit">Finish Adventure</button>
+        <button id="continueHuntBtn" type="button">Keep Match Running</button>
+        <button class="primary-btn" id="completeHuntOrderBtn" type="submit">Finish Match</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog class="reset-dialog session-review-dialog" id="sessionReviewDialog" aria-labelledby="sessionReviewTitle">
+    <form id="sessionReviewForm">
+      <span class="sprite-search-recap-eyebrow">Session in progress</span>
+      <h2 id="sessionReviewTitle" tabindex="-1">Session Review</h2>
+      <p id="sessionReviewSummary">Review each match before finalizing the Session.</p>
+      <div class="session-review-matches" id="sessionReviewMatches"></div>
+      <div class="session-review-actions">
+        <button id="sessionReviewAddSpriteBtn" type="button">+ Add Sprite</button>
+        <button id="sessionReviewAddGameBtn" type="button">Add Game</button>
+        <button class="primary-btn" id="sessionReviewEndBtn" type="submit">End Session</button>
       </div>
     </form>
   </dialog>
 
   <dialog class="reset-dialog sprite-search-recap-dialog" id="spriteSearchRecapDialog" aria-labelledby="spriteSearchRecapTitle">
     <form method="dialog">
-      <span class="sprite-search-recap-eyebrow">Adventure complete</span>
-      <h2 id="spriteSearchRecapTitle" tabindex="-1">Adventure Recap</h2>
+      <span class="sprite-search-recap-eyebrow">Match complete</span>
+      <h2 id="spriteSearchRecapTitle" tabindex="-1">Match Recap</h2>
       <div class="sprite-search-recap-summary" id="spriteSearchRecapSummary"></div>
       <div class="sprite-search-recap-items" id="spriteSearchRecapItems"></div>
       <div class="dialog-actions">
@@ -1307,8 +1339,8 @@
   <script src="data.js?v=82"></script>
   <script src="sprite-events-v140.js?v=140"></script>
   <script src="state-schema-v127.js?v=127"></script>
-  <script src="feature-config-v129.js?v=142"></script>
-  <script src="app.js?v=142"></script>
+<script src="feature-config-v129.js?v=143"></script>
+<script src="app.js?v=143"></script>
   <script src="cloud-config-v128.js?v=128"></script>
   <script src="cloud-v128.js?v=135"></script>
   <script src="profile-v133.js?v=142"></script>

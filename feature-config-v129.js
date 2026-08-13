@@ -24,13 +24,13 @@ window.SPRITE_FEATURE_CONFIG = Object.freeze({
     }),
     collectionJournal:Object.freeze({
       state:'public',
-      label:'Collection Journal',
+      label:'Collection History',
       route:'journal',
       implemented:true
     }),
     spriteRunHistory:Object.freeze({
       state:'public',
-      label:'Sprite Adventure',
+      label:'Sprite Assistant',
       route:'adventure',
       implemented:true
     }),
