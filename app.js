@@ -25,7 +25,7 @@
   const APP_VIEW_PROFILE = 'profile';
   const APP_VIEW_SETTINGS = 'settings';
   const APP_VIEW_COMING_SOON = 'coming-soon';
-  const COMPASS_QUICK_ADD_PAGE_SIZE = Number.POSITIVE_INFINITY;
+  const COMPASS_QUICK_ADD_PAGE_SIZE = 500;
   const HELP_COPY_DEFAULTS = Object.freeze({
     adventure:'Start an Adventure when you begin playing. Pick a drop spot once, use Quick Add for every Sprite you find, and finish for a timed recap.',
     'hot-drop':'Hottest Drop uses anonymous totals from signed-in collectors during the past hour. It never shows usernames or individual activity, and it waits for at least three collectors before naming a location.',
@@ -80,6 +80,8 @@
       reduceMotion:saved.reduceMotion === true,
       defaultView:['card','list','sheet'].includes(saved.defaultView) ? saved.defaultView : 'card',
       eventNotices:saved.eventNotices !== false,
+      trackerFilter:['all','uncollected','collected','mastered'].includes(saved.trackerFilter) ? saved.trackerFilter : 'all',
+      collapseVariants:saved.collapseVariants === true,
       personalRoute:normalizePersonalRoute(saved.personalRoute),
       helpCopy:cleanHelpCopy(saved.helpCopy)
     };
@@ -116,6 +118,7 @@
   const HUNT_CART_KEY = `galaxy_sprite_tracker_hunt_cart_v1_${STORAGE_SCOPE}`;
   const HUNT_HISTORY_KEY = `galaxy_sprite_tracker_hunt_history_v1_${STORAGE_SCOPE}`;
   const SEARCH_TARGETS_KEY = `galaxy_sprite_tracker_search_targets_v1_${STORAGE_SCOPE}`;
+  const QUICK_ADD_HISTORY_KEY = `galaxy_sprite_tracker_quick_add_history_v1_${STORAGE_SCOPE}`;
   const DUST_LEDGER_KEY = `galaxy_sprite_tracker_dust_ledger_v1_${STORAGE_SCOPE}`;
   const JOURNAL_FALLBACK_KEY = `galaxy_sprite_tracker_collection_journal_v1_${STORAGE_SCOPE}`;
   const FUTURE_STATE_KEY = `galaxy_sprite_tracker_state_v1_${STORAGE_SCOPE}`;
@@ -127,7 +130,7 @@
   const BACKUP_VERSION = 5;
   const MAX_BACKUP_BYTES = 24 * 1024 * 1024;
   const MAX_HUNT_HISTORY = 300;
-  const MAX_SEARCH_TARGETS = 150;
+  const MAX_SEARCH_TARGETS = 3;
   const MAX_DUST_RECEIPTS = 1000;
   const DUST_PURCHASE_ITEMS = Object.freeze([
     { category:'Base Sprite Re-Summon', name:'Rare Base Sprite Re-Summon', cost:1800 },
@@ -369,6 +372,24 @@
     });
   }
 
+  function normalizeQuickAddHistory(value) {
+    if (!Array.isArray(value)) return [];
+    const merged = new Map();
+    value.slice(0,200).forEach((item) => {
+      if (!item || typeof item !== 'object') return;
+      const familyId = String(item.familyId || '').slice(0,200);
+      const variantId = String(item.variantId || '').slice(0,200);
+      if (!familyId || !variantId) return;
+      const key = `${familyId}:${variantId}`;
+      const previous = merged.get(key) || { familyId,variantId,count:0,lastUsedAt:'' };
+      previous.count = Math.max(previous.count,Math.max(1,Math.min(10000,Math.round(Number(item.count) || 1))));
+      const date = validIsoDate(item.lastUsedAt);
+      if (date && (!previous.lastUsedAt || Date.parse(date) > Date.parse(previous.lastUsedAt))) previous.lastUsedAt = date;
+      merged.set(key,previous);
+    });
+    return [...merged.values()].sort((a,b) => b.count - a.count || Date.parse(b.lastUsedAt || 0) - Date.parse(a.lastUsedAt || 0)).slice(0,30);
+  }
+
   function normalizeDustLedger(value) {
     if (!Array.isArray(value)) return [];
     return value.slice(0,MAX_DUST_RECEIPTS).flatMap((entry) => {
@@ -412,6 +433,7 @@
     const saved = readJson(SPRITE_CARD_EDITS_KEY);
     return {
       families:saved?.families && typeof saved.families === 'object' ? saved.families : {},
+      rarityDustLevels:saved?.rarityDustLevels && typeof saved.rarityDustLevels === 'object' && !Array.isArray(saved.rarityDustLevels) ? saved.rarityDustLevels : {},
       customFamilies:Array.isArray(saved?.customFamilies) ? saved.customFamilies : [],
       lastPublishedSnapshot:saved?.lastPublishedSnapshot || ''
     };
@@ -545,6 +567,7 @@
       },
       pages:Object.fromEntries(rarities.map((rarity) => [rarity,{ ...DEFAULT_PAGES[rarity], ...(source.pages?.[rarity] || {}) }])),
       families:source.families && typeof source.families === 'object' ? source.families : {},
+      rarityDustLevels:source.rarityDustLevels && typeof source.rarityDustLevels === 'object' ? source.rarityDustLevels : {},
       customFamilies:Array.isArray(source.customFamilies) ? source.customFamilies : [],
       theme:{
         ...DEFAULT_THEME,
@@ -733,16 +756,19 @@
   let huntCart = loadStoredArray(HUNT_CART_KEY,normalizeHuntCart);
   let huntHistory = loadStoredArray(HUNT_HISTORY_KEY,normalizeHuntHistory);
   let searchTargets = loadStoredArray(SEARCH_TARGETS_KEY,normalizeSearchTargets);
+  let quickAddHistory = loadStoredArray(QUICK_ADD_HISTORY_KEY,normalizeQuickAddHistory);
   let compassQuickAddPage = 0;
   let compassExpandedFamilyId = '';
   let compassSwipeStartX = 0;
   let dustLedger = loadStoredArray(DUST_LEDGER_KEY,normalizeDustLedger);
   let experienceSettings = loadExperienceSettings();
+  let expandedCollapsedFamilies = new Set();
+  let journalView = 'adventures';
+  let activeVoiceRecognition = null;
   let welcomeIndex = 0;
   let currentHelpKey = '';
   let hottestDropRequest = null;
   let hottestDropLoadedAt = 0;
-  let journalView = 'timeline';
 
   const tabsEl = document.getElementById('rarityTabs');
   const collectionsEl = document.getElementById('collections');
@@ -785,6 +811,12 @@
   const journalZoneBossCount = document.getElementById('journalZoneBossCount');
   const journalMapZones = [...document.querySelectorAll('[data-journal-map-zone]')];
   const journalActionFilter = document.getElementById('journalActionFilter');
+  const journalViewTabs = document.getElementById('journalViewTabs');
+  const journalInsightsPanel = document.getElementById('journalInsightsPanel');
+  const journalLocationPanel = document.getElementById('journalLocationPanel');
+  const journalHistoryPanel = document.getElementById('journalHistoryPanel');
+  const journalHistoryEyebrow = document.getElementById('journalHistoryEyebrow');
+  const journalHistoryTitle = document.getElementById('journalHistoryTitle');
   const clearJournalActivityBtn = document.getElementById('clearJournalActivityBtn');
   const addCollectionStoryBtn = document.getElementById('addCollectionStoryBtn');
   const collectionStoryDialog = document.getElementById('collectionStoryDialog');
@@ -816,10 +848,6 @@
   const journalMemoryPhoto = document.getElementById('journalMemoryPhoto');
   const journalMemoryPhotoPreview = document.getElementById('journalMemoryPhotoPreview');
   const journalMemoryStatus = document.getElementById('journalMemoryStatus');
-  const journalViewTabs = document.getElementById('journalViewTabs');
-  const journalInsightsPanel = document.getElementById('journalInsightsPanel');
-  const journalLocationsPanel = document.getElementById('journalLocationsPanel');
-  const journalHistoryPanel = document.getElementById('journalHistoryPanel');
   const locationFoundDialog = document.getElementById('locationFoundDialog');
   const locationFoundForm = document.getElementById('locationFoundForm');
   const locationFoundTitle = document.getElementById('locationFoundTitle');
@@ -847,10 +875,6 @@
   const spriteSearchStartForm = document.getElementById('spriteSearchStartForm');
   const spriteSearchStartTitle = document.getElementById('spriteSearchStartTitle');
   const spriteSearchLocation = document.getElementById('spriteSearchLocation');
-  const adventureLocationGrid = document.getElementById('adventureLocationGrid');
-  const adventureStartLocationGrid = document.getElementById('adventureStartLocationGrid');
-  const journalLocationGrid = document.getElementById('journalLocationGrid');
-  const adventureGridSelection = document.getElementById('adventureGridSelection');
   const spriteSearchRecapDialog = document.getElementById('spriteSearchRecapDialog');
   const spriteSearchRecapTitle = document.getElementById('spriteSearchRecapTitle');
   const spriteSearchRecapSummary = document.getElementById('spriteSearchRecapSummary');
@@ -863,6 +887,11 @@
   const compassNextTarget = document.getElementById('compassNextTarget');
   const compassNextReason = document.getElementById('compassNextReason');
   const compassTargetTotal = document.getElementById('compassTargetTotal');
+  const adventureGoalCount = document.getElementById('adventureGoalCount');
+  const adventureGoalList = document.getElementById('adventureGoalList');
+  const adventureGoalEmpty = document.getElementById('adventureGoalEmpty');
+  const compassSmartHistory = document.getElementById('compassSmartHistory');
+  const compassSmartHistoryRow = document.getElementById('compassSmartHistoryRow');
   const compassStartSearchBtn = document.getElementById('compassStartSearchBtn');
   const compassTargetForm = document.getElementById('compassTargetForm');
   const compassTargetInput = document.getElementById('compassTargetInput');
@@ -913,6 +942,12 @@
   const clearSpriteSearchBtn = document.getElementById('clearSpriteSearchBtn');
   const spriteEditorToggle = document.getElementById('spriteEditorToggle');
   const spriteViewSelect = document.getElementById('spriteViewSelect');
+  const trackerFilterBar = document.getElementById('trackerFilterBar');
+  const variantCollapseToggle = document.getElementById('variantCollapseToggle');
+  const voiceCommandBtn = document.getElementById('voiceCommandBtn');
+  const voiceCommandStatus = document.getElementById('voiceCommandStatus');
+  const rarityDustAdmin = document.getElementById('rarityDustAdmin');
+  const rarityDustAdminFields = document.getElementById('rarityDustAdminFields');
   const shareSheetBtn = document.getElementById('shareSheetBtn');
   const addSpriteDialog = document.getElementById('addSpriteDialog');
   const addSpriteForm = document.getElementById('addSpriteForm');
@@ -1010,6 +1045,25 @@
       localStorage.setItem(SEARCH_TARGETS_KEY,JSON.stringify(searchTargets));
       noteLocalSaveChange('sprite-compass');
     } catch { showToast('The Search List could not be saved.'); }
+  }
+
+  function saveQuickAddHistory() {
+    quickAddHistory = normalizeQuickAddHistory(quickAddHistory);
+    try {
+      localStorage.setItem(QUICK_ADD_HISTORY_KEY,JSON.stringify(quickAddHistory));
+      noteLocalSaveChange('quick-add-history');
+    } catch { /* Quick Add still works without history. */ }
+  }
+
+  function noteQuickAdd(family,variant) {
+    const existing = quickAddHistory.find((item) => item.familyId === family.id && item.variantId === variant.id);
+    if (existing) {
+      existing.count = Math.min(10000,(existing.count || 0) + 1);
+      existing.lastUsedAt = new Date().toISOString();
+    } else {
+      quickAddHistory.unshift({ familyId:family.id,variantId:variant.id,count:1,lastUsedAt:new Date().toISOString() });
+    }
+    saveQuickAddHistory();
   }
 
   function saveDustLedger() {
@@ -1155,6 +1209,7 @@
       mastered:false,
       addedAt:new Date().toISOString()
     });
+    noteQuickAdd(family,variant);
     saveHuntCart();
     renderHuntCartTray();
     if (appView === APP_VIEW_HUNTS) renderHuntHistory();
@@ -1899,7 +1954,8 @@
       editor:{
         localFamilyIds:(spriteCardEdits.customFamilies || []).map((family) => family?.id).filter(Boolean),
         editedFamilyIds:Object.keys(spriteCardEdits.families || {}),
-        hasUnpublishedChanges:Boolean((spriteCardEdits.customFamilies || []).length || Object.keys(spriteCardEdits.families || {}).length)
+        hasUnpublishedChanges:Boolean((spriteCardEdits.customFamilies || []).length || Object.keys(spriteCardEdits.families || {}).length || Object.keys(spriteCardEdits.rarityDustLevels || {}).length),
+        rarityDustLevels:spriteCardEdits.rarityDustLevels || {}
       },
       viewModes:spriteViewModes,
       experience:sanitizeExperienceSettings(experienceSettings),
@@ -1911,6 +1967,7 @@
       huntCart,
       huntHistory,
       searchTargets,
+      quickAddHistory,
       dustLedger
     };
   }
@@ -2645,28 +2702,19 @@
     }
   }
 
-  function applyJournalView() {
-    const timeline = journalView === 'timeline';
-    const adventures = journalView === 'adventures';
-    const story = journalView === 'story';
-    const insights = journalView === 'insights';
-    if (journalInsightsPanel) journalInsightsPanel.hidden = !insights;
-    if (journalLocationsPanel) journalLocationsPanel.hidden = !insights;
-    if (journalHistoryPanel) journalHistoryPanel.hidden = insights;
-    journalViewTabs?.querySelectorAll('[data-journal-view]').forEach((button) => {
-      const active = button.dataset.journalView === journalView;
-      button.setAttribute('aria-pressed',String(active));
-    });
-    const controls = journalHistoryPanel?.querySelector('.journal-history-controls');
-    if (controls) controls.hidden = adventures;
-    const historyTitle = document.getElementById('journalHistoryTitle');
-    if (historyTitle) historyTitle.textContent = adventures ? 'Adventures' : (story ? 'Collection Story' : 'Timeline');
-    if (!timeline && journalActionFilter) journalActionFilter.value = 'all';
-  }
-
   function renderJournal() {
     if (!collectionJournalPage) return;
-    applyJournalView();
+    journalViewTabs?.querySelectorAll('[data-journal-view]').forEach((button) => {
+      button.setAttribute('aria-pressed',String(button.dataset.journalView === journalView));
+    });
+    if (journalInsightsPanel) journalInsightsPanel.hidden = journalView !== 'insights';
+    if (journalLocationPanel) journalLocationPanel.hidden = journalView !== 'insights';
+    if (journalHistoryPanel) journalHistoryPanel.hidden = journalView === 'insights';
+    if (journalHistoryTitle) journalHistoryTitle.textContent = journalView === 'story' ? 'Collection Story' : 'Adventures';
+    if (journalHistoryEyebrow) journalHistoryEyebrow.textContent = journalView === 'story' ? 'Your saved notes' : 'Completed play sessions';
+    if (journalActionFilter) journalActionFilter.closest('.journal-filter-label').hidden = true;
+    if (addCollectionStoryBtn) addCollectionStoryBtn.hidden = journalView !== 'story';
+    if (clearJournalActivityBtn) clearJournalActivityBtn.hidden = journalView !== 'adventures';
     const visibleEntries = (journalReady ? journalEntries : pendingJournalEntries)
       .filter((entry) => !entry.undone)
       .sort((a,b) => journalEntryTimestamp(b) - journalEntryTimestamp(a));
@@ -2712,10 +2760,10 @@
       button.setAttribute('aria-pressed',String(active));
     });
 
-    const filter = journalView === 'story'
-      ? 'story'
-      : (journalView === 'timeline' ? (journalActionFilter?.value || 'all') : 'all');
-    const filtered = (journalView === 'adventures' ? [] : activityEntries).filter((entry) => {
+    const filter = journalActionFilter?.value || 'all';
+    const filtered = activityEntries.filter((entry) => {
+      if (journalView === 'adventures') return false;
+      if (journalView === 'story') return entry.type === 'story';
       if (!journalFilterMatches(entry,filter)) return false;
       if (!journalLocationFilter) return true;
       return locationZone(entry.after?.locationFound) === journalLocationFilter;
@@ -2723,9 +2771,7 @@
     journalMemoryList.replaceChildren();
     journalMemoryEmpty.hidden = true;
     journalEntryList.replaceChildren();
-    const adventureRecaps = journalView === 'adventures'
-      ? normalizeHuntHistory(huntHistory).slice(0,50)
-      : (journalView === 'timeline' && filter === 'all' ? normalizeHuntHistory(huntHistory).slice(0,20) : []);
+    const adventureRecaps = journalView === 'adventures' ? normalizeHuntHistory(huntHistory).slice(0,40) : [];
     journalEmptyState.hidden = Boolean(filtered.length || adventureRecaps.length);
     if (!journalReady && !filtered.length) {
       journalEmptyState.querySelector('strong').textContent = 'Opening your journal…';
@@ -2889,7 +2935,8 @@
   function addSearchTarget(entry) {
     if (!entry) return;
     const exists = searchTargets.some((target) => target.familyId === entry.familyId && target.variantId === entry.variantId);
-    if (exists) return showToast('That Sprite is already on your Search List.');
+    if (exists) return showToast('That Sprite is already an Adventure Goal.');
+    if (searchTargets.length >= MAX_SEARCH_TARGETS) return showToast('Choose up to three Adventure Goals.');
     searchTargets.unshift({
       familyId:entry.familyId,
       variantId:entry.variantId,
@@ -2899,14 +2946,50 @@
     compassTargetInput.value = '';
     closeCompassTargetResults();
     renderHuntHistory();
-    showToast(`${entry.groupName} · ${entry.variantName} added to Search List`);
+    showToast(`${entry.groupName} · ${entry.variantName} added as an Adventure Goal`);
   }
 
   function removeSearchTarget(target) {
     searchTargets = searchTargets.filter((entry) => !(entry.familyId === target.familyId && entry.variantId === target.variantId));
     saveSearchTargets();
     renderHuntHistory();
-    showToast('Removed from Search List');
+    showToast('Adventure Goal removed');
+  }
+
+  function toggleAdventureGoal(family,variant) {
+    const existing = searchTargets.find((target) => target.familyId === family.id && target.variantId === variant.id);
+    if (existing) return removeSearchTarget(existing);
+    const entry = searchableSprites().find((item) => item.familyId === family.id && item.variantId === variant.id);
+    addSearchTarget(entry);
+  }
+
+  function renderAdventureGoals() {
+    const goals = searchTargets.map(searchTargetInfo).filter(Boolean);
+    adventureGoalCount.textContent = `${goals.length} / ${MAX_SEARCH_TARGETS}`;
+    adventureGoalEmpty.hidden = Boolean(goals.length);
+    adventureGoalList.replaceChildren();
+    goals.forEach((info) => {
+      const item = document.createElement('article');
+      item.className = 'adventure-goal-item';
+      item.dataset.rarity = info.entry.rarity;
+      const thumb = document.createElement('span');
+      if (info.image) {
+        const image = document.createElement('img');
+        image.src = info.image; image.alt = ''; image.width = 54; image.height = 54;
+        thumb.appendChild(image);
+      }
+      const copy = document.createElement('div');
+      const name = document.createElement('strong');
+      const stateLabel = document.createElement('small');
+      name.textContent = `${info.entry.groupName} · ${info.entry.variantName}`;
+      stateLabel.textContent = info.current.mastered ? 'Mastered' : (info.current.collected ? 'Collected · mastery goal' : 'Uncollected');
+      copy.append(name,stateLabel);
+      const remove = document.createElement('button');
+      remove.type = 'button'; remove.textContent = '×'; remove.setAttribute('aria-label',`Remove ${name.textContent} from Adventure Goals`);
+      remove.addEventListener('click',() => removeSearchTarget(info.target));
+      item.append(thumb,copy,remove);
+      adventureGoalList.appendChild(item);
+    });
   }
 
   function closeCompassTargetResults() {
@@ -2918,7 +3001,7 @@
     const query = compassTargetInput.value.trim();
     compassTargetResults.replaceChildren();
     if (!query) return closeCompassTargetResults();
-    const matches = findSpriteMatches(query).filter((entry) => !variantState(entry.familyId,entry.variantId).collected).slice(0,8);
+    const matches = findSpriteMatches(query).slice(0,8);
     if (!matches.length) {
       const empty = document.createElement('p');
       empty.className = 'sprite-search-empty';
@@ -2931,15 +3014,23 @@
         const name = document.createElement('strong');
         const detail = document.createElement('small');
         const added = huntCart.some((item) => item.familyId === entry.familyId && item.variantId === entry.variantId);
+        const goalActive = searchTargets.some((item) => item.familyId === entry.familyId && item.variantId === entry.variantId);
         button.type = 'button';
         button.role = 'option';
-        button.disabled = added || !huntMode.active;
+        button.disabled = huntMode.active && added;
         name.textContent = `${entry.groupName} · ${entry.variantName}`;
-        detail.textContent = added ? `${entry.rarity} · Added` : (huntMode.active ? `${entry.rarity} · Add to Adventure` : `${entry.rarity} · Start an Adventure first`);
+        detail.textContent = huntMode.active
+          ? (added ? `${entry.rarity} · Added` : `${entry.rarity} · Add to Adventure`)
+          : `${entry.rarity} · ${goalActive ? 'Remove goal' : 'Set Adventure Goal'}`;
         copy.append(name,detail);
         button.append(copy);
         button.addEventListener('click',() => {
-          addSpriteSearchResultToHunt(entry);
+          if (huntMode.active) addSpriteSearchResultToHunt(entry);
+          else {
+            const family = allFamilies().find((item) => item.id === entry.familyId);
+            const variant = family && orderedVariants(family).find((item) => item.id === entry.variantId);
+            if (family && variant) toggleAdventureGoal(family,variant);
+          }
           compassTargetInput.value = '';
           closeCompassTargetResults();
           renderSpriteCompass();
@@ -2954,7 +3045,7 @@
   function compassRecommendation() {
     const targets = searchTargets.map(searchTargetInfo).filter(Boolean);
     const missingTarget = targets.find((info) => !info.current.collected);
-    if (missingTarget) return { info:missingTarget, reason:'First unowned Sprite on your Search List.' };
+    if (missingTarget) return { info:missingTarget, reason:'First unowned Sprite in your Adventure Goals.' };
     const masteryTarget = targets.find((info) => !info.current.mastered);
     if (masteryTarget) return { info:masteryTarget, reason:'Already collected and ready to master.' };
 
@@ -2988,7 +3079,7 @@
         const view = variantView(family,variant);
         return !view.deleted && view.visible && spriteSeasonId(family,variant) === CURRENT_SEASON_ID;
       });
-      const availableVariants = variants.filter((variant) => !variantState(family.id,variant.id).collected);
+      const availableVariants = variants;
       if (!availableVariants.length) return [];
       const familyName = group.name || family.name || 'Sprite';
       const searchText = normalizeSearchText([familyName,...variants.map((variant) => variantView(family,variant).name || variant.name)].join(' '));
@@ -2996,16 +3087,18 @@
       const base = variants.find((variant) => variant.id === 'base') || variants[0];
       return [{ family,group,familyName,base,availableVariants }];
     }).sort((left,right) => sortDirection * left.familyName.localeCompare(right.familyName,undefined,{ sensitivity:'base',numeric:true }));
-    const pageCount = 1;
+    const pageCount = Math.max(1,Math.ceil(matching.length / COMPASS_QUICK_ADD_PAGE_SIZE));
     if (compassExpandedFamilyId && !matching.some((entry) => entry.family.id === compassExpandedFamilyId)) compassExpandedFamilyId = '';
     compassQuickAddPage = Math.max(0,Math.min(compassQuickAddPage,pageCount - 1));
-    const pageStart = 0;
-    const available = matching;
+    const pageStart = compassQuickAddPage * COMPASS_QUICK_ADD_PAGE_SIZE;
+    const available = matching.slice(pageStart,pageStart + COMPASS_QUICK_ADD_PAGE_SIZE);
     compassTargetTotal.textContent = String(huntCart.length);
+    renderAdventureGoals();
+    renderQuickAddHistory();
     compassTargetList.replaceChildren();
     compassTargetEmpty.hidden = Boolean(available.length);
     if (compassQuickAddPager) {
-      compassQuickAddPager.hidden = true;
+      compassQuickAddPager.hidden = matching.length <= COMPASS_QUICK_ADD_PAGE_SIZE;
       compassQuickAddPrev.disabled = compassQuickAddPage === 0;
       compassQuickAddNext.disabled = compassQuickAddPage >= pageCount - 1;
       compassQuickAddPageInfo.textContent = matching.length
@@ -3032,6 +3125,16 @@
       name.textContent = entry.familyName;
       copy.append(name);
       const actions = document.createElement('div');
+      actions.className = 'compass-family-actions';
+      const goal = document.createElement('button');
+      const baseGoalActive = entry.base && searchTargets.some((target) => target.familyId === entry.family.id && target.variantId === entry.base.id);
+      goal.type = 'button';
+      goal.className = 'compass-goal-toggle';
+      goal.textContent = '✦';
+      goal.setAttribute('aria-pressed',String(Boolean(baseGoalActive)));
+      goal.setAttribute('aria-label',`${baseGoalActive ? 'Remove' : 'Set'} ${entry.familyName} as an Adventure Goal`);
+      goal.disabled = !entry.base;
+      goal.addEventListener('click',() => entry.base && toggleAdventureGoal(entry.family,entry.base));
       const add = document.createElement('button');
       add.type = 'button';
       add.className = 'compass-quick-add';
@@ -3042,7 +3145,7 @@
         compassExpandedFamilyId = compassExpandedFamilyId === entry.family.id ? '' : entry.family.id;
         renderSpriteCompass();
       });
-      actions.append(add);
+      actions.append(goal,add);
       row.append(thumb,copy,actions);
       if (compassExpandedFamilyId === entry.family.id) {
         row.style.setProperty('--quick-add-span',String(Math.max(3,entry.availableVariants.length + 2)));
@@ -3054,6 +3157,14 @@
           const label = document.createElement('span');
           label.textContent = variantInfo.name || variant.name || 'Variant';
           const variantAdd = document.createElement('button');
+          const variantGoal = document.createElement('button');
+          const goalActive = searchTargets.some((target) => target.familyId === entry.family.id && target.variantId === variant.id);
+          variantGoal.type = 'button';
+          variantGoal.className = 'compass-variant-goal';
+          variantGoal.textContent = '✦';
+          variantGoal.setAttribute('aria-pressed',String(goalActive));
+          variantGoal.setAttribute('aria-label',`${goalActive ? 'Remove' : 'Set'} ${entry.familyName} ${label.textContent} as an Adventure Goal`);
+          variantGoal.addEventListener('click',() => toggleAdventureGoal(entry.family,variant));
           const alreadyAdded = huntCart.some((cartItem) => cartItem.familyId === entry.family.id && cartItem.variantId === variant.id);
           variantAdd.type = 'button';
           variantAdd.textContent = '+';
@@ -3062,7 +3173,7 @@
             ? `${entry.familyName} ${label.textContent} is already in this Adventure`
             : `Add ${entry.familyName} ${label.textContent} to this Adventure`);
           variantAdd.addEventListener('click',() => addSpriteToHuntCart(entry.family,variant));
-          item.append(label,variantAdd);
+          item.append(label,variantGoal,variantAdd);
           variants.appendChild(item);
         });
         row.appendChild(variants);
@@ -3076,6 +3187,34 @@
       : 'Collection complete';
     compassNextReason.textContent = recommendation.reason;
     compassStartSearchBtn.textContent = huntMode.active ? `Finish Adventure · ${formatHuntDuration(huntElapsedMs())}` : 'Start Adventure';
+  }
+
+  function renderQuickAddHistory() {
+    const entries = quickAddHistory.map((history) => {
+      const family = allFamilies().find((item) => item.id === history.familyId);
+      const variant = family && orderedVariants(family).find((item) => item.id === history.variantId);
+      return family && variant ? { history,family,variant } : null;
+    }).filter(Boolean).slice(0,6);
+    compassSmartHistory.hidden = !entries.length;
+    compassSmartHistoryRow.replaceChildren();
+    entries.forEach(({ family,variant }) => {
+      const info = variantView(family,variant);
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'compass-history-add';
+      const source = displayImageSource(info.image);
+      if (source) {
+        const image = document.createElement('img'); image.src = source; image.alt = ''; image.width = 44; image.height = 44;
+        button.appendChild(image);
+      }
+      const label = document.createElement('span');
+      label.textContent = `${familyView(family).name} · ${info.name}`;
+      const plus = document.createElement('b'); plus.textContent = '+';
+      button.append(label,plus);
+      button.disabled = !huntMode.active || huntCart.some((item) => item.familyId === family.id && item.variantId === variant.id);
+      button.addEventListener('click',() => addSpriteToHuntCart(family,variant));
+      compassSmartHistoryRow.appendChild(button);
+    });
   }
 
   function renderHuntHistory() {
@@ -3344,63 +3483,6 @@
     return Number.isFinite(date.getTime()) ? date.toISOString() : '';
   }
 
-  function buildLocationGrid(container,onSelect) {
-    if (!container || container.childElementCount) return;
-    const columns = 'ABCDEFGHIJ'.split('');
-    for (let row = 1; row <= 8; row += 1) {
-      columns.forEach((column) => {
-        const cell = `${column}${row}`;
-        const button = document.createElement('button');
-        button.type = 'button';
-        button.dataset.mapCell = cell;
-        button.setAttribute('aria-label',`Map square ${cell}`);
-        button.textContent = cell;
-        button.addEventListener('click',() => onSelect(cell));
-        container.appendChild(button);
-      });
-    }
-  }
-
-  function selectLocationGrid(container,cell) {
-    container?.querySelectorAll('[data-map-cell]').forEach((button) => {
-      const selected = button.dataset.mapCell === cell;
-      button.classList.toggle('is-selected',selected);
-      button.setAttribute('aria-pressed',String(selected));
-    });
-  }
-
-  function setSelectToMapCell(select,cell) {
-    if (!select || !cell) return;
-    let option = [...select.options].find((item) => item.value === cell);
-    if (!option) {
-      option = document.createElement('option');
-      option.value = cell;
-      option.textContent = `Map square ${cell}`;
-      select.appendChild(option);
-    }
-    select.value = cell;
-  }
-
-  function initializeLocationGrids() {
-    buildLocationGrid(adventureStartLocationGrid,(cell) => {
-      setSelectToMapCell(spriteSearchLocation,cell);
-      selectLocationGrid(adventureStartLocationGrid,cell);
-      selectLocationGrid(adventureLocationGrid,cell);
-      if (adventureGridSelection) adventureGridSelection.textContent = `Next Adventure location: ${cell}`;
-    });
-    buildLocationGrid(adventureLocationGrid,(cell) => {
-      setSelectToMapCell(spriteSearchLocation,cell);
-      selectLocationGrid(adventureStartLocationGrid,cell);
-      selectLocationGrid(adventureLocationGrid,cell);
-      if (adventureGridSelection) adventureGridSelection.textContent = `Next Adventure location: ${cell}`;
-    });
-    buildLocationGrid(journalLocationGrid,(cell) => {
-      setSelectToMapCell(locationFoundSelect,cell);
-      locationFoundCustomLabel.hidden = true;
-      selectLocationGrid(journalLocationGrid,cell);
-    });
-  }
-
   function openLocationDetails(family,variant,journalEntryId = '',{ newlyCollected = false } = {}) {
     const current = variantState(family.id,variant.id);
     if (!current.collected) return;
@@ -3419,7 +3501,6 @@
     locationFoundSelect.value = builtInLocation ? savedLocation : (savedLocation ? 'Other' : '');
     locationFoundCustom.value = savedLocation && !builtInLocation ? savedLocation : '';
     locationFoundCustomLabel.hidden = locationFoundSelect.value !== 'Other';
-    selectLocationGrid(journalLocationGrid,/^[A-J][1-8]$/.test(savedLocation) ? savedLocation : '');
     locationCollectedAt.value = isoToLocalDateTime(current.collectedAt || new Date().toISOString());
     locationMasteredAt.value = isoToLocalDateTime(current.masteredAt || '');
     locationMasteredAtLabel.hidden = !current.mastered;
@@ -3650,7 +3731,36 @@
     return true;
   }
 
+  function saveRarityDustLevels(rarity,inputs) {
+    if (!rarities.includes(rarity)) return false;
+    const values = {};
+    let invalid = false;
+    inputs.forEach((input,index) => {
+      const raw = String(input.value || '').trim().replace(/,/g,'');
+      if (!raw) return;
+      const amount = Number(raw);
+      if (!Number.isFinite(amount) || amount < 0 || amount > 1000000) invalid = true;
+      else values[String(index + 1)] = Math.round(amount);
+    });
+    if (invalid || Object.keys(values).length !== 5) {
+      showToast('Enter all five whole Sprite Dust amounts from 0 to 1,000,000.');
+      return false;
+    }
+    const previousEdits = cloneJson(spriteCardEdits);
+    spriteCardEdits.rarityDustLevels ||= {};
+    spriteCardEdits.rarityDustLevels[rarity] = values;
+    if (!saveCardEditOrRestore(previousEdits)) return false;
+    renderExtractionDust(rarity);
+    showToast(`${rarity} Sprite Dust rewards saved`);
+    return true;
+  }
+
   function rarityDustRewards(rarity) {
+    const globalLevels = normalizeDustLevels(
+      spriteCardEdits.rarityDustLevels?.[rarity]
+      || design.rarityDustLevels?.[rarity]
+    );
+    if (Object.keys(globalLevels).length) return globalLevels;
     const rewardCounts = Object.fromEntries([1,2,3,4,5].map((level) => [String(level),new Map()]));
     allFamilies().filter((family) => familyRarity(family) === rarity).forEach((family) => {
       familyVariants(family).forEach((variant) => {
@@ -3671,9 +3781,10 @@
 
   function spriteDustAtLevel(family,variant,level = 1) {
     const normalizedLevel = String(Math.max(1,Math.min(5,Number(level) || 1)));
-    const saved = Number(variantView(family,variant).dustLevels[normalizedLevel]);
-    if (Number.isFinite(saved) && saved >= 0) return saved;
-    return Number(rarityDustRewards(familyRarity(family))[normalizedLevel]) || 0;
+    const rarityReward = Number(rarityDustRewards(familyRarity(family))[normalizedLevel]);
+    if (Number.isFinite(rarityReward) && rarityReward >= 0) return rarityReward;
+    const legacy = Number(variantView(family,variant).dustLevels[normalizedLevel]);
+    return Number.isFinite(legacy) && legacy >= 0 ? legacy : 0;
   }
 
   function renderExtractionDust(rarity) {
@@ -3695,6 +3806,23 @@
       row.append(label,value);
       extractionDustLevels.appendChild(row);
     });
+    renderRarityDustAdmin(rarity,rewards);
+  }
+
+  function renderRarityDustAdmin(rarity,rewards = rarityDustRewards(rarity)) {
+    if (!rarityDustAdmin || !rarityDustAdminFields) return;
+    rarityDustAdmin.hidden = !spriteEditMode || !rarities.includes(rarity) || appView !== APP_VIEW_TRACKER;
+    rarityDustAdminFields.replaceChildren();
+    [1,2,3,4,5].forEach((level) => {
+      const label = document.createElement('label');
+      label.textContent = `Level ${level}`;
+      const input = document.createElement('input');
+      input.type = 'number'; input.min = '0'; input.max = '1000000'; input.step = '1'; input.inputMode = 'numeric';
+      input.value = String(rewards[String(level)] ?? '');
+      input.dataset.dustLevel = String(level);
+      label.appendChild(input);
+      rarityDustAdminFields.appendChild(label);
+    });
   }
 
   function formatDust(value) {
@@ -3708,6 +3836,7 @@
   function spriteCardEditsFingerprint() {
     return JSON.stringify({
       families:spriteCardEdits.families || {},
+      rarityDustLevels:spriteCardEdits.rarityDustLevels || {},
       customFamilies:Array.isArray(spriteCardEdits.customFamilies) ? spriteCardEdits.customFamilies : []
     });
   }
@@ -3725,7 +3854,8 @@
       || hasOwn(edits,'archivedGroup')
     ));
     const hasNewGroups = Array.isArray(spriteCardEdits.customFamilies) && spriteCardEdits.customFamilies.length > 0;
-    const hasChanges = hasFamilyChanges || hasNewGroups;
+    const hasRarityDustChanges = Object.keys(spriteCardEdits.rarityDustLevels || {}).length > 0;
+    const hasChanges = hasFamilyChanges || hasNewGroups || hasRarityDustChanges;
     return Boolean(hasChanges && spriteCardEdits.lastPublishedSnapshot !== spriteCardEditsFingerprint());
   }
 
@@ -3809,6 +3939,10 @@
     nextDesign.seasons = cloneJson(seasonCatalog);
     nextDesign.currentSeasonId = CURRENT_SEASON_ID;
     nextDesign.families ||= {};
+    nextDesign.rarityDustLevels = {
+      ...(nextDesign.rarityDustLevels && typeof nextDesign.rarityDustLevels === 'object' ? nextDesign.rarityDustLevels : {}),
+      ...Object.fromEntries(Object.entries(spriteCardEdits.rarityDustLevels || {}).map(([rarity,levels]) => [rarity,normalizeDustLevels(levels)]))
+    };
     nextDesign.customFamilies = Array.isArray(nextDesign.customFamilies) ? nextDesign.customFamilies : [];
     const assets = [];
 
@@ -3960,6 +4094,7 @@
     });
 
     design.families = cloneJson(nextDesign.families || {});
+    design.rarityDustLevels = cloneJson(nextDesign.rarityDustLevels || {});
     design.customFamilies = cloneJson(nextDesign.customFamilies || []);
     design._meta = { ...(design._meta || {}), ...(nextDesign._meta || {}) };
     Object.entries(nextDesign.families || {}).forEach(([familyId,family]) => {
@@ -4210,6 +4345,33 @@
     masterLabel.hidden = !masterText;
   }
 
+  function celebrateSheetCrown(button) {
+    if (!button || experienceSettings.reduceMotion || !experienceSettings.animations) return;
+    button.classList.remove('crown-celebrate');
+    void button.offsetWidth;
+    button.classList.add('crown-celebrate');
+    window.setTimeout(() => button.classList.remove('crown-celebrate'),750);
+  }
+
+  function celebrateCrown(crown) {
+    if (!crown || experienceSettings.reduceMotion || !experienceSettings.animations) return;
+    crown.querySelector('.crown-dust-burst')?.remove();
+    const burst = document.createElement('span');
+    burst.className = 'crown-dust-burst';
+    burst.setAttribute('aria-hidden','true');
+    for (let index = 0;index < 10;index += 1) {
+      const particle = document.createElement('i');
+      particle.style.setProperty('--particle-angle',`${index * 36}deg`);
+      particle.style.setProperty('--particle-delay',`${index % 3 * 25}ms`);
+      burst.appendChild(particle);
+    }
+    crown.appendChild(burst);
+    crown.classList.remove('crown-celebrate');
+    void crown.offsetWidth;
+    crown.classList.add('crown-celebrate');
+    window.setTimeout(() => { burst.remove();crown.classList.remove('crown-celebrate'); },950);
+  }
+
   function saveRecentMissingChanges() {
     try {
       sessionStorage.setItem(RECENT_MISSING_KEY,JSON.stringify(recentMissingChanges));
@@ -4406,7 +4568,11 @@
     mastered.setAttribute('aria-pressed',String(Boolean(current.mastered)));
     mastered.setAttribute('aria-label',`${current.mastered ? 'Remove mastery from' : 'Mark'} ${view.name || 'variant'} ${familyName}${current.mastered ? '' : ' as mastered'}`);
     mastered.innerHTML = crownSvg();
-    mastered.addEventListener('click',() => commitSheetStateChange(family,variant,'mastered'));
+    mastered.addEventListener('click',() => {
+      const becomingMastered = !variantState(family.id,variant.id).mastered;
+      commitSheetStateChange(family,variant,'mastered');
+      if (becomingMastered) celebrateSheetCrown(mastered);
+    });
     controls.append(collected,mastered);
     return controls;
   }
@@ -4628,32 +4794,6 @@
     percentageInput.setAttribute('aria-label',`Rarity percentage for ${view.name || 'sprite'} ${familyInfo.name || ''}`.trim());
     percentageEditor.append(percentageEditorLabel,percentageInput);
 
-    const dustEditor = document.createElement('section');
-    dustEditor.className = 'sprite-dust-editor';
-    const dustEditorTitle = document.createElement('strong');
-    dustEditorTitle.textContent = 'Sprite Dust by level';
-    const dustFields = document.createElement('div');
-    const dustInputs = [1,2,3,4,5].map((level) => {
-      const label = document.createElement('label');
-      label.textContent = `Lv ${level}`;
-      const input = document.createElement('input');
-      input.type = 'number';
-      input.min = '0';
-      input.max = '1000000';
-      input.step = '1';
-      input.inputMode = 'numeric';
-      input.placeholder = '—';
-      input.value = hasOwn(view.dustLevels,String(level)) ? String(view.dustLevels[String(level)]) : '';
-      input.setAttribute('aria-label',`${view.name || 'Sprite'} level ${level} Sprite Dust`);
-      label.appendChild(input);
-      dustFields.appendChild(label);
-      return input;
-    });
-    const saveDust = document.createElement('button');
-    saveDust.type = 'button';
-    saveDust.textContent = 'Save Sprite Dust';
-    saveDust.addEventListener('click',() => saveSpriteDustLevels(family,variant,dustInputs));
-    dustEditor.append(dustEditorTitle,dustFields,saveDust);
 
     const variantLine = document.createElement('div');
     variantLine.className = 'sprite-variant-line';
@@ -4700,7 +4840,7 @@
 
     const masterLabel = document.createElement('div');
     masterLabel.className = 'master-label';
-    card.append(crown,seasonBadge,imageWrap,editorTools,percentageEditor,dustEditor,variantLine,listLabel,collect,huntCartButton,masterLabel);
+    card.append(crown,seasonBadge,imageWrap,editorTools,percentageEditor,variantLine,listLabel,collect,huntCartButton,masterLabel);
 
     const toggleCollected = () => {
       if (huntMode.active) return;
@@ -4739,6 +4879,7 @@
       }
       const type = current.mastered ? 'mastered' : 'unmastered';
       commitCardChange(card,family,variant,current,current.mastered ? 'Mastered' : 'Mastery removed',before,type);
+      if (current.mastered) celebrateCrown(crown);
     });
     [imageButton,collect,crown].forEach((button) => {
       button.addEventListener('pointerup',() => requestAnimationFrame(() => button.blur()));
@@ -4944,6 +5085,7 @@
 
   function renderCollections() {
     collectionsEl.replaceChildren();
+    applyTrackerFilterControls();
     renderRecentMissingChanges();
     const page = design.pages[activeRarity] || DEFAULT_PAGES[activeRarity];
     renderOptionalText(pageEyebrowEl,isUnownedPage() ? '' : page.eyebrow);
@@ -4962,17 +5104,21 @@
       allFamilies().filter((family) => unownedPage || familyRarity(family) === activeRarity).forEach((family) => {
         const group = familyView(family);
         if (!familyMatchesSeason(family)) return;
-        const rowVariants = variantsForSeason(family).filter(
-          (variant) => !variantFilter || variantFilter(family,variant)
-        );
-        if (appView === APP_VIEW_VAULT) {
-          const ownedVariants = rowVariants.filter((variant) => variantState(family.id,variant.id).collected);
-          rowVariants.splice(0,rowVariants.length,...ownedVariants);
-        }
+        const rowVariants = variantsForSeason(family).filter((variant) => (
+          (!variantFilter || variantFilter(family,variant))
+          && (unownedPage || trackerFilterMatches(family,variant))
+          && (appView !== APP_VIEW_VAULT || variantState(family.id,variant.id).collected)
+        ));
         if (!rowVariants.length && !spriteEditMode) return;
         if (currentSpriteViewMode() === 'sheet') {
           if (!rowVariants.length) return;
           collectionsEl.appendChild(makeSheetCollection(family,rowVariants));
+          appended += 1;
+          return;
+        }
+        if (experienceSettings.collapseVariants && !spriteEditMode && !expandedCollapsedFamilies.has(family.id)) {
+          if (!rowVariants.length) return;
+          collectionsEl.appendChild(makeCollapsedCollection(family,rowVariants));
           appended += 1;
           return;
         }
@@ -5080,6 +5226,10 @@
     }
 
     const appended = appendCollectionGroups();
+    if (!appended && seasonView === CURRENT_SEASON_ID && (experienceSettings.trackerFilter || 'all') !== 'all') {
+      const filterLabel = experienceSettings.trackerFilter === 'uncollected' ? 'uncollected' : experienceSettings.trackerFilter;
+      appendMissingEmpty(`No ${filterLabel} Sprites are shown on this rarity page.`);
+    }
     if (!appended && seasonView !== CURRENT_SEASON_ID && seasonView !== SEASON_VIEW_ALL) {
       appendMissingEmpty(`Nothing from this rarity is listed for ${seasonViewLabel()} yet.`);
     }
@@ -5108,8 +5258,10 @@
       const family = allFamilies().find((item) => item.id === section.dataset.familyId);
       if (!family) return;
       const stats = familyStats(family);
-      section.querySelector('.collection-count:not(.collection-mastered-count)').textContent = `${stats.collected} / ${stats.total} collected`;
-      section.querySelector('.collection-mastered-count').textContent = `${stats.mastered} / ${stats.total} mastered`;
+      const collectedCount = section.querySelector('.collection-count:not(.collection-mastered-count)');
+      const masteredCount = section.querySelector('.collection-mastered-count');
+      if (collectedCount) collectedCount.textContent = `${stats.collected} / ${stats.total} collected`;
+      if (masteredCount) masteredCount.textContent = `${stats.mastered} / ${stats.total} mastered`;
     });
     tabsEl.querySelectorAll('.tab').forEach((tab) => {
       const rarity = rarities.find((name) => tab.id === `tab-${name.toLowerCase()}`);
@@ -5129,6 +5281,53 @@
     }
   }
 
+  function trackerFilterMatches(family,variant) {
+    const filter = experienceSettings.trackerFilter || 'all';
+    const current = variantState(family.id,variant.id);
+    if (filter === 'uncollected') return !current.collected;
+    if (filter === 'collected') return current.collected;
+    if (filter === 'mastered') return current.mastered;
+    return true;
+  }
+
+  function applyTrackerFilterControls() {
+    const visible = appView === APP_VIEW_TRACKER && !isUnownedPage() && currentSpriteViewMode() !== 'sheet';
+    trackerFilterBar.hidden = !visible;
+    trackerFilterBar.querySelectorAll('[data-tracker-filter]').forEach((button) => {
+      button.setAttribute('aria-pressed',String(button.dataset.trackerFilter === (experienceSettings.trackerFilter || 'all')));
+    });
+    variantCollapseToggle.setAttribute('aria-pressed',String(experienceSettings.collapseVariants === true));
+    variantCollapseToggle.textContent = experienceSettings.collapseVariants ? 'Expand variants' : 'Collapse variants';
+  }
+
+  function makeCollapsedCollection(family,rowVariants) {
+    const group = familyView(family);
+    const familyVariants = variantsForSeason(family);
+    const section = document.createElement('section');
+    section.className = 'collection collection-collapsed';
+    section.dataset.rarity = familyRarity(family);
+    section.dataset.familyId = family.id;
+    const base = rowVariants.find((variant) => variant.id === 'base') || rowVariants[0];
+    const thumb = document.createElement('span');
+    thumb.className = 'collapsed-family-thumb';
+    const source = displayImageSource(base ? variantView(family,base).image : '');
+    if (source) {
+      const image = document.createElement('img'); image.src = source; image.alt = ''; image.width = 88; image.height = 88;
+      thumb.appendChild(image);
+    }
+    const copy = document.createElement('div');
+    const title = document.createElement('h3'); title.textContent = group.name || 'Sprite';
+    const collected = familyVariants.filter((variant) => variantState(family.id,variant.id).collected).length;
+    const mastered = familyVariants.filter((variant) => variantState(family.id,variant.id).mastered).length;
+    const progress = document.createElement('span'); progress.textContent = `${collected}/${familyVariants.length} collected · ${mastered}/${familyVariants.length} mastered`;
+    copy.append(title,progress);
+    const open = document.createElement('button');
+    open.type = 'button'; open.textContent = 'Show variants'; open.setAttribute('aria-expanded','false');
+    open.addEventListener('click',() => { expandedCollapsedFamilies.add(family.id);renderCollections(); });
+    section.append(thumb,copy,open);
+    return section;
+  }
+
   function renderAll() {
     applyFeatureVisibility();
     applyTheme();
@@ -5136,6 +5335,7 @@
     applyAppView();
     applySeasonViewControls();
     renderTabs();
+    applyTrackerFilterControls();
     updatePageModeControls();
     applySpriteViewMode();
     renderCollections();
@@ -5226,6 +5426,86 @@
       const score = variant === normalized ? 0 : (group === normalized ? 1 : (combined.startsWith(normalized) ? 2 : 3));
       return { ...entry, score };
     }).sort((a,b) => a.score - b.score || a.groupName.localeCompare(b.groupName) || a.variantName.localeCompare(b.variantName)).slice(0,12);
+  }
+
+  function voiceSpriteMatch(command) {
+    const normalized = normalizeSearchText(command)
+      .replace(/\b(do i have|is|the|a|an|sprite|in collection|in my collection|collected|mastered|master|mark|add|as|please)\b/g,' ')
+      .replace(/\s+/g,' ')
+      .trim();
+    return findSpriteMatches(normalized)[0] || null;
+  }
+
+  function speakVoiceReply(message) {
+    voiceCommandStatus.textContent = message;
+    showToast(message);
+    if ('speechSynthesis' in window && message) {
+      try {
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(message);
+        utterance.rate = 1.02;
+        window.speechSynthesis.speak(utterance);
+      } catch { /* The on-screen reply is always available. */ }
+    }
+  }
+
+  function applyVoiceCommand(rawCommand) {
+    const command = normalizeSearchText(rawCommand);
+    const entry = voiceSpriteMatch(command);
+    if (!entry) return speakVoiceReply('I could not find that Sprite. Try saying the family and variant name.');
+    const family = allFamilies().find((item) => item.id === entry.familyId);
+    const variant = family && orderedVariants(family).find((item) => item.id === entry.variantId);
+    if (!family || !variant) return speakVoiceReply('That Sprite is not available right now.');
+    const current = variantState(entry.familyId,entry.variantId);
+    const before = snapshotVariantState(current);
+    const asksMastered = /\b(is|do i have)\b.*\bmastered\b/.test(command);
+    const asksCollected = /\b(do i have|is)\b/.test(command) && /\b(collection|collected|have)\b/.test(command) && !asksMastered;
+    if (asksMastered) return speakVoiceReply(`${entry.groupName} ${entry.variantName} is ${current.mastered ? '' : 'not '}mastered.`);
+    if (asksCollected) return speakVoiceReply(`${entry.groupName} ${entry.variantName} is ${current.collected ? '' : 'not '}in your collection.`);
+    const markMastered = /\b(master|mastered)\b/.test(command);
+    const markCollected = /\b(add|mark|collect|collected)\b/.test(command);
+    if (!markMastered && !markCollected) return speakVoiceReply(`Say “add ${entry.groupName} ${entry.variantName}” or ask if it is mastered.`);
+    if (markMastered && current.mastered) return speakVoiceReply(`${entry.groupName} ${entry.variantName} is already mastered.`);
+    if (!markMastered && current.collected) return speakVoiceReply(`${entry.groupName} ${entry.variantName} is already in your collection.`);
+    const changedAt = new Date().toISOString();
+    if (markMastered) {
+      current.mastered = true; current.collected = true;
+      current.collectedAt ||= changedAt; current.masteredAt ||= changedAt;
+      recordJournalEntry('mastered',family,variant,before,current);
+    } else {
+      current.collected = true; current.collectedAt ||= changedAt;
+      recordJournalEntry('collected',family,variant,before,current);
+    }
+    saveProgress(); renderTabs(); renderCollections(); updateCounters(); queueFutureStateSync();
+    speakVoiceReply(`${entry.groupName} ${entry.variantName} marked ${markMastered ? 'mastered' : 'in collection'}.`);
+  }
+
+  function startVoiceCommand() {
+    const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!Recognition) return speakVoiceReply('Voice commands are not supported in this browser. Safari or Chrome with microphone access works best.');
+    if (activeVoiceRecognition) {
+      activeVoiceRecognition.stop();
+      return;
+    }
+    const recognition = new Recognition();
+    activeVoiceRecognition = recognition;
+    recognition.lang = navigator.language || 'en-US';
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+    voiceCommandBtn.classList.add('is-listening');
+    voiceCommandBtn.setAttribute('aria-pressed','true');
+    voiceCommandStatus.textContent = 'Listening… Try “add Water Sprite Base” or “is Gummy Earth mastered?”';
+    recognition.onresult = (event) => applyVoiceCommand(event.results?.[0]?.[0]?.transcript || '');
+    recognition.onerror = (event) => {
+      if (event.error !== 'aborted') speakVoiceReply(event.error === 'not-allowed' ? 'Microphone access was not allowed.' : 'I did not catch that. Try again.');
+    };
+    recognition.onend = () => {
+      activeVoiceRecognition = null;
+      voiceCommandBtn.classList.remove('is-listening');
+      voiceCommandBtn.setAttribute('aria-pressed','false');
+    };
+    try { recognition.start(); }
+    catch { activeVoiceRecognition = null;voiceCommandBtn.classList.remove('is-listening'); }
   }
 
   function spriteSearchState(entry) {
@@ -5619,6 +5899,8 @@
       reduceMotion:source.reduceMotion === true,
       defaultView:['card','list','sheet'].includes(source.defaultView) ? source.defaultView : 'card',
       eventNotices:source.eventNotices !== false,
+      trackerFilter:['all','uncollected','collected','mastered'].includes(source.trackerFilter) ? source.trackerFilter : 'all',
+      collapseVariants:source.collapseVariants === true,
       personalRoute:normalizePersonalRoute(source.personalRoute),
       helpCopy:cleanHelpCopy(source.helpCopy)
     };
@@ -5671,6 +5953,7 @@
       huntCart:normalizeHuntCart(huntCart),
       huntHistory:normalizeHuntHistory(huntHistory),
       searchList:normalizeSearchTargets(searchTargets),
+      quickAddHistory:normalizeQuickAddHistory(quickAddHistory),
       dustLedger:normalizeDustLedger(dustLedger)
     };
   }
@@ -5711,6 +5994,7 @@
       huntCart:value.version >= 3 ? normalizeHuntCart(value.huntCart) : normalizeHuntCart(huntCart),
       huntHistory:value.version >= 3 ? normalizeHuntHistory(value.huntHistory) : normalizeHuntHistory(huntHistory),
       searchList:value.version >= 5 ? normalizeSearchTargets(value.searchList) : normalizeSearchTargets(searchTargets),
+      quickAddHistory:normalizeQuickAddHistory(value.quickAddHistory || quickAddHistory),
       dustLedger:value.version >= 3 ? normalizeDustLedger(value.dustLedger) : normalizeDustLedger(dustLedger)
     };
   }
@@ -5783,6 +6067,7 @@
       huntCart:normalizeHuntCart(huntCart),
       huntHistory:normalizeHuntHistory(huntHistory),
       searchList:normalizeSearchTargets(searchTargets),
+      quickAddHistory:normalizeQuickAddHistory(quickAddHistory),
       dustLedger:normalizeDustLedger(dustLedger)
     };
     try {
@@ -5798,6 +6083,7 @@
     huntCart = restored.huntCart;
     huntHistory = restored.huntHistory;
     searchTargets = restored.searchList;
+    quickAddHistory = restored.quickAddHistory;
     dustLedger = restored.dustLedger;
     seasonView = appView === APP_VIEW_VAULT ? vaultSeasonView : CURRENT_SEASON_ID;
     if (!saveProgress()) {
@@ -5809,6 +6095,7 @@
       huntCart = safetyCopy.huntCart;
       huntHistory = safetyCopy.huntHistory;
       searchTargets = safetyCopy.searchList;
+      quickAddHistory = safetyCopy.quickAddHistory;
       dustLedger = safetyCopy.dustLedger;
       throw new Error('Progress could not be saved in this browser.');
     }
@@ -5819,6 +6106,7 @@
     saveHuntCart();
     saveHuntHistory();
     saveSearchTargets();
+    saveQuickAddHistory();
     saveDustLedger();
     await replaceJournalEntries(restored.journal);
     if (closeBackup && backupDialog.open) backupDialog.close();
@@ -6791,7 +7079,7 @@
   journalViewTabs?.addEventListener('click',(event) => {
     const button = event.target.closest('[data-journal-view]');
     if (!button) return;
-    journalView = button.dataset.journalView || 'timeline';
+    journalView = ['adventures','story','insights'].includes(button.dataset.journalView) ? button.dataset.journalView : 'adventures';
     renderJournal();
   });
   clearJournalActivityBtn.addEventListener('click',clearJournalActivity);
@@ -6890,6 +7178,28 @@
     compassExpandedFamilyId = '';
     renderSpriteCompass();
   });
+  trackerFilterBar?.addEventListener('click',(event) => {
+    const button = event.target.closest('[data-tracker-filter]');
+    if (!button) return;
+    experienceSettings.trackerFilter = button.dataset.trackerFilter;
+    expandedCollapsedFamilies.clear();
+    saveExperienceSettings();
+    applyTrackerFilterControls();
+    renderCollections();
+    showToast(`${button.textContent.trim()} Sprites`);
+  });
+  variantCollapseToggle?.addEventListener('click',() => {
+    experienceSettings.collapseVariants = !experienceSettings.collapseVariants;
+    expandedCollapsedFamilies.clear();
+    saveExperienceSettings();
+    applyTrackerFilterControls();
+    renderCollections();
+  });
+  voiceCommandBtn?.addEventListener('click',startVoiceCommand);
+  rarityDustAdmin?.addEventListener('submit',(event) => {
+    event.preventDefault();
+    saveRarityDustLevels(activeThemeRarity(),[...rarityDustAdminFields.querySelectorAll('input[data-dust-level]')]);
+  });
   compassQuickAddPrev?.addEventListener('click',() => {
     compassQuickAddPage = Math.max(0,compassQuickAddPage - 1);
     compassExpandedFamilyId = '';
@@ -6945,7 +7255,6 @@
       catch { locationFoundCustom.focus(); }
     }
   });
-  initializeLocationGrids();
   window.addEventListener('sprite-account-bridge-ready',() => {
     renderFloatingAdmin();
     if (appView === APP_VIEW_HUNTS) loadHottestDrop({ force:true });
@@ -7251,7 +7560,7 @@
                             : (isUnownedPage() ? `#${missingView}` : `#${activeRarity.toLowerCase()}`)))))));
   if (location.hash !== activeHash) history.replaceState({ rarity:activeRarity },'',activeHash);
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./service-worker.js?v=140',{ updateViaCache:'none' }).then((registration) => registration.update()).catch(() => {});
+    navigator.serviceWorker.register('./service-worker.js?v=142',{ updateViaCache:'none' }).then((registration) => registration.update()).catch(() => {});
   }
   const signalAppRendered = () => window.dispatchEvent(new Event('sprite-app-rendered'));
   if (document.fonts?.ready) {
