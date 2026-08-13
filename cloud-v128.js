@@ -545,7 +545,7 @@
   cloudDialog.innerHTML = `
     <div class="cloud-account-panel">
       <header class="cloud-account-head">
-        <div><span>YOUR ACCOUNT</span><h2 id="cloudAccountTitle" tabindex="-1">Account &amp; Progress</h2></div>
+        <div><span>YOUR ACCOUNT</span><h2 id="cloudAccountTitle">Account &amp; Progress</h2></div>
         <button class="cloud-close-button" id="closeCloudAccountBtn" type="button" aria-label="Close Account and Cloud">×</button>
       </header>
       <section class="cloud-setup-panel" id="cloudSetupPanel" hidden>

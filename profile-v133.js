@@ -373,6 +373,7 @@
     renderFavoriteShowcase(ownerFavorites,ownerFavoritesEmpty,profile.favorites);
     renderQuickAvatar();
     renderCloudState();
+    requestAnimationFrame(() => fitProfileName(ownerName));
   }
 
   function renderVisitor(profile) {

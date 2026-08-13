@@ -1,134 +1,14 @@
 <!DOCTYPE html>
-<html lang="en" class="app-booting">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <style>
-    /* Standalone launch guard: never show the live checklist in iOS's temporary narrow viewport. */
-    html.app-booting,
-    html.app-booting body {
-      background:#03070d !important;
-    }
-    html.app-booting body {
-      overflow:hidden !important;
-    }
-    html.app-booting .app-shell,
-    html.app-booting .page-backdrop,
-    html.app-booting .page-motion-layer {
-      visibility:hidden !important;
-      opacity:0 !important;
-    }
-    .app-launch-screen {
-      position:fixed;
-      inset:0;
-      z-index:9999;
-      display:none;
-      place-items:center;
-      padding:env(safe-area-inset-top) 20px env(safe-area-inset-bottom);
-      overflow:hidden;
-      background:
-        radial-gradient(circle at 50% 42%,rgba(104,27,43,.42),transparent 34%),
-        linear-gradient(180deg,#080a10,#03070d 68%,#020305);
-      opacity:1;
-      transition:opacity .16s ease,visibility .16s ease;
-    }
-    html.app-launch-gated .app-launch-screen {
-      display:grid;
-    }
-    html.app-launch-gated.app-ready .app-launch-screen {
-      visibility:hidden;
-      opacity:0;
-      pointer-events:none;
-    }
-    .app-launch-mark {
-      display:grid;
-      gap:10px;
-      place-items:center;
-      color:#eef4f8;
-      font:800 14px/1 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
-      letter-spacing:.08em;
-      text-transform:uppercase;
-    }
-    .app-launch-mark img {
-      width:76px;
-      height:76px;
-      border:1px solid rgba(255,255,255,.2);
-      border-radius:18px;
-      box-shadow:0 10px 28px rgba(0,0,0,.45),0 0 20px rgba(129,32,50,.28);
-    }
-    html.app-launch-gated.app-ready .app-shell,
-    html.app-launch-gated.app-ready .page-backdrop,
-    html.app-launch-gated.app-ready .page-motion-layer {
-      animation:app-launch-reveal .18s ease-out both;
-    }
-    @keyframes app-launch-reveal {
-      from { opacity:.78; }
-      to { opacity:1; }
-    }
-    @media (prefers-reduced-motion:reduce) {
-      .app-launch-screen { transition:none; }
-      html.app-launch-gated.app-ready .app-shell,
-      html.app-launch-gated.app-ready .page-backdrop,
-      html.app-launch-gated.app-ready .page-motion-layer { animation:none; }
-    }
-  </style>
-  <script>
-    (() => {
-      const root = document.documentElement;
-      const standalone = window.matchMedia?.('(display-mode: standalone)').matches || navigator.standalone === true;
-      if (!standalone) {
-        root.classList.remove('app-booting');
-        root.classList.add('app-ready');
-        return;
-      }
-
-      root.classList.add('app-launch-gated');
-      let rendered = false;
-      let renderedAt = 0;
-      let started = false;
-      let revealed = false;
-      let lastWidth = 0;
-      let stableFrames = 0;
-      const startedAt = performance.now();
-
-      const reveal = () => {
-        if (revealed) return;
-        revealed = true;
-        root.classList.remove('app-booting');
-        root.classList.add('app-ready');
-      };
-
-      const waitForStableViewport = () => {
-        if (revealed) return;
-        const width = Math.round(window.visualViewport?.width || window.innerWidth || 0);
-        if (width >= 280 && Math.abs(width - lastWidth) <= 1) stableFrames += 1;
-        else stableFrames = 0;
-        lastWidth = width;
-        if ((rendered && stableFrames >= 3 && performance.now() - renderedAt >= 140) || performance.now() - startedAt > 1400) reveal();
-        else requestAnimationFrame(waitForStableViewport);
-      };
-
-      const start = () => {
-        if (started) return;
-        started = true;
-        requestAnimationFrame(waitForStableViewport);
-      };
-
-      window.addEventListener('sprite-app-rendered',() => {
-        rendered = true;
-        renderedAt = performance.now();
-        start();
-      },{ once:true });
-      window.addEventListener('DOMContentLoaded',start,{ once:true });
-      window.setTimeout(reveal,1600);
-    })();
-  </script>
   <meta name="theme-color" content="#681b2b">
   <meta name="description" content="Track collected and mastered Fortnite Sprites by rarity and variant.">
   <meta name="application-name" content="My Sprite Tracker">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="Sprite Dev">
+  <meta name="apple-mobile-web-app-title" content="Sprite Tracker">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="My Sprite Tracker">
   <meta property="og:url" content="https://snorkythebeard.github.io/Real-Sprite-Checklist/">
@@ -301,14 +181,10 @@
 <link rel="stylesheet" href="v142.css?v=142">
   <link rel="stylesheet" href="v143.css?v=143">
   <link rel="stylesheet" href="v144.css?v=144">
+  <link rel="stylesheet" href="v145.css?v=145">
+  <link rel="stylesheet" href="v146.css?v=146">
 </head>
 <body>
-  <div class="app-launch-screen" aria-hidden="true">
-    <div class="app-launch-mark">
-      <img src="icons/app-icon-192-v101.png" alt="" width="76" height="76">
-      <span>Sprite Dev</span>
-    </div>
-  </div>
   <a class="skip-link" href="#mainContent">Skip to checklist</a>
   <div class="page-backdrop" aria-hidden="true"></div>
   <div class="page-motion-layer" id="pageMotionLayer" aria-hidden="true">
@@ -328,7 +204,7 @@
       </svg>
     </button>
 
-    <button class="profile-quick-button" id="profileQuickBtn" type="button" aria-label="Open My Sprite Profile" title="My Sprite Profile">
+    <button class="profile-quick-button" id="profileQuickBtn" type="button" aria-label="Open My Profile" title="My Profile">
       <span class="profile-quick-avatar" id="profileQuickAvatar" data-avatar="sprite" aria-hidden="true">
         <svg viewBox="0 0 64 64" focusable="false"><path d="M20 8c8-5 22-4 28 5 6 8 3 19 5 27 2 6 7 9 4 14-2 5-9 5-14 2-3 6-8 7-13 3-6 3-12 0-12-7-6 2-11 0-12-5-1-5 4-8 6-12 3-7 1-16 8-27Z"></path><path d="m23 35 7 7 13-15"></path></svg>
       </span>
@@ -608,31 +484,6 @@
         </div>
       </section>
 
-      <dialog class="quick-add-dialog" id="quickAddDialog" aria-labelledby="spriteSearchListTitle">
-      <section class="sprite-search-list-panel quick-add-popup" aria-labelledby="spriteSearchListTitle">
-        <div class="journal-section-heading">
-          <div><span id="quickAddLocationLabel">No drop spot selected</span><h3 id="spriteSearchListTitle">Quick Add</h3></div>
-          <button class="quick-add-close" id="quickAddCloseBtn" type="button" aria-label="Close Quick Add">×</button>
-        </div>
-        <form id="compassTargetForm" hidden><input id="compassTargetInput" type="search"><button>Search</button></form>
-        <select id="compassTargetSort" hidden><option value="az">A–Z</option></select>
-        <section id="compassSmartHistory" hidden><h4 id="compassSmartHistoryTitle">Recent</h4><div id="compassSmartHistoryRow"></div></section>
-        <div class="compass-target-results" id="compassTargetResults" role="listbox" hidden></div>
-        <p class="visually-hidden" id="compassTargetStatus" aria-live="polite"></p>
-        <div class="compass-target-list" id="compassTargetList"></div>
-        <nav class="compass-quick-add-pager" id="compassQuickAddPager" aria-label="Quick Add pages" hidden>
-          <button id="compassQuickAddPrev" type="button" aria-label="Show previous Sprites">‹</button>
-          <span id="compassQuickAddPageInfo">1–20</span>
-          <button id="compassQuickAddNext" type="button" aria-label="Show next Sprites">›</button>
-        </nav>
-        <div class="feature-empty-state" id="compassTargetEmpty">
-          <strong>No Sprites match this search.</strong>
-          <span>Try another Sprite name.</span>
-        </div>
-        <button class="quick-add-location-button" id="quickAddLocationBtn" type="button">New location +</button>
-      </section>
-      </dialog>
-
       <section class="adventure-map-panel" aria-labelledby="adventureMapTitle">
         <div class="journal-section-heading"><div><span>Optional guide</span><h3 id="adventureMapTitle">Sprite Chest Map</h3></div></div>
         <div class="adventure-map-slot"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 6 5-3 6 3 5-3v15l-5 3-6-3-5 3Z"></path><path d="M9 3v15M15 6v15"></path></svg><strong>Map artwork ready to add</strong><span>Your Sprite Chest map can drop into this space without another layout rebuild.</span></div>
@@ -668,7 +519,7 @@
 
     <section class="sprite-profile-page" id="spriteProfilePage" aria-labelledby="spriteProfilePageTitle" hidden>
       <header class="feature-page-head sprite-profile-page-head">
-        <div class="feature-title-row"><h2 id="spriteProfilePageTitle">My Sprite Profile</h2><button class="context-help-button" type="button" data-help-key="profile" aria-label="How Sprite Profiles work">?</button></div>
+        <div class="feature-title-row"><h2 id="spriteProfilePageTitle">My Profile</h2><button class="context-help-button" type="button" data-help-key="profile" aria-label="How profiles work">?</button></div>
       </header>
 
       <section class="profile-meadow-hero" id="profileOwnerHero" hidden aria-hidden="true">
@@ -694,7 +545,7 @@
 
       <section class="profile-signed-out" id="profileSignedOut">
         <span class="profile-lock-icon" aria-hidden="true">✦</span>
-        <div><strong>Sign in to create your Sprite Profile.</strong><p>You can still visit someone else with their Meadow Code.</p></div>
+        <div><strong>Sign in to create your profile.</strong><p>You can still visit someone else with their Meadow Code.</p></div>
         <button id="profileOpenAccountBtn" type="button">Sign in or create account</button>
       </section>
 
@@ -775,14 +626,13 @@
         <details><summary>Card View</summary><p>Full artwork cards with collection and mastery controls.</p></details>
         <details><summary>List View</summary><p>A compact vertical layout with a smaller image and the same tracking controls.</p></details>
         <details><summary>Sheet View</summary><p>The smallest checklist layout, built for scanning many Sprite variants quickly.</p></details>
-        <details><summary>Sprite Assistant</summary><p>Track one Match or a multi-match Session, Quick Add what you found, then review before finalizing.</p></details>
-        <details><summary>Collection History</summary><p>See the Sprites finalized during each Match.</p></details>
+        <details><summary>Collection History</summary><p>Review collection and mastery changes saved automatically by the tracker.</p></details>
         <details><summary>Sprite Archive</summary><p>A quiet collection display for viewing the Sprites you already own.</p></details>
       </section>
       <section class="settings-card" aria-labelledby="settingsAccountTitle">
         <div class="journal-section-heading"><div><span>Automatic protection</span><h3 id="settingsAccountTitle">Account &amp; Data</h3></div></div>
         <p class="settings-save-status" id="settingsSaveStatus">Sign in to save your tracker across devices.</p>
-        <div class="settings-action-grid"><button id="settingsManageAccountBtn" type="button">Manage account</button><button id="backupBtn" type="button">Backup or restore</button></div>
+        <div class="settings-action-grid"><button id="settingsManageAccountBtn" type="button">Manage account</button><button id="backupBtn" type="button" hidden>Backup or restore</button></div>
       </section>
       <section class="settings-card settings-admin-card" aria-labelledby="settingsAdminTitle">
         <div class="journal-section-heading"><div><span>Owner tools</span><h3 id="settingsAdminTitle">Admin Mode</h3></div></div>
@@ -908,12 +758,7 @@
           <button type="button" data-tracker-filter="collected" aria-pressed="false">Collected</button>
           <button type="button" data-tracker-filter="mastered" aria-pressed="false">Mastered</button>
           <button class="variant-collapse-toggle" id="variantCollapseToggle" type="button" aria-pressed="false">Collapse variants</button>
-          <button class="voice-command-button" id="voiceCommandBtn" type="button" aria-label="Use voice commands" title="Ask about or update a Sprite by voice">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M5 11a7 7 0 0 0 14 0M12 18v3M9 21h6"></path></svg>
-            <span>Voice</span>
-          </button>
         </nav>
-        <p class="voice-command-status" id="voiceCommandStatus" role="status" aria-live="polite"></p>
         <section class="missing-recent-changes" id="missingRecentChanges" aria-labelledby="missingRecentTitle" hidden>
           <div class="missing-recent-heading">
             <h3 id="missingRecentTitle">Recently changed</h3>
@@ -945,16 +790,21 @@
     <span>Admin</span>
   </button>
 
+  <button class="floating-voice-button" id="voiceCommandBtn" type="button" aria-label="Use voice commands" aria-pressed="false" title="Ask about or update a Sprite by voice">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M5 11a7 7 0 0 0 14 0M12 18v3M9 21h6"></path></svg>
+  </button>
+  <p class="voice-command-status floating-voice-status" id="voiceCommandStatus" role="status" aria-live="polite"></p>
+
   <img class="custom-art art-left" id="leftCustomArt" alt="" hidden>
   <img class="custom-art art-right" id="rightCustomArt" alt="" hidden>
 
   <dialog class="reset-dialog" id="resetDialog">
     <form method="dialog">
-      <h2>Reset checklist?</h2>
-      <p>This clears the collected and mastered choices on this device. Your artwork and site files are not affected.</p>
+      <h2>Reset all tracker data?</h2>
+      <p>This clears your collection progress, Collection History, and display preferences. Your public Sprite catalog and artwork are not affected.</p>
       <div class="dialog-actions">
         <button value="cancel">Cancel</button>
-        <button class="danger-btn" id="confirmResetBtn" type="button">Reset progress</button>
+        <button class="danger-btn" id="confirmResetBtn" type="button">Reset everything</button>
       </div>
     </form>
   </dialog>
@@ -989,11 +839,11 @@
   <dialog class="reset-dialog publish-sprites-dialog" id="publishSpritesDialog">
     <form id="publishSpritesForm">
       <h2>Publish sprite changes</h2>
-      <p>This publishes new Sprite groups, card additions and order, uploaded images, rarity percentages, Sprite Dust levels, and Season Vault changes.</p>
+      <p>This publishes new Sprite groups, card additions and order, uploaded images, rarity percentages, and Sprite Archive changes.</p>
       <label class="add-sprite-label" for="githubTokenInput">GitHub token</label>
       <input id="githubTokenInput" type="password" required autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Paste token here">
       <p class="publish-token-help">
-        <a href="https://github.com/settings/personal-access-tokens/new?name=Sprite%20Tracker%20Publisher&amp;description=Publishes%20sprite%20card%20changes%20to%20Real-Sprite-Checklist&amp;target_name=SnorkyTheBeard&amp;expires_in=90&amp;contents=write" target="_blank" rel="noopener">Create a fine-grained GitHub token</a>, select only <strong>Real-Sprite-Checklist</strong>, and give <strong>Contents</strong> read-and-write access. The token is kept only in this browser tab.
+        <a href="https://github.com/settings/personal-access-tokens/new?name=Sprite%20Tracker%20Publisher&amp;description=Publishes%20sprite%20card%20changes%20to%20Sprite-Checklist-Dev&amp;target_name=SnorkyTheBeard&amp;expires_in=90&amp;contents=write" target="_blank" rel="noopener">Create a fine-grained GitHub token</a>, select only <strong>Sprite-Checklist-Dev</strong>, and give <strong>Contents</strong> read-and-write access. The token is kept only in this browser tab.
       </p>
       <p class="publish-sprites-status" id="publishSpritesStatus" role="status" aria-live="polite"></p>
       <div class="dialog-actions">
@@ -1146,6 +996,29 @@
         <button class="primary-btn" id="beginMatchBtn" type="submit">Let's Go!</button>
       </div>
     </form>
+  </dialog>
+
+  <dialog class="quick-add-dialog" id="quickAddDialog" aria-labelledby="spriteSearchListTitle">
+    <section class="sprite-search-list-panel quick-add-popup" aria-labelledby="spriteSearchListTitle">
+      <div class="journal-section-heading">
+        <div><span id="quickAddLocationLabel">No drop spot selected</span><h3 id="spriteSearchListTitle">Quick Add</h3></div>
+        <button class="quick-add-close" id="quickAddCloseBtn" type="button" aria-label="Close Quick Add">×</button>
+      </div>
+      <form id="compassTargetForm" hidden><input id="compassTargetInput" type="search"><button>Search</button></form>
+      <select id="compassTargetSort" hidden><option value="az">A–Z</option></select>
+      <section id="compassSmartHistory" hidden><h4 id="compassSmartHistoryTitle">Recent</h4><div id="compassSmartHistoryRow"></div></section>
+      <div class="compass-target-results" id="compassTargetResults" role="listbox" hidden></div>
+      <p class="visually-hidden" id="compassTargetStatus" aria-live="polite"></p>
+      <div class="compass-target-list" id="compassTargetList"></div>
+      <nav class="compass-quick-add-pager" id="compassQuickAddPager" aria-label="Quick Add pages" hidden>
+        <button id="compassQuickAddPrev" type="button" aria-label="Show previous Sprites">‹</button>
+        <span id="compassQuickAddPageInfo">All Sprites</span>
+        <button id="compassQuickAddNext" type="button" aria-label="Show next Sprites">›</button>
+      </nav>
+      <div class="feature-empty-state" id="compassTargetEmpty"><strong>No Sprites available.</strong></div>
+      <button class="quick-add-location-button" id="quickAddLocationBtn" type="button">New location +</button>
+      <button class="quick-add-cart-button" id="quickAddCartBtn" type="button">Cart (0)</button>
+    </section>
   </dialog>
 
   <dialog class="reset-dialog quick-location-dialog" id="quickLocationDialog" aria-labelledby="quickLocationTitle">
@@ -1338,10 +1211,10 @@
   <script src="data.js?v=82"></script>
   <script src="sprite-events-v140.js?v=140"></script>
   <script src="state-schema-v127.js?v=127"></script>
-<script src="feature-config-v129.js?v=144"></script>
-<script src="app.js?v=144"></script>
+<script src="feature-config-v129.js?v=146"></script>
+<script src="app.js?v=146"></script>
   <script src="cloud-config-v128.js?v=128"></script>
-  <script src="cloud-v128.js?v=135"></script>
-  <script src="profile-v133.js?v=142"></script>
+  <script src="cloud-v128.js?v=146"></script>
+  <script src="profile-v133.js?v=146"></script>
 </body>
 </html>

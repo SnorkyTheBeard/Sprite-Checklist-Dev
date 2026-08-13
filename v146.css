@@ -1,0 +1,109 @@
+/* V146 Essentials — the stable tracker, profile, history, voice, and archive experience. */
+
+/* Retired experiments stay unavailable even while an older tab is refreshing. */
+[data-app-view="hunts"],
+[data-feature-id="spriteRunHistory"],
+.hunt-mode-control,
+#huntCartTray,
+#spriteDustBalanceBtn,
+#huntHistoryPage,
+#spriteDustPage,
+#quickAddDialog,
+#huntCheckoutDialog,
+#sessionReviewDialog,
+#spriteSearchStartDialog,
+#spriteSearchRecapDialog,
+#quickLocationDialog,
+#dustPurchaseDialog,
+#dustBalanceDialog {
+  display:none !important;
+}
+
+/* The history page is intentionally one focused timeline, not the old Journal suite. */
+.collection-journal-page > :not(.collection-journal-head):not(.collection-history-panel) {
+  display:none !important;
+}
+.collection-journal-page {
+  width:min(920px,calc(100% - 24px));
+  margin:0 auto;
+  padding:clamp(84px,13vw,124px) 0 120px;
+}
+.collection-journal-head {
+  margin:0 auto 16px;
+  text-align:center;
+}
+.collection-journal-head .feature-title-row { justify-content:center; }
+.collection-journal-head h2 {
+  margin:0;
+  color:#fff;
+  font-size:clamp(38px,10vw,68px);
+  text-shadow:0 3px 0 rgba(0,0,0,.75),0 0 14px rgba(127,222,255,.75),0 0 32px rgba(72,140,255,.48);
+}
+.collection-history-panel {
+  margin:0;
+  padding:clamp(16px,4vw,24px);
+  border:1px solid rgba(166,222,255,.35);
+  border-radius:26px;
+  background:linear-gradient(150deg,rgba(10,26,52,.82),rgba(5,10,24,.9));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 18px 48px rgba(0,0,0,.42);
+  -webkit-backdrop-filter:blur(16px);
+  backdrop-filter:blur(16px);
+}
+.collection-history-heading { align-items:center;gap:12px; }
+.collection-history-heading h3 { margin:0;color:#fff;font-size:clamp(21px,5vw,30px); }
+.collection-history-heading button {
+  min-height:40px;
+  color:#fff;
+  border:1px solid rgba(255,255,255,.22);
+  border-radius:999px;
+  background:rgba(6,12,25,.72);
+}
+.collection-history-list { display:grid;gap:11px;margin-top:16px; }
+.collection-history-match {
+  padding:14px;
+  border:1px solid rgba(255,255,255,.14);
+  border-radius:18px;
+  background:rgba(255,255,255,.055);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.06);
+}
+.collection-history-match header { align-items:center;gap:12px; }
+.collection-history-match header h3 { color:#fff;font-size:18px; }
+.collection-history-match header span { color:#b8c7dc; }
+.collection-history-match header button {
+  flex:0 0 auto;
+  min-height:36px;
+  padding:0 12px;
+  color:#ffdce2;
+  border:1px solid rgba(255,127,151,.35);
+  border-radius:999px;
+  background:rgba(93,16,35,.42);
+}
+.collection-history-sprites { margin-top:10px; }
+.collection-history-sprites > span {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  min-height:44px;
+  padding:8px 12px;
+  color:#fff;
+  border-radius:13px;
+  background:rgba(0,0,0,.25);
+}
+.collection-history-sprites small { color:#c5d1e4; }
+.collection-history-empty { margin:18px 0 4px;color:#c5d1e4;text-align:center; }
+
+/* With Match and Dust removed, the creator is the only primary tracker tool. */
+.tracker-tools { justify-content:center; }
+
+/* Production launches directly into the tracker. */
+.app-launch-screen { display:none !important; }
+
+@media (max-width:520px) {
+  .collection-journal-page { width:min(100% - 16px,920px);padding-top:78px; }
+  .collection-history-panel { padding:14px;border-radius:22px; }
+  .collection-history-heading { align-items:flex-start; }
+  .collection-history-heading button { font-size:11px; }
+  .collection-history-match header { align-items:flex-start; }
+  .collection-history-sprites > span { align-items:flex-start;flex-direction:column;gap:3px; }
+}

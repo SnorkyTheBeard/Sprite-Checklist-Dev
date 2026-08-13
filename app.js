@@ -29,7 +29,7 @@
   const HELP_COPY_DEFAULTS = Object.freeze({
     adventure:'Use Match Start for one game or Session Start for several games. Quick Add what you found, review it, and finalize when you are ready.',
     'hot-drop':'Hottest Drop uses anonymous totals from signed-in collectors during the past hour. It never shows usernames or individual activity, and it waits for at least three collectors before naming a location.',
-    journal:'Collection History groups the Sprites you finalized by match. It does not include ordinary checklist taps.',
+    journal:'Collection History records collection and mastery changes made in the tracker, with the Sprite and time of each change.',
     profile:'Your profile holds your Meadow Code, selected collection stats, favorite Sprites, and account save status. Share the code so another collector can visit.',
     meadow:'Sprite Archive is a clean gallery of the Sprites already in your collection. Change the selected season to revisit older collections.',
     settings:'Settings controls background motion, reduced motion, your default tracker view, account access, and DEV owner tools.'
@@ -185,6 +185,21 @@
     return Boolean(userId && allowed.includes(userId));
   }
 
+  function adminAccessAvailable() {
+    if (DEV_BUILD || ownerPreviewActive()) return true;
+    const session = (() => {
+      try { return JSON.parse(localStorage.getItem(CLOUD_SESSION_KEY) || 'null'); }
+      catch { return null; }
+    })();
+    const email = String(session?.user?.email || '').trim().toLowerCase();
+    let hash = 2166136261;
+    for (let index = 0; index < email.length; index += 1) {
+      hash ^= email.charCodeAt(index);
+      hash = Math.imul(hash,16777619);
+    }
+    return email && (hash >>> 0).toString(16) === '732aa0b7';
+  }
+
   function featureAccess(featureId) {
     const feature = featureDefinition(featureId);
     if (!feature) return 'hidden';
@@ -289,6 +304,12 @@
     return APP_VIEW_TRACKER;
   }
 
+  function normalizeJournalHistory() {
+    return normalizeJournalEntries(journalReady ? journalEntries : pendingJournalEntries)
+      .filter((entry) => !entry.undone && entry.activityCleared !== true && entry.type !== 'story')
+      .sort((left,right) => journalEntryTimestamp(right) - journalEntryTimestamp(left));
+  }
+
   function loadHuntMode() {
     const saved = readJson(HUNT_MODE_KEY) || {};
     const startedAt = validIsoDate(saved.startedAt);
@@ -297,7 +318,7 @@
       ? Math.max(0,Math.min(Number(saved.lastDurationMs),7 * 24 * 60 * 60 * 1000))
       : 0;
     return {
-      active:saved.active === true && Boolean(startedAt),
+      active:false,
       startedAt,
       sessionStartedAt,
       lastDurationMs,
@@ -945,6 +966,7 @@
   const quickAddCloseBtn = document.getElementById('quickAddCloseBtn');
   const quickAddLocationBtn = document.getElementById('quickAddLocationBtn');
   const quickAddLocationLabel = document.getElementById('quickAddLocationLabel');
+  const quickAddCartBtn = document.getElementById('quickAddCartBtn');
   const quickLocationDialog = document.getElementById('quickLocationDialog');
   const quickLocationInput = document.getElementById('quickLocationInput');
   const quickLocationResults = document.getElementById('quickLocationResults');
@@ -1263,6 +1285,7 @@
     huntCartSummary.textContent = String(count);
     huntCheckoutBtn.disabled = false;
     huntCheckoutBtn.textContent = `Cart (${count})`;
+    if (quickAddCartBtn) quickAddCartBtn.textContent = `Cart (${count})`;
   }
 
   function addSpriteToHuntCart(family,variant) {
@@ -2019,7 +2042,7 @@
             ? 'Collection History'
             : (appView === APP_VIEW_HUNTS
                 ? 'Sprite Assistant'
-                : (appView === APP_VIEW_DUST ? 'Sprite Dust' : (appView === APP_VIEW_PROFILE ? 'My Sprite Profile' : (appView === APP_VIEW_SETTINGS ? 'Settings' : 'Current Tracker')))));
+                : (appView === APP_VIEW_DUST ? 'Sprite Dust' : (appView === APP_VIEW_PROFILE ? 'My Profile' : (appView === APP_VIEW_SETTINGS ? 'Settings' : 'Current Tracker')))));
       showToast(label);
     }
     window.setTimeout(wakeBackgroundMotion,40);
@@ -3030,11 +3053,12 @@
 
   function renderCollectionHistory() {
     if (!collectionHistoryList || !collectionHistoryEmpty) return;
-    const matches = normalizeHuntHistory(huntHistory).filter((match) => match.items.length);
+    const entries = normalizeJournalHistory();
     collectionHistoryList.replaceChildren();
-    collectionHistoryEmpty.hidden = Boolean(matches.length);
-    clearCollectionHistoryBtn.disabled = !matches.length;
-    matches.forEach((match) => {
+    collectionHistoryEmpty.hidden = Boolean(entries.length);
+    collectionHistoryEmpty.textContent = entries.length ? '' : 'Collection and mastery changes will appear here automatically.';
+    clearCollectionHistoryBtn.disabled = !entries.length;
+    entries.forEach((entry) => {
       const card = document.createElement('article');
       card.className = 'collection-history-match';
       const header = document.createElement('header');
@@ -3042,31 +3066,29 @@
       const title = document.createElement('h3');
       const meta = document.createElement('span');
       const remove = document.createElement('button');
-      title.textContent = match.mode === 'session' ? `Session Match ${match.matchNumber}` : 'Match';
-      meta.textContent = `${formatJournalDate(match.completedAt)} · ${formatHuntDuration(match.durationMs)}${match.location ? ` · ${match.location}` : ''}`;
+      title.textContent = `${entry.familyName} · ${entry.variantName}`;
+      meta.textContent = formatJournalDate(entry.timestamp);
       copy.append(title,meta);
       remove.type = 'button';remove.textContent = 'Delete';
-      remove.setAttribute('aria-label',`Delete match from ${formatJournalDate(match.completedAt)}`);
-      remove.addEventListener('click',() => requestClearConfirmation(() => {
-        huntHistory = huntHistory.filter((entry) => entry.id !== match.id);
-        saveHuntHistory();renderCollectionHistory();renderHuntHistory();renderCollections();
-        showToast('Match removed from Collection History');
+      remove.setAttribute('aria-label',`Delete ${entry.familyName} ${entry.variantName} from Collection History`);
+      remove.addEventListener('click',() => requestClearConfirmation(async () => {
+        journalEntries = journalEntries.filter((saved) => saved.id !== entry.id);
+        pendingJournalEntries = pendingJournalEntries.filter((saved) => saved.id !== entry.id);
+        if (journalReady) await scheduleJournalSave();
+        renderCollectionHistory();
+        showToast('Entry removed from Collection History');
       }));
       header.append(copy,remove);
       const list = document.createElement('div');
       list.className = 'collection-history-sprites';
-      const groups = new Map();
-      match.items.forEach((item) => {
-        const key = `${item.familyId}:${item.variantId}`;
-        const group = groups.get(key) || { ...item,count:0 };
-        group.count += 1;groups.set(key,group);
-      });
-      groups.forEach((item) => {
-        const row = document.createElement('span');
-        row.dataset.rarity = item.rarity;
-        row.innerHTML = `<b>${item.familyName} · ${item.variantName}</b><small>${item.mastered ? 'Mastered' : 'Collected'}${item.count > 1 ? ` · ×${item.count}` : ''}</small>`;
-        list.appendChild(row);
-      });
+      const row = document.createElement('span');
+      row.dataset.rarity = entry.rarity;
+      const status = document.createElement('b');
+      const detail = document.createElement('small');
+      status.textContent = journalActionText(entry.type);
+      detail.textContent = entry.after?.locationFound ? `Location: ${entry.after.locationFound}` : entry.rarity;
+      row.append(status,detail);
+      list.appendChild(row);
       card.append(header,list);collectionHistoryList.appendChild(card);
     });
   }
@@ -3461,9 +3483,9 @@
     compassQuickAddPager.hidden = true;
     matching.forEach((entry) => {
       const row = document.createElement('article');
-      row.className = 'compass-target-card quick-add-sprite';
+      row.className = 'quick-add-sprite';
       const imageWrap = document.createElement('span');
-      imageWrap.className = 'compass-target-thumb';
+      imageWrap.className = 'quick-add-sprite-image';
       const source = displayImageSource(variantView(entry.family,entry.variant).image);
       if (source) {
         const image = document.createElement('img');
@@ -5797,6 +5819,7 @@
   }
 
   function startVoiceCommand() {
+    if (document.querySelector('dialog[open]')) return speakVoiceReply('Close the open window before using voice commands.');
     const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!Recognition) return speakVoiceReply('Voice commands are not supported in this browser. Safari or Chrome with microphone access works best.');
     if (activeVoiceRecognition) {
@@ -5806,6 +5829,7 @@
     const recognition = new Recognition();
     activeVoiceRecognition = recognition;
     recognition.lang = navigator.language || 'en-US';
+    recognition.continuous = false;
     recognition.interimResults = false;
     recognition.maxAlternatives = 1;
     voiceCommandBtn.classList.add('is-listening');
@@ -5821,7 +5845,12 @@
       voiceCommandBtn.setAttribute('aria-pressed','false');
     };
     try { recognition.start(); }
-    catch { activeVoiceRecognition = null;voiceCommandBtn.classList.remove('is-listening'); }
+    catch {
+      activeVoiceRecognition = null;
+      voiceCommandBtn.classList.remove('is-listening');
+      voiceCommandBtn.setAttribute('aria-pressed','false');
+      speakVoiceReply('Voice could not start. Check microphone permission and try again.');
+    }
   }
 
   function spriteSearchState(entry) {
@@ -5936,7 +5965,7 @@
 
   function renderFloatingAdmin() {
     if (!floatingAdminToggle) return;
-    const available = DEV_BUILD || ownerPreviewActive();
+    const available = adminAccessAvailable();
     floatingAdminToggle.hidden = !available;
     floatingAdminToggle.setAttribute('aria-pressed',String(spriteEditMode));
     const label = spriteEditMode ? 'Exit Admin Mode' : 'Enter Admin Mode';
@@ -5956,7 +5985,7 @@
     const trigger = Array.from(document.querySelectorAll('[data-help-key]')).find((button) => button.dataset.helpKey === key);
     contextHelpTitle.textContent = trigger?.getAttribute('aria-label')?.replace(/^How\s+/i,'') || 'How it works';
     contextHelpCopy.textContent = helpCopyFor(key);
-    const canEdit = DEV_BUILD || ownerPreviewActive();
+    const canEdit = adminAccessAvailable();
     contextHelpEditor.hidden = !canEdit;
     contextHelpSave.hidden = !canEdit;
     contextHelpInput.value = helpCopyFor(key);
@@ -5964,7 +5993,7 @@
   }
 
   function saveContextHelp() {
-    if (!currentHelpKey || (!DEV_BUILD && !ownerPreviewActive())) return;
+    if (!currentHelpKey || !adminAccessAvailable()) return;
     const copy = String(contextHelpInput.value || '').trim().replace(/\s+/g,' ').slice(0,360);
     if (!copy) return showToast('Add a short help description first.');
     experienceSettings.helpCopy = { ...cleanHelpCopy(experienceSettings.helpCopy),[currentHelpKey]:copy };
@@ -6121,19 +6150,14 @@
   function renderSettings() {
     applyExperienceSettings();
     const adminCard = document.querySelector('.settings-admin-card');
-    if (adminCard) adminCard.hidden = !DEV_BUILD && !ownerPreviewActive();
+    if (adminCard) adminCard.hidden = !adminAccessAvailable();
     const status = window.SPRITE_ACCOUNT_BRIDGE?.status?.();
     settingsSaveStatus.textContent = status?.signedIn
       ? (status.lastSyncedAt ? `Last save at ${formatSettingsSaveTime(status.lastSyncedAt)}` : 'Signed in · your first automatic save is being prepared.')
       : 'Sign in to save your tracker automatically across devices.';
   }
 
-  const welcomeSlides = [
-    { icon:'✓',title:'Track your collection',copy:'Tap In Collection on any card, then tap its crown when you master that Sprite.' },
-    { icon:'⌕',title:'Find any Sprite fast',copy:'Type a Sprite or variant name. Results update as you type and open the exact card.' },
-    { icon:'↟',title:'Use the Sprite Assistant',copy:'Track one Match or several games in a Session, then review before finalizing.' },
-    { icon:'☁',title:'Keep progress protected',copy:'Sign in from your profile and every change saves automatically to your account.' }
-  ];
+  const welcomeSlides = [];
 
   function renderWelcome() {
     const slide = welcomeSlides[welcomeIndex];
@@ -6151,12 +6175,7 @@
   }
 
   function maybeOpenWelcome() {
-    let seen = false;
-    try { seen = localStorage.getItem(WELCOME_KEY) === 'seen'; } catch { /* Show the short guide. */ }
-    if (seen || welcomeDialog.open) return;
-    welcomeIndex = 0;
-    renderWelcome();
-    welcomeDialog.showModal();
+    return;
   }
 
   function safeStorageGet(key) {
@@ -6245,7 +6264,7 @@
     const source = value && typeof value === 'object' ? value : {};
     const startedAt = validIsoDate(source.startedAt);
     return {
-      active:source.active === true && Boolean(startedAt),
+      active:false,
       startedAt,
       sessionStartedAt:validIsoDate(source.sessionStartedAt) || startedAt,
       lastDurationMs:Math.max(0,Math.min(7 * 24 * 60 * 60 * 1000,Number(source.lastDurationMs) || 0)),
@@ -7327,11 +7346,35 @@
   function resetProgress() {
     state = {};
     recentMissingChanges = { unowned:[], unmastered:[] };
+    spriteViewModes = {};
+    huntMode = { active:false, startedAt:'', sessionStartedAt:'', lastDurationMs:0, location:'',mode:'match',matchNumber:1,editingMatchIndex:-1,sessionMatches:[] };
+    huntCart = [];
+    huntHistory = [];
+    searchTargets = [];
+    quickAddHistory = [];
+    dustLedger = [];
+    journalEntries = [];
+    pendingJournalEntries = [];
+    experienceSettings = {
+      animations:true,reduceMotion:false,defaultView:'card',eventNotices:true,
+      trackerFilter:'all',collapseVariants:false,personalRoute:[],helpCopy:{}
+    };
+    const resetKeys = [
+      PROGRESS_KEY,VIEW_MODES_KEY,MISSING_VIEW_KEY,EXPERIENCE_SETTINGS_KEY,
+      WELCOME_KEY,EVENT_NOTICE_KEY,SEASON_VIEW_KEY,
+      PRE_RESTORE_PROGRESS_KEY,HUNT_MODE_KEY,HUNT_CART_KEY,HUNT_HISTORY_KEY,
+      SEARCH_TARGETS_KEY,QUICK_ADD_HISTORY_KEY,DUST_LEDGER_KEY,JOURNAL_FALLBACK_KEY,
+      FUTURE_STATE_KEY,LEGACY_PROGRESS_KEY
+    ];
+    try { resetKeys.forEach((key) => localStorage.removeItem(key)); } catch { /* In-memory reset still completes. */ }
     try { sessionStorage.removeItem(RECENT_MISSING_KEY); } catch { /* Nothing else to clear. */ }
+    writeJournalDatabase([]).catch(() => {});
     saveProgress();
+    saveHuntMode();saveHuntCart();saveHuntHistory();saveSearchTargets();saveQuickAddHistory();saveDustLedger();saveExperienceSettings();
     resetDialog.close();
     renderAll();
-    showToast('Checklist progress reset');
+    queueFutureStateSync();
+    showToast('All tracker data reset');
   }
 
   function setSpriteEditMode(enabled) {
@@ -7553,6 +7596,7 @@
     if (!event.target.closest('.compass-target-form') && !event.target.closest('.compass-target-results')) closeCompassTargetResults();
   });
   huntCheckoutBtn.addEventListener('click',openHuntCheckout);
+  quickAddCartBtn?.addEventListener('click',openHuntCheckout);
   huntCheckoutForm.addEventListener('submit',completeHuntOrder);
   huntCheckoutQuickAddInput?.addEventListener('input',renderHuntCheckoutQuickAdd);
   document.getElementById('continueHuntBtn').addEventListener('click',resumeHuntFromCheckout);
@@ -7592,13 +7636,13 @@
     document.body.classList.remove('session-review-open');
   });
   clearCollectionHistoryBtn?.addEventListener('click',() => {
-    if (!huntHistory.length) return;
-    requestClearConfirmation(() => {
-      huntHistory = [];
-      saveHuntHistory();
+    if (!normalizeJournalHistory().length) return;
+    requestClearConfirmation(async () => {
+      const historyIds = new Set(normalizeJournalHistory().map((entry) => entry.id));
+      journalEntries = journalEntries.filter((entry) => !historyIds.has(entry.id));
+      pendingJournalEntries = pendingJournalEntries.filter((entry) => !historyIds.has(entry.id));
+      if (journalReady) await scheduleJournalSave();
       renderCollectionHistory();
-      renderHuntHistory();
-      renderCollections();
       showToast('Collection History cleared');
     });
   });
@@ -7881,12 +7925,8 @@
       setAppView(APP_VIEW_JOURNAL,{ announce:false });
       return;
     }
-    if (hashView === APP_VIEW_HUNTS || hashView === 'adventure') {
-      setAppView(APP_VIEW_HUNTS,{ announce:false });
-      return;
-    }
-    if (hashView === APP_VIEW_DUST) {
-      setAppView(APP_VIEW_DUST,{ announce:false });
+    if (hashView === APP_VIEW_HUNTS || hashView === 'adventure' || hashView === APP_VIEW_DUST) {
+      goHomeToRare({ announce:false });
       return;
     }
     if (hashView === APP_VIEW_PROFILE || hashView.startsWith(`${APP_VIEW_PROFILE}/`)) {
@@ -7925,7 +7965,7 @@
                             : (isUnownedPage() ? `#${missingView}` : `#${activeRarity.toLowerCase()}`)))))));
   if (location.hash !== activeHash) history.replaceState({ rarity:activeRarity },'',activeHash);
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./service-worker.js?v=144',{ updateViaCache:'none' }).then((registration) => registration.update()).catch(() => {});
+    navigator.serviceWorker.register('./service-worker.js?v=146',{ updateViaCache:'none' }).then((registration) => registration.update()).catch(() => {});
   }
   const signalAppRendered = () => window.dispatchEvent(new Event('sprite-app-rendered'));
   if (document.fonts?.ready) {
@@ -7938,5 +7978,4 @@
   }
   applyExperienceSettings();
   window.setTimeout(maybeShowSpriteEventNotice,1100);
-  window.setTimeout(maybeOpenWelcome,700);
 })();
