@@ -941,6 +941,13 @@
   const compassQuickAddPrev = document.getElementById('compassQuickAddPrev');
   const compassQuickAddNext = document.getElementById('compassQuickAddNext');
   const compassQuickAddPageInfo = document.getElementById('compassQuickAddPageInfo');
+  const quickAddDialog = document.getElementById('quickAddDialog');
+  const quickAddCloseBtn = document.getElementById('quickAddCloseBtn');
+  const quickAddLocationBtn = document.getElementById('quickAddLocationBtn');
+  const quickAddLocationLabel = document.getElementById('quickAddLocationLabel');
+  const quickLocationDialog = document.getElementById('quickLocationDialog');
+  const quickLocationInput = document.getElementById('quickLocationInput');
+  const quickLocationResults = document.getElementById('quickLocationResults');
   const spriteDustBalanceBtn = document.getElementById('spriteDustBalanceBtn');
   const spriteDustBalance = document.getElementById('spriteDustBalance');
   const spriteDustAccountBalance = document.getElementById('spriteDustAccountBalance');
@@ -1130,7 +1137,7 @@
     huntTimer.hidden = !huntMode.active && !huntMode.lastDurationMs;
     if (compassStartSearchBtn) compassStartSearchBtn.textContent = huntMode.active
       ? `End Match · ${formatHuntDuration(elapsed)}`
-      : 'Match Start';
+      : 'Quick Match';
     if (compassSessionStartBtn) {
       const pendingSession = huntMode.mode === 'session' && Boolean(huntMode.sessionMatches?.length);
       compassSessionStartBtn.textContent = huntMode.active && huntMode.mode === 'session'
@@ -1192,8 +1199,8 @@
     pendingHuntStartMode = mode === 'session' ? 'session' : 'match';
     pendingHuntStartReturnView = appView;
     spriteSearchLocation.value = cleanLocation(huntMode.location) || '';
-    spriteSearchStartTitle.textContent = pendingHuntStartMode === 'session' ? 'Session Start' : 'Match Start';
-    document.getElementById('beginMatchBtn').textContent = pendingHuntStartMode === 'session' ? 'Begin Session' : 'Begin Match';
+    spriteSearchStartTitle.textContent = pendingHuntStartMode === 'session' ? 'Session Start' : 'Quick Match';
+    document.getElementById('beginMatchBtn').textContent = "Let's Go!";
     document.documentElement.classList.add('sprite-search-start-open');
     document.body.classList.add('sprite-search-start-open');
     if (!spriteSearchStartDialog.open) spriteSearchStartDialog.showModal();
@@ -1252,10 +1259,10 @@
 
   function renderHuntCartTray() {
     const count = huntCart.length;
-    huntCartTray.hidden = !huntMode.active && !count;
-    huntCartSummary.textContent = `${count} ${count === 1 ? 'Sprite' : 'Sprites'} · ${formatDust(huntCartDustTotal())} Dust`;
-    huntCheckoutBtn.disabled = !count;
-    huntCheckoutBtn.textContent = huntMode.active ? 'Checkout' : 'Review cart';
+    huntCartTray.hidden = !huntMode.active;
+    huntCartSummary.textContent = String(count);
+    huntCheckoutBtn.disabled = false;
+    huntCheckoutBtn.textContent = `Cart (${count})`;
   }
 
   function addSpriteToHuntCart(family,variant) {
@@ -1271,7 +1278,7 @@
     noteQuickAdd(family,variant);
     saveHuntCart();
     renderHuntCartTray();
-    if (appView === APP_VIEW_HUNTS) renderHuntHistory();
+    if (appView === APP_VIEW_HUNTS) renderSpriteCompass();
     if (spriteSearchInput.value.trim()) {
       spriteSearchInput.value = '';
       clearSpriteSearchBtn.hidden = true;
@@ -1299,7 +1306,7 @@
     huntMode.sessionStartedAt ||= new Date(Date.now() - elapsed).toISOString();
     saveHuntMode();
     applyHuntMode();
-    showToast('Match resumed');
+    openQuickAdd();
   }
 
   function updateHuntCartLevel(itemId,level) {
@@ -1324,6 +1331,41 @@
     saveHuntCart();
     renderHuntCheckout();
     renderHuntCartTray();
+  }
+
+  function openQuickAdd() {
+    if (!huntMode.active) return;
+    renderSpriteCompass();
+    quickAddLocationLabel.textContent = cleanLocation(huntMode.location) || 'No drop spot selected';
+    document.documentElement.classList.add('quick-add-open');
+    document.body.classList.add('quick-add-open');
+    if (!quickAddDialog.open) quickAddDialog.showModal();
+  }
+
+  function closeQuickAdd() {
+    if (quickAddDialog.open) quickAddDialog.close();
+  }
+
+  function renderQuickLocations() {
+    const query = normalizeSearchText(quickLocationInput.value || '');
+    const names = [...spriteSearchLocation.options].map((option) => option.value).filter(Boolean)
+      .filter((name) => !query || normalizeSearchText(name).startsWith(query));
+    quickLocationResults.replaceChildren();
+    names.forEach((name) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      const label = document.createElement('span');
+      const plus = document.createElement('b');
+      label.textContent = name; plus.textContent = '+';
+      button.append(label,plus);
+      button.addEventListener('click',() => {
+        huntMode.location = name;
+        saveHuntMode();
+        quickAddLocationLabel.textContent = name;
+        quickLocationDialog.close();
+      });
+      quickLocationResults.appendChild(button);
+    });
   }
 
   function huntQuickAddMatches(query = '') {
@@ -1412,17 +1454,17 @@
       huntCheckoutItems.appendChild(row);
     });
     const location = cleanLocation(huntMode.location);
-    huntCheckoutTitle.textContent = huntMode.mode === 'session' ? `Match ${huntMode.matchNumber} Review` : 'Match Review';
+    huntCheckoutTitle.textContent = 'Match Review';
     huntCheckoutDuration.textContent = `Match time: ${formatHuntDuration(huntMode.lastDurationMs || huntElapsedMs())}${location ? ` · ${location}` : ''}`;
     huntCheckoutDustTotal.textContent = formatDust(huntCartDustTotal());
     huntCheckoutWarning.hidden = !missingDust;
     completeHuntOrderBtn.disabled = false;
-    completeHuntOrderBtn.textContent = huntMode.mode === 'session' ? 'Save Match' : 'Finish Match';
-    document.getElementById('continueHuntBtn').textContent = 'Keep Match Running';
-    renderHuntCheckoutQuickAdd();
+    completeHuntOrderBtn.textContent = 'Next';
+    document.getElementById('continueHuntBtn').textContent = 'Cancel';
   }
 
   function openHuntCheckout() {
+    closeQuickAdd();
     freezeHuntTimer();
     renderHuntCheckout();
     document.documentElement.classList.add('hunt-checkout-open');
@@ -1635,6 +1677,7 @@
     if (sessionReviewDialog.open) sessionReviewDialog.close();
     setAppView(APP_VIEW_HUNTS,{ announce:false });
     renderHuntHistory();
+    openQuickAdd();
     showToast(`Session · Match ${huntMode.matchNumber} started`);
   }
 
@@ -1673,7 +1716,7 @@
     const matches = normalizeSessionMatches(huntMode.sessionMatches);
     sessionReviewMatches.replaceChildren();
     const totalSprites = matches.reduce((total,match) => total + match.items.length,0);
-    sessionReviewSummary.textContent = `${matches.length} ${matches.length === 1 ? 'match' : 'matches'} · ${totalSprites} ${totalSprites === 1 ? 'Sprite' : 'Sprites'}. Add another game, edit a match, or finalize the Session.`;
+    sessionReviewSummary.textContent = `${matches.length} ${matches.length === 1 ? 'match' : 'matches'} · ${totalSprites} ${totalSprites === 1 ? 'Sprite' : 'Sprites'}`;
     matches.forEach((match,index) => {
       const card = document.createElement('article');
       card.className = 'session-review-match';
@@ -3397,8 +3440,6 @@
   }
 
   function renderSpriteCompass() {
-    const query = normalizeSearchText(compassTargetInput.value || '');
-    const sortDirection = compassTargetSort?.value === 'za' ? -1 : 1;
     const matching = allFamilies().flatMap((family) => {
       const group = familyView(family);
       if (group.deleted || !group.visible) return [];
@@ -3406,109 +3447,38 @@
         const view = variantView(family,variant);
         return !view.deleted && view.visible && spriteSeasonId(family,variant) === CURRENT_SEASON_ID;
       });
-      const availableVariants = variants;
-      if (!availableVariants.length) return [];
-      const familyName = group.name || family.name || 'Sprite';
-      const searchText = normalizeSearchText([familyName,...variants.map((variant) => variantView(family,variant).name || variant.name)].join(' '));
-      if (query && !searchText.includes(query)) return [];
-      const base = variants.find((variant) => variant.id === 'base') || variants[0];
-      return [{ family,group,familyName,base,availableVariants }];
-    }).sort((left,right) => sortDirection * left.familyName.localeCompare(right.familyName,undefined,{ sensitivity:'base',numeric:true }));
-    const pageCount = Math.max(1,Math.ceil(matching.length / COMPASS_QUICK_ADD_PAGE_SIZE));
-    if (compassExpandedFamilyId && !matching.some((entry) => entry.family.id === compassExpandedFamilyId)) compassExpandedFamilyId = '';
-    compassQuickAddPage = Math.max(0,Math.min(compassQuickAddPage,pageCount - 1));
-    const pageStart = compassQuickAddPage * COMPASS_QUICK_ADD_PAGE_SIZE;
-    const available = matching.slice(pageStart,pageStart + COMPASS_QUICK_ADD_PAGE_SIZE);
+      if (!variants.length) return [];
+      return variants.map((variant) => ({
+        family,variant,
+        familyName:group.name || family.name || 'Sprite',
+        variantName:variantView(family,variant).name || variant.name || 'Variant'
+      }));
+    }).sort((left,right) => `${left.familyName} ${left.variantName}`.localeCompare(`${right.familyName} ${right.variantName}`,undefined,{ sensitivity:'base',numeric:true }));
     compassTargetTotal.textContent = String(huntCart.length);
     renderAdventureGoals();
-    renderQuickAddHistory();
     compassTargetList.replaceChildren();
-    compassTargetEmpty.hidden = Boolean(available.length);
-    if (compassQuickAddPager) {
-      compassQuickAddPager.hidden = matching.length <= COMPASS_QUICK_ADD_PAGE_SIZE;
-      compassQuickAddPrev.disabled = compassQuickAddPage === 0;
-      compassQuickAddNext.disabled = compassQuickAddPage >= pageCount - 1;
-      compassQuickAddPageInfo.textContent = matching.length
-        ? `${pageStart + 1}–${Math.min(pageStart + COMPASS_QUICK_ADD_PAGE_SIZE,matching.length)} of ${matching.length}`
-        : '0 Sprites';
-    }
-    available.forEach((entry) => {
+    compassTargetEmpty.hidden = Boolean(matching.length);
+    compassQuickAddPager.hidden = true;
+    matching.forEach((entry) => {
       const row = document.createElement('article');
-      row.className = 'compass-target-card compass-family-card';
-      row.dataset.expanded = String(compassExpandedFamilyId === entry.family.id);
-      const thumb = document.createElement('span');
-      thumb.className = 'compass-target-thumb';
-      const baseImage = displayImageSource(entry.base ? variantView(entry.family,entry.base).image : '');
-      if (baseImage) {
+      row.className = 'compass-target-card quick-add-sprite';
+      const imageWrap = document.createElement('span');
+      imageWrap.className = 'compass-target-thumb';
+      const source = displayImageSource(variantView(entry.family,entry.variant).image);
+      if (source) {
         const image = document.createElement('img');
-        image.src = baseImage;
-        image.alt = '';
-        thumb.appendChild(image);
-      } else {
-        thumb.textContent = entry.familyName.slice(0,1).toUpperCase();
+        image.src = source; image.alt = `${entry.familyName} ${entry.variantName}`;
+        imageWrap.appendChild(image);
       }
-      const copy = document.createElement('div');
-      const name = document.createElement('strong');
-      name.textContent = entry.familyName;
-      copy.append(name);
-      const actions = document.createElement('div');
-      actions.className = 'compass-family-actions';
-      const goal = document.createElement('button');
-      const baseGoalActive = entry.base && searchTargets.some((target) => target.familyId === entry.family.id && target.variantId === entry.base.id);
-      goal.type = 'button';
-      goal.className = 'compass-goal-toggle';
-      goal.textContent = '✦';
-      goal.setAttribute('aria-pressed',String(Boolean(baseGoalActive)));
-      goal.setAttribute('aria-label',`${baseGoalActive ? 'Remove' : 'Set'} ${entry.familyName} as an Adventure Goal`);
-      goal.disabled = !entry.base;
-      goal.addEventListener('click',() => entry.base && toggleAdventureGoal(entry.family,entry.base));
       const add = document.createElement('button');
-      add.type = 'button';
-      add.className = 'compass-quick-add';
-      add.textContent = '+';
-      add.setAttribute('aria-expanded',String(compassExpandedFamilyId === entry.family.id));
-      add.setAttribute('aria-label',`Show ${entry.familyName} variants`);
-      add.addEventListener('click',() => {
-        compassExpandedFamilyId = compassExpandedFamilyId === entry.family.id ? '' : entry.family.id;
-        renderSpriteCompass();
-      });
-      actions.append(goal,add);
-      row.append(thumb,copy,actions);
-      if (compassExpandedFamilyId === entry.family.id) {
-        row.style.setProperty('--quick-add-span',String(Math.max(3,entry.availableVariants.length + 2)));
-        const variants = document.createElement('div');
-        variants.className = 'compass-family-variants';
-        entry.availableVariants.forEach((variant) => {
-          const variantInfo = variantView(entry.family,variant);
-          const item = document.createElement('div');
-          const label = document.createElement('span');
-          label.textContent = variantInfo.name || variant.name || 'Variant';
-          const variantAdd = document.createElement('button');
-          const variantGoal = document.createElement('button');
-          const goalActive = searchTargets.some((target) => target.familyId === entry.family.id && target.variantId === variant.id);
-          variantGoal.type = 'button';
-          variantGoal.className = 'compass-variant-goal';
-          variantGoal.textContent = '✦';
-          variantGoal.setAttribute('aria-pressed',String(goalActive));
-          variantGoal.setAttribute('aria-label',`${goalActive ? 'Remove' : 'Set'} ${entry.familyName} ${label.textContent} as an Adventure Goal`);
-          variantGoal.addEventListener('click',() => toggleAdventureGoal(entry.family,variant));
-          variantAdd.type = 'button';
-          variantAdd.textContent = '+';
-          variantAdd.disabled = !huntMode.active;
-          variantAdd.setAttribute('aria-label',`Add ${entry.familyName} ${label.textContent} to this match`);
-          variantAdd.addEventListener('click',() => addSpriteToHuntCart(entry.family,variant));
-          item.append(label,variantGoal,variantAdd);
-          variants.appendChild(item);
-        });
-        row.appendChild(variants);
-      }
+      add.type = 'button'; add.className = 'compass-quick-add'; add.textContent = '+';
+      add.setAttribute('aria-label',`Add ${entry.familyName} ${entry.variantName}`);
+      add.addEventListener('click',() => addSpriteToHuntCart(entry.family,entry.variant));
+      row.append(imageWrap,add);
       compassTargetList.appendChild(row);
     });
-
     const recommendation = compassRecommendation();
-    compassNextTarget.textContent = recommendation.info
-      ? `${recommendation.info.entry.groupName} · ${recommendation.info.entry.variantName}`
-      : 'Collection complete';
+    compassNextTarget.textContent = recommendation.info ? `${recommendation.info.entry.groupName} · ${recommendation.info.entry.variantName}` : 'Collection complete';
     compassNextReason.textContent = recommendation.reason;
     updateHuntTimer();
   }
@@ -7506,6 +7476,7 @@
     startSpriteSearch(location,pendingHuntStartMode);
     if (pendingHuntStartReturnView === APP_VIEW_HUNTS) setAppView(APP_VIEW_HUNTS,{ announce:false });
     else renderAll();
+    openQuickAdd();
   });
   document.getElementById('cancelSpriteSearchStartBtn').addEventListener('click',() => spriteSearchStartDialog.close());
   spriteSearchStartDialog.addEventListener('close',() => {
@@ -7585,6 +7556,19 @@
   huntCheckoutForm.addEventListener('submit',completeHuntOrder);
   huntCheckoutQuickAddInput?.addEventListener('input',renderHuntCheckoutQuickAdd);
   document.getElementById('continueHuntBtn').addEventListener('click',resumeHuntFromCheckout);
+  quickAddCloseBtn?.addEventListener('click',closeQuickAdd);
+  quickAddDialog?.addEventListener('cancel',(event) => { event.preventDefault(); closeQuickAdd(); });
+  quickAddDialog?.addEventListener('close',() => {
+    document.documentElement.classList.remove('quick-add-open');
+    document.body.classList.remove('quick-add-open');
+  });
+  quickAddLocationBtn?.addEventListener('click',() => {
+    quickLocationInput.value = '';
+    renderQuickLocations();
+    quickLocationDialog.showModal();
+    requestAnimationFrame(() => quickLocationInput.focus({ preventScroll:true }));
+  });
+  quickLocationInput?.addEventListener('input',renderQuickLocations);
   huntCheckoutDialog.addEventListener('cancel',(event) => {
     event.preventDefault();
     resumeHuntFromCheckout();
@@ -7941,7 +7925,7 @@
                             : (isUnownedPage() ? `#${missingView}` : `#${activeRarity.toLowerCase()}`)))))));
   if (location.hash !== activeHash) history.replaceState({ rarity:activeRarity },'',activeHash);
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./service-worker.js?v=143',{ updateViaCache:'none' }).then((registration) => registration.update()).catch(() => {});
+    navigator.serviceWorker.register('./service-worker.js?v=144',{ updateViaCache:'none' }).then((registration) => registration.update()).catch(() => {});
   }
   const signalAppRendered = () => window.dispatchEvent(new Event('sprite-app-rendered'));
   if (document.fonts?.ready) {

@@ -1,0 +1,43 @@
+/* V144 — match Quick Add, Collected History, and compact profile cleanup */
+.collection-history-heading { align-items:center;margin-bottom:12px; }
+.collection-history-heading h3 { margin:0;font-size:clamp(25px,6vw,36px); }
+.collection-history-empty:empty { display:none!important; }
+
+.quick-add-dialog {
+  width:min(94vw,720px);height:min(88dvh,900px);max-width:none;max-height:none;padding:0;
+  overflow:hidden;color:#fff;border:1px solid rgba(125,206,255,.38);border-radius:28px;
+  background:linear-gradient(150deg,rgba(6,18,43,.98),rgba(12,11,40,.98));box-shadow:0 28px 80px #000b;
+}
+.quick-add-dialog::backdrop { background:rgba(0,3,12,.76);backdrop-filter:blur(8px); }
+.quick-add-popup { display:flex;flex-direction:column;height:100%;min-height:0;padding:18px;background:none!important;border:0!important; }
+.quick-add-popup .journal-section-heading { flex:0 0 auto;align-items:center;margin:0 0 14px; }
+.quick-add-popup .journal-section-heading span { color:#85d9ff;font-size:11px; }
+.quick-add-popup .journal-section-heading h3 { margin:4px 0 0;color:#fff;font-size:30px; }
+.quick-add-close { width:42px;height:42px;color:#fff;border:1px solid #ffffff38;border-radius:50%;background:#ffffff0d;font-size:28px; }
+.quick-add-popup .compass-target-list { display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;min-height:0;overflow:auto;padding:2px 2px 92px; }
+.quick-add-sprite { position:relative;display:block!important;min-width:0;aspect-ratio:1/1.05;padding:0!important;overflow:hidden;border:1px solid #ffffff20!important;border-radius:18px!important;background:#ffffff09!important; }
+.quick-add-sprite .compass-target-thumb { display:block!important;width:100%!important;height:100%!important;border:0!important;border-radius:0!important;background:transparent!important; }
+.quick-add-sprite img { width:100%;height:100%;object-fit:contain; }
+.quick-add-sprite .compass-quick-add { position:absolute;right:7px;top:7px;width:auto!important;height:auto!important;padding:0!important;color:#fff!important;border:0!important;background:transparent!important;filter:drop-shadow(0 2px 4px #000);font:900 31px/1 Arial!important; }
+.quick-add-location-button { position:absolute;left:50%;bottom:max(16px,env(safe-area-inset-bottom));z-index:3;transform:translateX(-50%);min-height:46px;padding:0 19px;color:#fff;border:1px solid #ffffff42;border-radius:999px;background:rgba(7,17,39,.88);box-shadow:0 8px 24px #0008;font:800 13px var(--font-button); }
+
+body.quick-add-open .hunt-cart-tray { position:fixed!important;right:14px!important;bottom:max(14px,env(safe-area-inset-bottom))!important;left:auto!important;z-index:2147483647!important;display:block!important;width:auto!important;min-width:0!important;padding:0!important;border:0!important;background:transparent!important;box-shadow:none!important; }
+body.quick-add-open .hunt-cart-tray > div { display:none!important; }
+body.quick-add-open #huntCheckoutBtn { min-height:48px;padding:0 17px;color:#fff;border:1px solid #8be0ff66;border-radius:999px;background:linear-gradient(145deg,#197acb,#5631be);box-shadow:0 10px 28px #0009;font:900 13px var(--font-button); }
+
+.quick-location-dialog input { width:100%;min-height:48px;padding:0 14px;color:#fff;border:1px solid #ffffff32;border-radius:14px;background:#071126;font-size:16px; }
+.quick-location-results { display:grid;gap:8px;max-height:45dvh;overflow:auto;margin:12px 0; }
+.quick-location-results button { display:flex;align-items:center;justify-content:space-between;min-height:46px;padding:0 14px;color:#fff;border:1px solid #ffffff20;border-radius:13px;background:#ffffff0a;text-align:left; }
+.quick-location-results b { color:#78dcff;font-size:24px; }
+
+.hunt-checkout-mastered,.hunt-checkout-item label,.hunt-checkout-item-dust,.hunt-checkout-total,.hunt-checkout-warning { display:none!important; }
+.hunt-checkout-item { grid-template-columns:minmax(0,1fr) auto!important; }
+.hunt-checkout-dialog .hunt-checkout-items { max-height:52dvh;overflow:auto; }
+.profile-meadow-hero[hidden],.profile-lookup-panel[hidden],.profile-code-chip,.profile-code-share-row { display:none!important; }
+
+@media (max-width:430px) {
+  .quick-add-dialog { width:96vw;height:90dvh;border-radius:24px; }
+  .quick-add-popup { padding:14px 12px; }
+  .quick-add-popup .compass-target-list { gap:7px; }
+  .quick-add-sprite { border-radius:15px!important; }
+}

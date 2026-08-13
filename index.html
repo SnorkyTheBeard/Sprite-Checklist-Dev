@@ -299,7 +299,8 @@
 <link rel="stylesheet" href="v139.css?v=139">
 <link rel="stylesheet" href="v140.css?v=140">
 <link rel="stylesheet" href="v142.css?v=142">
-<link rel="stylesheet" href="v143.css?v=143">
+  <link rel="stylesheet" href="v143.css?v=143">
+  <link rel="stylesheet" href="v144.css?v=144">
 </head>
 <body>
   <div class="app-launch-screen" aria-hidden="true">
@@ -504,11 +505,11 @@
 
       <section class="collection-history-panel" aria-labelledby="collectionHistoryHeading">
         <div class="collection-history-heading">
-          <div><span>Completed matches</span><h3 id="collectionHistoryHeading">Sprites Collected by Match</h3></div>
+          <div><h3 id="collectionHistoryHeading">Collected History</h3></div>
           <button id="clearCollectionHistoryBtn" type="button">Clear History</button>
         </div>
         <div class="collection-history-list" id="collectionHistoryList" aria-live="polite"></div>
-        <p class="collection-history-empty" id="collectionHistoryEmpty">Finish a Match or Session and its collected Sprites will appear here.</p>
+        <p class="collection-history-empty" id="collectionHistoryEmpty" hidden></p>
       </section>
 
       <nav class="journal-view-tabs" id="journalViewTabs" aria-label="Collection Journal sections">
@@ -566,7 +567,6 @@
 
     <section class="hunt-history-page sprite-compass-page" id="huntHistoryPage" aria-labelledby="huntHistoryTitle" hidden>
       <header class="feature-page-head">
-        <span>Your play-session companion</span>
         <div class="feature-title-row"><h2 id="huntHistoryTitle">Sprite Assistant</h2><button class="context-help-button" type="button" data-help-key="adventure" aria-label="How Sprite Assistant works">?</button></div>
       </header>
       <section class="sprite-compass-overview" aria-label="Sprite Assistant overview">
@@ -575,7 +575,7 @@
           <strong id="compassNextTarget">Your collection is ready</strong>
           <small id="compassNextReason">A useful suggestion will appear here.</small>
           <div class="assistant-start-actions">
-            <button class="primary-btn" id="compassStartSearchBtn" type="button">Match Start</button>
+            <button class="primary-btn" id="compassStartSearchBtn" type="button">Quick Match</button>
             <button class="primary-btn secondary-session-btn" id="compassSessionStartBtn" type="button">Session Start</button>
           </div>
         </article>
@@ -608,27 +608,15 @@
         </div>
       </section>
 
-      <section class="sprite-search-list-panel" aria-labelledby="spriteSearchListTitle">
+      <dialog class="quick-add-dialog" id="quickAddDialog" aria-labelledby="spriteSearchListTitle">
+      <section class="sprite-search-list-panel quick-add-popup" aria-labelledby="spriteSearchListTitle">
         <div class="journal-section-heading">
-          <div><h3 id="spriteSearchListTitle">Quick Add</h3></div>
+          <div><span id="quickAddLocationLabel">No drop spot selected</span><h3 id="spriteSearchListTitle">Quick Add</h3></div>
+          <button class="quick-add-close" id="quickAddCloseBtn" type="button" aria-label="Close Quick Add">×</button>
         </div>
-        <div class="compass-quick-add-toolbar">
-          <form class="compass-target-form" id="compassTargetForm" role="search">
-            <label class="visually-hidden" for="compassTargetInput">Find a Sprite</label>
-            <input id="compassTargetInput" type="search" placeholder="Search Sprites…" autocomplete="off" enterkeyhint="search" aria-controls="compassTargetList">
-          </form>
-          <label class="compass-sort-control" for="compassTargetSort">
-            <span>Sort</span>
-            <select id="compassTargetSort">
-              <option value="az">A–Z</option>
-              <option value="za">Z–A</option>
-            </select>
-          </label>
-        </div>
-        <section class="compass-smart-history" id="compassSmartHistory" aria-labelledby="compassSmartHistoryTitle" hidden>
-          <div><span>Fast access</span><h4 id="compassSmartHistoryTitle">Recent &amp; Frequent</h4></div>
-          <div class="compass-smart-history-row" id="compassSmartHistoryRow"></div>
-        </section>
+        <form id="compassTargetForm" hidden><input id="compassTargetInput" type="search"><button>Search</button></form>
+        <select id="compassTargetSort" hidden><option value="az">A–Z</option></select>
+        <section id="compassSmartHistory" hidden><h4 id="compassSmartHistoryTitle">Recent</h4><div id="compassSmartHistoryRow"></div></section>
         <div class="compass-target-results" id="compassTargetResults" role="listbox" hidden></div>
         <p class="visually-hidden" id="compassTargetStatus" aria-live="polite"></p>
         <div class="compass-target-list" id="compassTargetList"></div>
@@ -641,7 +629,9 @@
           <strong>No Sprites match this search.</strong>
           <span>Try another Sprite name.</span>
         </div>
+        <button class="quick-add-location-button" id="quickAddLocationBtn" type="button">New location +</button>
       </section>
+      </dialog>
 
       <section class="adventure-map-panel" aria-labelledby="adventureMapTitle">
         <div class="journal-section-heading"><div><span>Optional guide</span><h3 id="adventureMapTitle">Sprite Chest Map</h3></div></div>
@@ -681,13 +671,13 @@
         <div class="feature-title-row"><h2 id="spriteProfilePageTitle">My Sprite Profile</h2><button class="context-help-button" type="button" data-help-key="profile" aria-label="How Sprite Profiles work">?</button></div>
       </header>
 
-      <section class="profile-meadow-hero" id="profileOwnerHero" hidden>
-        <div><span>Your Meadow Code</span><strong id="profileHeroCode">—</strong><button id="profileHeroShareBtn" type="button">Share code</button></div>
+      <section class="profile-meadow-hero" id="profileOwnerHero" hidden aria-hidden="true">
+        <div><span>Friends</span><strong id="profileHeroCode">—</strong><button id="profileHeroShareBtn" type="button">Share profile</button></div>
         <div class="profile-avatar profile-hero-avatar" id="profileHeroAvatar" data-avatar="sprite" aria-hidden="true"></div>
       </section>
 
-      <section class="profile-lookup-panel" aria-labelledby="profileLookupTitle">
-        <div><span>Visit another collector</span><h3 id="profileLookupTitle">Meadow Code</h3></div>
+      <section class="profile-lookup-panel" aria-labelledby="profileLookupTitle" hidden aria-hidden="true">
+        <div><span>Friends</span><h3 id="profileLookupTitle">Find a collector</h3></div>
         <form class="profile-lookup-form" id="profileLookupForm">
           <label class="visually-hidden" for="profileLookupCode">Meadow Code</label>
           <input id="profileLookupCode" type="text" inputmode="text" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="8" placeholder="AB12CD34" required>
@@ -1138,7 +1128,6 @@
   <dialog class="reset-dialog sprite-search-start-dialog" id="spriteSearchStartDialog" aria-labelledby="spriteSearchStartTitle">
     <form id="spriteSearchStartForm">
       <h2 id="spriteSearchStartTitle" tabindex="-1">Match Start</h2>
-      <p>Optionally choose a drop spot. Add the Sprites you found when the match ends.</p>
       <label class="add-sprite-label" for="spriteSearchLocation">Drop spot</label>
       <select id="spriteSearchLocation">
         <option value="">Choose later</option>
@@ -1154,8 +1143,18 @@
       </select>
       <div class="dialog-actions">
         <button id="cancelSpriteSearchStartBtn" type="button">Cancel</button>
-        <button class="primary-btn" id="beginMatchBtn" type="submit">Begin Match</button>
+        <button class="primary-btn" id="beginMatchBtn" type="submit">Let's Go!</button>
       </div>
+    </form>
+  </dialog>
+
+  <dialog class="reset-dialog quick-location-dialog" id="quickLocationDialog" aria-labelledby="quickLocationTitle">
+    <form method="dialog">
+      <h2 id="quickLocationTitle">Change location</h2>
+      <label class="add-sprite-label" for="quickLocationInput">Type the first letter or location name</label>
+      <input id="quickLocationInput" type="search" autocomplete="off" placeholder="Start typing…">
+      <div class="quick-location-results" id="quickLocationResults"></div>
+      <div class="dialog-actions"><button value="cancel" type="submit">Cancel</button></div>
     </form>
   </dialog>
 
@@ -1163,7 +1162,7 @@
     <form id="huntCheckoutForm">
       <h2 id="huntCheckoutTitle" tabindex="-1">Match Review</h2>
       <p id="huntCheckoutDuration">Match time: 00:00</p>
-      <label class="hunt-checkout-quick-add" for="huntCheckoutQuickAddInput">
+      <label class="hunt-checkout-quick-add" for="huntCheckoutQuickAddInput" hidden>
         <span>Add a Sprite from this match</span>
         <input id="huntCheckoutQuickAddInput" type="search" placeholder="Search Sprites…" autocomplete="off">
       </label>
@@ -1175,8 +1174,8 @@
       </div>
       <p class="hunt-checkout-warning" id="huntCheckoutWarning" hidden>Some Sprites do not have a Dust value saved for that level and will add 0 Dust.</p>
       <div class="dialog-actions">
-        <button id="continueHuntBtn" type="button">Keep Match Running</button>
-        <button class="primary-btn" id="completeHuntOrderBtn" type="submit">Finish Match</button>
+        <button id="continueHuntBtn" type="button">Cancel</button>
+        <button class="primary-btn" id="completeHuntOrderBtn" type="submit">Next</button>
       </div>
     </form>
   </dialog>
@@ -1189,7 +1188,7 @@
       <div class="session-review-matches" id="sessionReviewMatches"></div>
       <div class="session-review-actions">
         <button id="sessionReviewAddSpriteBtn" type="button">+ Add Sprite</button>
-        <button id="sessionReviewAddGameBtn" type="button">Add Game</button>
+        <button id="sessionReviewAddGameBtn" type="button">New Game</button>
         <button class="primary-btn" id="sessionReviewEndBtn" type="submit">End Session</button>
       </div>
     </form>
@@ -1339,8 +1338,8 @@
   <script src="data.js?v=82"></script>
   <script src="sprite-events-v140.js?v=140"></script>
   <script src="state-schema-v127.js?v=127"></script>
-<script src="feature-config-v129.js?v=143"></script>
-<script src="app.js?v=143"></script>
+<script src="feature-config-v129.js?v=144"></script>
+<script src="app.js?v=144"></script>
   <script src="cloud-config-v128.js?v=128"></script>
   <script src="cloud-v128.js?v=135"></script>
   <script src="profile-v133.js?v=142"></script>
