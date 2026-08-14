@@ -5,17 +5,13 @@
 [data-feature-id="spriteRunHistory"],
 .hunt-mode-control,
 #huntCartTray,
-#spriteDustBalanceBtn,
 #huntHistoryPage,
-#spriteDustPage,
 #quickAddDialog,
 #huntCheckoutDialog,
 #sessionReviewDialog,
 #spriteSearchStartDialog,
 #spriteSearchRecapDialog,
-#quickLocationDialog,
-#dustPurchaseDialog,
-#dustBalanceDialog {
+#quickLocationDialog {
   display:none !important;
 }
 

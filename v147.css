@@ -1,0 +1,21 @@
+/* V147 Essentials + Sprite Dust — variant rewards and unified glowing titles. */
+body:not(.vault-view) #activePageTitle {
+  color:#fff !important;
+  background:none !important;
+  background-image:none !important;
+  -webkit-background-clip:border-box !important;
+  background-clip:border-box !important;
+  -webkit-text-fill-color:#fff !important;
+  -webkit-text-stroke:.5px rgba(235,245,255,.82) !important;
+  filter:none !important;
+  text-shadow:0 3px 0 rgba(0,0,0,.92),0 0 7px rgba(255,255,255,.86),0 0 18px var(--v142-rarity),0 0 36px var(--v142-rarity) !important;
+}
+#spriteDustBalanceBtn { display:flex !important; }
+#spriteDustPage:not([hidden]) { display:block !important; }
+#dustPurchaseDialog[open],#dustBalanceDialog[open] { display:block !important; }
+.tracker-tools { justify-content:center; }
+.rarity-dust-admin > div { grid-template-columns:repeat(auto-fit,minmax(112px,1fr));gap:8px; }
+.rarity-dust-admin label { min-width:0;color:#e4edf9;font-size:11px; }
+.rarity-dust-admin input { font-size:13px; }
+.extraction-dust-levels span { min-width:0; }
+@media (max-width:520px) { .rarity-dust-admin > div { grid-template-columns:repeat(2,minmax(0,1fr)); } }

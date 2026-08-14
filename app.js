@@ -4022,10 +4022,57 @@
     }));
   }
 
+  const LEGACY_DUST_VARIANTS = Object.freeze({
+    '1':'base',
+    '2':'gold',
+    '3':'gummy',
+    '4':'galaxy',
+    '5':'holofoil'
+  });
+
+  function normalizeRarityDustVariants(value) {
+    const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+    const normalized = {};
+    Object.entries(source).forEach(([rawKey,rawAmount]) => {
+      const variantId = LEGACY_DUST_VARIANTS[String(rawKey)] || String(rawKey || '').trim().slice(0,200);
+      const amount = Number(String(rawAmount ?? '').replace(/,/g,''));
+      if (!variantId || !Number.isFinite(amount) || amount < 0) return;
+      normalized[variantId] = Math.min(1000000,Math.round(amount));
+    });
+    return normalized;
+  }
+
+  function dustVariantTypes() {
+    const names = new Map();
+    allFamilies().forEach((family) => {
+      familyVariants(family).forEach((variant) => {
+        const id = String(variant.id || '').trim();
+        if (!id || names.has(id)) return;
+        names.set(id,String(variantView(family,variant).name || variant.name || id));
+      });
+    });
+    const publishedRewards = design.rarityDustLevels || {};
+    const editedRewards = spriteCardEdits.rarityDustLevels || {};
+    [...Object.values(publishedRewards),...Object.values(editedRewards)].forEach((rewards) => {
+      Object.keys(normalizeRarityDustVariants(rewards)).forEach((id) => {
+        if (!names.has(id)) names.set(id,id.replace(/[-_]+/g,' ').replace(/\b\w/g,(letter) => letter.toUpperCase()));
+      });
+    });
+    const preferred = ['base','gold','gummy','galaxy','holofoil','cube','gem','quack'];
+    return [...names.entries()]
+      .map(([id,name]) => ({ id,name }))
+      .sort((a,b) => {
+        const aIndex = preferred.indexOf(a.id);
+        const bIndex = preferred.indexOf(b.id);
+        if (aIndex !== -1 || bIndex !== -1) return (aIndex === -1 ? 999 : aIndex) - (bIndex === -1 ? 999 : bIndex);
+        return a.name.localeCompare(b.name,undefined,{ sensitivity:'base' });
+      });
+  }
+
   function saveSpriteDustLevels(family,variant,inputs) {
     const values = {};
     let invalid = false;
-    inputs.forEach((input,index) => {
+    inputs.forEach((input) => {
       const raw = String(input.value || '').trim();
       if (!raw) return;
       const amount = Number(raw.replace(/,/g,''));
@@ -4056,10 +4103,10 @@
       if (!raw) return;
       const amount = Number(raw);
       if (!Number.isFinite(amount) || amount < 0 || amount > 1000000) invalid = true;
-      else values[String(index + 1)] = Math.round(amount);
+      else if (input.dataset.dustVariant) values[input.dataset.dustVariant] = Math.round(amount);
     });
-    if (invalid || Object.keys(values).length !== 5) {
-      showToast('Enter all five whole Sprite Dust amounts from 0 to 1,000,000.');
+    if (invalid) {
+      showToast('Use whole Sprite Dust amounts from 0 to 1,000,000.');
       return false;
     }
     const previousEdits = cloneJson(spriteCardEdits);
@@ -4067,37 +4114,38 @@
     spriteCardEdits.rarityDustLevels[rarity] = values;
     if (!saveCardEditOrRestore(previousEdits)) return false;
     renderExtractionDust(rarity);
-    showToast(`${rarity} Sprite Dust rewards saved`);
+    showToast(`${rarity} variant rewards saved`);
     return true;
   }
 
   function rarityDustRewards(rarity) {
-    const globalLevels = normalizeDustLevels(
+    const globalLevels = normalizeRarityDustVariants(
       spriteCardEdits.rarityDustLevels?.[rarity]
       || design.rarityDustLevels?.[rarity]
     );
     if (Object.keys(globalLevels).length) return globalLevels;
-    const rewardCounts = Object.fromEntries([1,2,3,4,5].map((level) => [String(level),new Map()]));
+    const rewardCounts = Object.fromEntries(dustVariantTypes().map(({ id }) => [id,new Map()]));
     allFamilies().filter((family) => familyRarity(family) === rarity).forEach((family) => {
       familyVariants(family).forEach((variant) => {
         const levels = variantView(family,variant).dustLevels;
-        [1,2,3,4,5].forEach((level) => {
-          const amount = Number(levels[String(level)]);
+        const legacyLevel = Object.entries(LEGACY_DUST_VARIANTS).find(([,id]) => id === variant.id)?.[0];
+        if (legacyLevel) {
+          const amount = Number(levels[legacyLevel]);
           if (!Number.isFinite(amount) || amount < 0) return;
-          const counts = rewardCounts[String(level)];
+          const counts = rewardCounts[variant.id];
           counts.set(amount,(counts.get(amount) || 0) + 1);
-        });
+        }
       });
     });
-    return Object.fromEntries([1,2,3,4,5].flatMap((level) => {
-      const ranked = [...rewardCounts[String(level)].entries()].sort((a,b) => b[1] - a[1] || a[0] - b[0]);
-      return ranked.length ? [[String(level),ranked[0][0]]] : [];
+    return Object.fromEntries(dustVariantTypes().flatMap(({ id }) => {
+      const ranked = [...rewardCounts[id].entries()].sort((a,b) => b[1] - a[1] || a[0] - b[0]);
+      return ranked.length ? [[id,ranked[0][0]]] : [];
     }));
   }
 
   function spriteDustAtLevel(family,variant,level = 1) {
     const normalizedLevel = String(Math.max(1,Math.min(5,Number(level) || 1)));
-    const rarityReward = Number(rarityDustRewards(familyRarity(family))[normalizedLevel]);
+    const rarityReward = Number(rarityDustRewards(familyRarity(family))[variant.id]);
     if (Number.isFinite(rarityReward) && rarityReward >= 0) return rarityReward;
     const legacy = Number(variantView(family,variant).dustLevels[normalizedLevel]);
     return Number.isFinite(legacy) && legacy >= 0 ? legacy : 0;
@@ -4113,12 +4161,12 @@
     }
     const rewards = rarityDustRewards(rarity);
     extractionDustLevels.replaceChildren();
-    [1,2,3,4,5].forEach((level) => {
+    dustVariantTypes().forEach(({ id,name }) => {
       const row = document.createElement('span');
       const label = document.createElement('b');
       const value = document.createElement('strong');
-      label.textContent = `Level ${level}`;
-      value.innerHTML = `${dustBottleSvg()} ${formatDust(rewards[String(level)] || 0)} Dust`;
+      label.textContent = name;
+      value.innerHTML = `${dustBottleSvg()} ${formatDust(rewards[id] || 0)} Dust`;
       row.append(label,value);
       extractionDustLevels.appendChild(row);
     });
@@ -4129,13 +4177,13 @@
     if (!rarityDustAdmin || !rarityDustAdminFields) return;
     rarityDustAdmin.hidden = !spriteEditMode || !rarities.includes(rarity) || appView !== APP_VIEW_TRACKER;
     rarityDustAdminFields.replaceChildren();
-    [1,2,3,4,5].forEach((level) => {
+    dustVariantTypes().forEach(({ id,name }) => {
       const label = document.createElement('label');
-      label.textContent = `Level ${level}`;
+      label.textContent = name;
       const input = document.createElement('input');
       input.type = 'number'; input.min = '0'; input.max = '1000000'; input.step = '1'; input.inputMode = 'numeric';
-      input.value = String(rewards[String(level)] ?? '');
-      input.dataset.dustLevel = String(level);
+      input.value = String(rewards[id] ?? '');
+      input.dataset.dustVariant = id;
       label.appendChild(input);
       rarityDustAdminFields.appendChild(label);
     });
@@ -4257,7 +4305,7 @@
     nextDesign.families ||= {};
     nextDesign.rarityDustLevels = {
       ...(nextDesign.rarityDustLevels && typeof nextDesign.rarityDustLevels === 'object' ? nextDesign.rarityDustLevels : {}),
-      ...Object.fromEntries(Object.entries(spriteCardEdits.rarityDustLevels || {}).map(([rarity,levels]) => [rarity,normalizeDustLevels(levels)]))
+      ...Object.fromEntries(Object.entries(spriteCardEdits.rarityDustLevels || {}).map(([rarity,rewards]) => [rarity,normalizeRarityDustVariants(rewards)]))
     };
     nextDesign.customFamilies = Array.isArray(nextDesign.customFamilies) ? nextDesign.customFamilies : [];
     const assets = [];
@@ -7567,7 +7615,7 @@
   voiceCommandBtn?.addEventListener('click',startVoiceCommand);
   rarityDustAdmin?.addEventListener('submit',(event) => {
     event.preventDefault();
-    saveRarityDustLevels(activeThemeRarity(),[...rarityDustAdminFields.querySelectorAll('input[data-dust-level]')]);
+    saveRarityDustLevels(activeThemeRarity(),[...rarityDustAdminFields.querySelectorAll('input[data-dust-variant]')]);
   });
   compassQuickAddPrev?.addEventListener('click',() => {
     compassQuickAddPage = Math.max(0,compassQuickAddPage - 1);
@@ -7925,8 +7973,12 @@
       setAppView(APP_VIEW_JOURNAL,{ announce:false });
       return;
     }
-    if (hashView === APP_VIEW_HUNTS || hashView === 'adventure' || hashView === APP_VIEW_DUST) {
+    if (hashView === APP_VIEW_HUNTS || hashView === 'adventure') {
       goHomeToRare({ announce:false });
+      return;
+    }
+    if (hashView === APP_VIEW_DUST) {
+      setAppView(APP_VIEW_DUST,{ announce:false });
       return;
     }
     if (hashView === APP_VIEW_PROFILE || hashView.startsWith(`${APP_VIEW_PROFILE}/`)) {
@@ -7965,7 +8017,7 @@
                             : (isUnownedPage() ? `#${missingView}` : `#${activeRarity.toLowerCase()}`)))))));
   if (location.hash !== activeHash) history.replaceState({ rarity:activeRarity },'',activeHash);
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./service-worker.js?v=146',{ updateViaCache:'none' }).then((registration) => registration.update()).catch(() => {});
+    navigator.serviceWorker.register('./service-worker.js?v=147',{ updateViaCache:'none' }).then((registration) => registration.update()).catch(() => {});
   }
   const signalAppRendered = () => window.dispatchEvent(new Event('sprite-app-rendered'));
   if (document.fonts?.ready) {

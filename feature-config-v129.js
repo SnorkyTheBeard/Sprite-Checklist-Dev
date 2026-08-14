@@ -35,10 +35,10 @@ window.SPRITE_FEATURE_CONFIG = Object.freeze({
       implemented:false
     }),
     spriteDust:Object.freeze({
-      state:'hidden',
+      state:'public',
       label:'Sprite Dust',
       route:'dust',
-      implemented:false
+      implemented:true
     }),
     sheetView:Object.freeze({
       state:'public',

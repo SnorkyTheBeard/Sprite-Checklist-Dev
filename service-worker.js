@@ -1,4 +1,4 @@
-const CACHE = 'galaxy-sprite-checklist-v146-essentials';
+const CACHE = 'galaxy-sprite-checklist-v147-essentials-dust';
 const CORE = [
   './',
   './index.html',
@@ -19,16 +19,17 @@ const CORE = [
   './v144.css?v=144',
   './v145.css?v=145',
   './v146.css?v=146',
+  './v147.css?v=147',
   './published-design.js',
   './art-config.js?v=67',
   './data.js?v=82',
   './sprite-events-v140.js?v=140',
   './state-schema-v127.js?v=127',
-  './feature-config-v129.js?v=146',
-  './app.js?v=146',
+  './feature-config-v129.js?v=147',
+  './app.js?v=147',
   './cloud-config-v128.js?v=128',
-  './cloud-v128.js?v=146',
-  './profile-v133.js?v=146',
+  './cloud-v128.js?v=147',
+  './profile-v133.js?v=147',
   './manifest.webmanifest?v=101',
   './fonts/Burbank Big Condensed Black.otf',
   './fonts/Fredoka-Regular.woff2',
@@ -70,7 +71,7 @@ const CORE = [
   './assets/feature-backgrounds/feature-bg-meadow-v139.webp',
   './assets/header/main-header.webp?v=3'
 ];
-const FRESH_CODE_FILES = new Set(['styles.css','vault-v105.css','viewport-v106.css','scene-v126.css','cloud-v128.css','profile-v133.css','v135.css','v136.css','v137.css','v138.css','v139.css','v140.css','v142.css','v143.css','v144.css','v145.css','v146.css','art-config.js','data.js','sprite-events-v140.js','state-schema-v127.js','feature-config-v129.js','app.js','cloud-config-v128.js','cloud-v128.js','profile-v133.js','manifest.webmanifest']);
+const FRESH_CODE_FILES = new Set(['styles.css','vault-v105.css','viewport-v106.css','scene-v126.css','cloud-v128.css','profile-v133.css','v135.css','v136.css','v137.css','v138.css','v139.css','v140.css','v142.css','v143.css','v144.css','v145.css','v146.css','v147.css','art-config.js','data.js','sprite-events-v140.js','state-schema-v127.js','feature-config-v129.js','app.js','cloud-config-v128.js','cloud-v128.js','profile-v133.js','manifest.webmanifest']);
 const FRESH_ASSET_PATHS = ['/assets/header/','/assets/page-backgrounds/','/assets/feature-backgrounds/','/assets/social/','/icons/'];
 
 async function freshOrCached(networkRequest, cachedResponse) {
