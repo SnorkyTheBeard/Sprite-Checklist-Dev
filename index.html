@@ -1,14 +1,131 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="app-booting">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <style>
+    /* V145 launch gate: the app stays hidden until it is rendered and the user enters. */
+    html.app-booting,
+    html.app-booting body {
+      background:#03070d !important;
+    }
+    html.app-booting body {
+      overflow:hidden !important;
+    }
+    html.app-booting .app-shell,
+    html.app-booting .page-backdrop,
+    html.app-booting .page-motion-layer,
+    html.app-booting .floating-home-button,
+    html.app-booting .floating-admin-toggle,
+    html.app-booting .floating-voice-button,
+    html.app-booting .floating-voice-status {
+      visibility:hidden !important;
+      opacity:0 !important;
+      pointer-events:none !important;
+    }
+    .app-launch-screen {
+      position:fixed;
+      inset:0;
+      z-index:2147483640;
+      display:none;
+      place-items:center;
+      padding:env(safe-area-inset-top) 20px env(safe-area-inset-bottom);
+      overflow:hidden;
+      background:
+        radial-gradient(circle at 50% 42%,rgba(104,27,43,.42),transparent 34%),
+        linear-gradient(180deg,#080a10,#03070d 68%,#020305);
+      opacity:1;
+      transition:opacity .16s ease,visibility .16s ease;
+    }
+    html.app-launch-gated .app-launch-screen { display:grid; }
+    html.app-launch-gated.app-ready .app-launch-screen {
+      visibility:hidden;
+      opacity:0;
+      pointer-events:none;
+    }
+    .app-launch-mark {
+      display:grid;
+      gap:12px;
+      place-items:center;
+      width:min(90vw,460px);
+      padding:30px 24px;
+      color:#eef4f8;
+      text-align:center;
+      border:1px solid rgba(255,255,255,.16);
+      border-radius:28px;
+      background:linear-gradient(155deg,rgba(20,29,52,.94),rgba(5,9,18,.96));
+      box-shadow:0 28px 75px rgba(0,0,0,.55);
+    }
+    .app-launch-mark img {
+      width:76px;
+      height:76px;
+      border:1px solid rgba(255,255,255,.2);
+      border-radius:18px;
+      box-shadow:0 10px 28px rgba(0,0,0,.45),0 0 20px rgba(129,32,50,.28);
+    }
+    .app-launch-mark h1 { margin:4px 0 0;font:900 clamp(34px,10vw,56px)/.9 "Arial Black",sans-serif;letter-spacing:-.03em; }
+    .app-launch-mark span { color:#83ddff;font:900 10px/1 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;letter-spacing:.15em;text-transform:uppercase; }
+    .app-launch-mark p { min-height:46px;margin:4px 0 8px;color:#bdcadb;font:600 14px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
+    .app-launch-mark button { min-height:50px;padding:0 24px;color:#07101f;border:1px solid #d6f8ff;border-radius:999px;background:linear-gradient(135deg,#d5f8ff,#67d5ff 60%,#9f82ff);box-shadow:0 10px 28px rgba(31,157,225,.28);font:900 14px/1 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
+    html.app-launch-gated.app-ready .app-shell,
+    html.app-launch-gated.app-ready .page-backdrop,
+    html.app-launch-gated.app-ready .page-motion-layer {
+      animation:app-launch-reveal .18s ease-out both;
+    }
+    @keyframes app-launch-reveal {
+      from { opacity:.78; }
+      to { opacity:1; }
+    }
+    @media (prefers-reduced-motion:reduce) {
+      .app-launch-screen { transition:none; }
+      html.app-launch-gated.app-ready .app-shell,
+      html.app-launch-gated.app-ready .page-backdrop,
+      html.app-launch-gated.app-ready .page-motion-layer { animation:none; }
+    }
+  </style>
+  <script>
+    (() => {
+      const root = document.documentElement;
+      root.classList.add('app-launch-gated');
+      let rendered = false;
+      let userStarted = false;
+      let minimumShown = false;
+      let revealed = false;
+
+      const reveal = () => {
+        if (revealed || !rendered || !userStarted || !minimumShown) return;
+        revealed = true;
+        root.classList.remove('app-booting');
+        root.classList.add('app-ready');
+      };
+
+      window.addEventListener('sprite-app-rendered',() => {
+        rendered = true;
+        reveal();
+      },{ once:true });
+      window.addEventListener('DOMContentLoaded',() => {
+        const hints = [
+          'Quick Match keeps a simple cart of every Sprite you collect during a game.',
+          'Tap a crown in the tracker when a Sprite reaches mastery.',
+          'Your signed-in progress saves automatically across your devices.',
+          'Use the Sprite Archive to revisit the Sprites already in your collection.',
+          'The voice button can add a Sprite or check its collection status.'
+        ];
+        const hint = document.getElementById('launchHint');
+        const button = document.getElementById('launchStartBtn');
+        if (hint) hint.textContent = hints[Math.floor(Math.random() * hints.length)];
+        button?.addEventListener('click',() => { userStarted = true;button.disabled = true;button.textContent = rendered ? 'Opening…' : 'Loading…';reveal(); });
+      },{ once:true });
+      window.setTimeout(() => { minimumShown = true;reveal(); },650);
+      window.setTimeout(() => { rendered = true;reveal(); },3500);
+    })();
+  </script>
   <meta name="theme-color" content="#681b2b">
   <meta name="description" content="Track collected and mastered Fortnite Sprites by rarity and variant.">
   <meta name="application-name" content="My Sprite Tracker">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="Sprite Tracker">
+  <meta name="apple-mobile-web-app-title" content="Sprite Dev">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="My Sprite Tracker">
   <meta property="og:url" content="https://snorkythebeard.github.io/Real-Sprite-Checklist/">
@@ -135,20 +252,30 @@
       const portraitScene = window.matchMedia?.('(max-width:760px) and (orientation:portrait)').matches;
       if (hashName !== 'vault' && rarity === 'Rare') {
         pageImage = portraitScene
-          ? 'assets/page-backgrounds/page-bg-rare-lifty-lodge-mobile-v113.webp'
+          ? 'assets/page-backgrounds/V148-page-bg-rare-mobile.webp'
           : 'assets/page-backgrounds/page-bg-rare-lifty-lodge-v113.webp';
         pageColor = '#0752c7';
         pageFit = 'cover';
       } else if (hashName !== 'vault' && rarity === 'Epic') {
         pageImage = portraitScene
-          ? 'assets/page-backgrounds/page-bg-epic-wonkeeland-mobile-v113.webp'
+          ? 'assets/page-backgrounds/V148-page-bg-epic-mobile.webp'
           : 'assets/page-backgrounds/page-bg-epic-wonkeeland-v113.webp';
         pageColor = '#43128d';
         pageFit = 'cover';
+      } else if (hashName !== 'vault' && portraitScene && rarity === 'Legendary') {
+        pageImage = 'assets/page-backgrounds/V148-page-bg-legendary-mobile.webp';
+        pageColor = '#7b270b';
+        pageFit = 'cover';
+      } else if (hashName !== 'vault' && portraitScene && rarity === 'Mythic') {
+        pageImage = 'assets/page-backgrounds/V148-page-bg-mythic-mobile.webp';
+        pageColor = '#a86523';
+        pageFit = 'cover';
       }
       if (hashName === 'unowned') {
-        pageImage = 'assets/page-backgrounds/page-bg-unowned.webp?v=93';
-        pageColor = '#06101f';
+        pageImage = portraitScene
+          ? 'assets/page-backgrounds/V148-page-bg-unowned-mobile.webp'
+          : 'assets/page-backgrounds/page-bg-unowned.webp?v=93';
+        pageColor = portraitScene ? '#6f9827' : '#06101f';
         pageFit = 'cover';
       } else if (hashName === 'unmastered') {
         pageImage = 'assets/page-backgrounds/page-bg-unmastered.webp?v=93';
@@ -182,10 +309,18 @@
   <link rel="stylesheet" href="v143.css?v=143">
   <link rel="stylesheet" href="v144.css?v=144">
   <link rel="stylesheet" href="v145.css?v=145">
-  <link rel="stylesheet" href="v146.css?v=146">
-  <link rel="stylesheet" href="v147.css?v=147">
+  <link rel="stylesheet" href="v148.css?v=148">
 </head>
 <body>
+  <div class="app-launch-screen" role="dialog" aria-labelledby="launchTitle" aria-describedby="launchHint">
+    <div class="app-launch-mark">
+      <img src="icons/app-icon-192-v101.png" alt="" width="76" height="76">
+      <span>My Sprite Tracker</span>
+      <h1 id="launchTitle">Ready to hunt?</h1>
+      <p id="launchHint">Preparing your Sprite collection…</p>
+      <button id="launchStartBtn" type="button">Start Hunting!</button>
+    </div>
+  </div>
   <a class="skip-link" href="#mainContent">Skip to checklist</a>
   <div class="page-backdrop" aria-hidden="true"></div>
   <div class="page-motion-layer" id="pageMotionLayer" aria-hidden="true">
@@ -513,7 +648,7 @@
         <div class="dust-receipt-list" id="dustReceiptList"></div>
         <div class="feature-empty-state" id="dustReceiptEmpty">
           <strong>No receipts yet.</strong>
-          <span>Balance changes and recorded Sprite Dust purchases will appear here.</span>
+          <span>Adventure deposits and recorded Sprite Dust purchases will appear here.</span>
         </div>
       </section>
     </section>
@@ -627,13 +762,14 @@
         <details><summary>Card View</summary><p>Full artwork cards with collection and mastery controls.</p></details>
         <details><summary>List View</summary><p>A compact vertical layout with a smaller image and the same tracking controls.</p></details>
         <details><summary>Sheet View</summary><p>The smallest checklist layout, built for scanning many Sprite variants quickly.</p></details>
-        <details><summary>Collection History</summary><p>Review collection and mastery changes saved automatically by the tracker.</p></details>
+        <details><summary>Sprite Assistant</summary><p>Track one Match or a multi-match Session, Quick Add what you found, then review before finalizing.</p></details>
+        <details><summary>Collection History</summary><p>See the Sprites finalized during each Match.</p></details>
         <details><summary>Sprite Archive</summary><p>A quiet collection display for viewing the Sprites you already own.</p></details>
       </section>
       <section class="settings-card" aria-labelledby="settingsAccountTitle">
         <div class="journal-section-heading"><div><span>Automatic protection</span><h3 id="settingsAccountTitle">Account &amp; Data</h3></div></div>
         <p class="settings-save-status" id="settingsSaveStatus">Sign in to save your tracker across devices.</p>
-        <div class="settings-action-grid"><button id="settingsManageAccountBtn" type="button">Manage account</button><button id="backupBtn" type="button" hidden>Backup or restore</button></div>
+        <div class="settings-action-grid"><button id="settingsManageAccountBtn" type="button">Manage account</button><button id="backupBtn" type="button">Backup or restore</button></div>
       </section>
       <section class="settings-card settings-admin-card" aria-labelledby="settingsAdminTitle">
         <div class="journal-section-heading"><div><span>Owner tools</span><h3 id="settingsAdminTitle">Admin Mode</h3></div></div>
@@ -733,9 +869,9 @@
               <summary>Extraction Dust</summary>
               <div class="extraction-dust-levels" id="extractionDustLevels"></div>
               <form class="rarity-dust-admin" id="rarityDustAdmin" hidden>
-                <strong>Edit rewards by Sprite type</strong>
+                <strong>Edit this rarity</strong>
                 <div id="rarityDustAdminFields"></div>
-                <button type="submit">Save variant rewards</button>
+                <button type="submit">Save rarity rewards</button>
               </form>
             </details>
             <p id="pageDescription"></p>
@@ -802,7 +938,7 @@
   <dialog class="reset-dialog" id="resetDialog">
     <form method="dialog">
       <h2>Reset all tracker data?</h2>
-      <p>This clears your collection progress, Collection History, and display preferences. Your public Sprite catalog and artwork are not affected.</p>
+      <p>This clears collection progress, Sprite Dust, Match and Session history, Quick Add history, routes, journal activity, and display preferences. Your public Sprite catalog and artwork are not affected.</p>
       <div class="dialog-actions">
         <button value="cancel">Cancel</button>
         <button class="danger-btn" id="confirmResetBtn" type="button">Reset everything</button>
@@ -840,11 +976,11 @@
   <dialog class="reset-dialog publish-sprites-dialog" id="publishSpritesDialog">
     <form id="publishSpritesForm">
       <h2>Publish sprite changes</h2>
-      <p>This publishes new Sprite groups, card additions and order, uploaded images, rarity percentages, and Sprite Archive changes.</p>
+      <p>This publishes new Sprite groups, card additions and order, uploaded images, rarity percentages, Sprite Dust levels, and Season Vault changes.</p>
       <label class="add-sprite-label" for="githubTokenInput">GitHub token</label>
       <input id="githubTokenInput" type="password" required autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Paste token here">
       <p class="publish-token-help">
-        <a href="https://github.com/settings/personal-access-tokens/new?name=Sprite%20Tracker%20Publisher&amp;description=Publishes%20sprite%20card%20changes%20to%20Sprite-Checklist-Dev&amp;target_name=SnorkyTheBeard&amp;expires_in=90&amp;contents=write" target="_blank" rel="noopener">Create a fine-grained GitHub token</a>, select only <strong>Sprite-Checklist-Dev</strong>, and give <strong>Contents</strong> read-and-write access. The token is kept only in this browser tab.
+        <a href="https://github.com/settings/personal-access-tokens/new?name=Sprite%20Tracker%20Publisher&amp;description=Publishes%20sprite%20card%20changes%20to%20Real-Sprite-Checklist&amp;target_name=SnorkyTheBeard&amp;expires_in=90&amp;contents=write" target="_blank" rel="noopener">Create a fine-grained GitHub token</a>, select only <strong>Real-Sprite-Checklist</strong>, and give <strong>Contents</strong> read-and-write access. The token is kept only in this browser tab.
       </p>
       <p class="publish-sprites-status" id="publishSpritesStatus" role="status" aria-live="polite"></p>
       <div class="dialog-actions">
@@ -1212,10 +1348,10 @@
   <script src="data.js?v=82"></script>
   <script src="sprite-events-v140.js?v=140"></script>
   <script src="state-schema-v127.js?v=127"></script>
-<script src="feature-config-v129.js?v=147"></script>
-<script src="app.js?v=147"></script>
+<script src="feature-config-v129.js?v=148"></script>
+<script src="app.js?v=148"></script>
   <script src="cloud-config-v128.js?v=128"></script>
-  <script src="cloud-v128.js?v=147"></script>
-  <script src="profile-v133.js?v=147"></script>
+  <script src="cloud-v128.js?v=148"></script>
+  <script src="profile-v133.js?v=148"></script>
 </body>
 </html>

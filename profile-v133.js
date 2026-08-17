@@ -393,7 +393,7 @@
       const available = element.parentElement?.clientWidth || 0;
       if (!available) return;
       let size = parseFloat(getComputedStyle(element).fontSize) || 48;
-      while (element.scrollWidth > available && size > 20) {
+      while (element.scrollWidth > available && size > 14) {
         size -= 1;
         element.style.fontSize = `${size}px`;
       }

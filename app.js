@@ -29,7 +29,7 @@
   const HELP_COPY_DEFAULTS = Object.freeze({
     adventure:'Use Match Start for one game or Session Start for several games. Quick Add what you found, review it, and finalize when you are ready.',
     'hot-drop':'Hottest Drop uses anonymous totals from signed-in collectors during the past hour. It never shows usernames or individual activity, and it waits for at least three collectors before naming a location.',
-    journal:'Collection History records collection and mastery changes made in the tracker, with the Sprite and time of each change.',
+    journal:'Collection History groups the Sprites you finalized by match. It does not include ordinary checklist taps.',
     profile:'Your profile holds your Meadow Code, selected collection stats, favorite Sprites, and account save status. Share the code so another collector can visit.',
     meadow:'Sprite Archive is a clean gallery of the Sprites already in your collection. Change the selected season to revisit older collections.',
     settings:'Settings controls background motion, reduced motion, your default tracker view, account access, and DEV owner tools.'
@@ -185,21 +185,6 @@
     return Boolean(userId && allowed.includes(userId));
   }
 
-  function adminAccessAvailable() {
-    if (DEV_BUILD || ownerPreviewActive()) return true;
-    const session = (() => {
-      try { return JSON.parse(localStorage.getItem(CLOUD_SESSION_KEY) || 'null'); }
-      catch { return null; }
-    })();
-    const email = String(session?.user?.email || '').trim().toLowerCase();
-    let hash = 2166136261;
-    for (let index = 0; index < email.length; index += 1) {
-      hash ^= email.charCodeAt(index);
-      hash = Math.imul(hash,16777619);
-    }
-    return email && (hash >>> 0).toString(16) === '732aa0b7';
-  }
-
   function featureAccess(featureId) {
     const feature = featureDefinition(featureId);
     if (!feature) return 'hidden';
@@ -304,12 +289,6 @@
     return APP_VIEW_TRACKER;
   }
 
-  function normalizeJournalHistory() {
-    return normalizeJournalEntries(journalReady ? journalEntries : pendingJournalEntries)
-      .filter((entry) => !entry.undone && entry.activityCleared !== true && entry.type !== 'story')
-      .sort((left,right) => journalEntryTimestamp(right) - journalEntryTimestamp(left));
-  }
-
   function loadHuntMode() {
     const saved = readJson(HUNT_MODE_KEY) || {};
     const startedAt = validIsoDate(saved.startedAt);
@@ -318,7 +297,7 @@
       ? Math.max(0,Math.min(Number(saved.lastDurationMs),7 * 24 * 60 * 60 * 1000))
       : 0;
     return {
-      active:false,
+      active:saved.active === true && Boolean(startedAt),
       startedAt,
       sessionStartedAt,
       lastDurationMs,
@@ -1840,7 +1819,7 @@
 
   function currentSpriteViewMode() {
     if (appView === APP_VIEW_VAULT || huntMode.active) return 'card';
-    const saved = spriteViewModes[activeRarity];
+    const saved = spriteViewModes.global || spriteViewModes[activeRarity];
     const sheetAvailable = !isUnownedPage() && ['public','preview'].includes(featureAccess('sheetView'));
     if (saved === 'sheet' && sheetAvailable) return 'sheet';
     if (saved === 'list') return 'list';
@@ -1860,19 +1839,20 @@
     const sheetOption = spriteViewSelect.querySelector('option[value="sheet"]');
     if (sheetOption) sheetOption.disabled = !sheetAvailable;
     spriteViewSelect.disabled = huntMode.active || appView === APP_VIEW_VAULT;
-    spriteViewSelect.setAttribute('aria-label',`Choose view for the ${activeRarity} page`);
+    spriteViewSelect.setAttribute('aria-label','Choose the view for every rarity page');
     shareSheetBtn.hidden = true;
   }
 
   function setSpriteViewMode(mode) {
     const sheetAvailable = !isUnownedPage() && ['public','preview'].includes(featureAccess('sheetView'));
-    spriteViewModes[activeRarity] = mode === 'list' ? 'list' : (mode === 'sheet' && sheetAvailable ? 'sheet' : 'card');
+    const normalizedMode = mode === 'list' ? 'list' : (mode === 'sheet' && sheetAvailable ? 'sheet' : 'card');
+    spriteViewModes = { global:normalizedMode };
     try { localStorage.setItem(VIEW_MODES_KEY,JSON.stringify(spriteViewModes)); } catch { /* The choice can remain active for this visit. */ }
     noteLocalSaveChange('preferences');
     applySpriteViewMode();
     renderCollections();
     updateCounters();
-    showToast(`${activeRarity}: ${currentSpriteViewMode()} view`);
+    showToast(`All pages: ${currentSpriteViewMode()} view`);
   }
 
   function lockPageForAppMenu() {
@@ -3053,12 +3033,11 @@
 
   function renderCollectionHistory() {
     if (!collectionHistoryList || !collectionHistoryEmpty) return;
-    const entries = normalizeJournalHistory();
+    const matches = normalizeHuntHistory(huntHistory).filter((match) => match.items.length);
     collectionHistoryList.replaceChildren();
-    collectionHistoryEmpty.hidden = Boolean(entries.length);
-    collectionHistoryEmpty.textContent = entries.length ? '' : 'Collection and mastery changes will appear here automatically.';
-    clearCollectionHistoryBtn.disabled = !entries.length;
-    entries.forEach((entry) => {
+    collectionHistoryEmpty.hidden = Boolean(matches.length);
+    clearCollectionHistoryBtn.disabled = !matches.length;
+    matches.forEach((match) => {
       const card = document.createElement('article');
       card.className = 'collection-history-match';
       const header = document.createElement('header');
@@ -3066,29 +3045,31 @@
       const title = document.createElement('h3');
       const meta = document.createElement('span');
       const remove = document.createElement('button');
-      title.textContent = `${entry.familyName} · ${entry.variantName}`;
-      meta.textContent = formatJournalDate(entry.timestamp);
+      title.textContent = match.mode === 'session' ? `Session Match ${match.matchNumber}` : 'Match';
+      meta.textContent = `${formatJournalDate(match.completedAt)} · ${formatHuntDuration(match.durationMs)}${match.location ? ` · ${match.location}` : ''}`;
       copy.append(title,meta);
       remove.type = 'button';remove.textContent = 'Delete';
-      remove.setAttribute('aria-label',`Delete ${entry.familyName} ${entry.variantName} from Collection History`);
-      remove.addEventListener('click',() => requestClearConfirmation(async () => {
-        journalEntries = journalEntries.filter((saved) => saved.id !== entry.id);
-        pendingJournalEntries = pendingJournalEntries.filter((saved) => saved.id !== entry.id);
-        if (journalReady) await scheduleJournalSave();
-        renderCollectionHistory();
-        showToast('Entry removed from Collection History');
+      remove.setAttribute('aria-label',`Delete match from ${formatJournalDate(match.completedAt)}`);
+      remove.addEventListener('click',() => requestClearConfirmation(() => {
+        huntHistory = huntHistory.filter((entry) => entry.id !== match.id);
+        saveHuntHistory();renderCollectionHistory();renderHuntHistory();renderCollections();
+        showToast('Match removed from Collection History');
       }));
       header.append(copy,remove);
       const list = document.createElement('div');
       list.className = 'collection-history-sprites';
-      const row = document.createElement('span');
-      row.dataset.rarity = entry.rarity;
-      const status = document.createElement('b');
-      const detail = document.createElement('small');
-      status.textContent = journalActionText(entry.type);
-      detail.textContent = entry.after?.locationFound ? `Location: ${entry.after.locationFound}` : entry.rarity;
-      row.append(status,detail);
-      list.appendChild(row);
+      const groups = new Map();
+      match.items.forEach((item) => {
+        const key = `${item.familyId}:${item.variantId}`;
+        const group = groups.get(key) || { ...item,count:0 };
+        group.count += 1;groups.set(key,group);
+      });
+      groups.forEach((item) => {
+        const row = document.createElement('span');
+        row.dataset.rarity = item.rarity;
+        row.innerHTML = `<b>${item.familyName} · ${item.variantName}</b><small>${item.mastered ? 'Mastered' : 'Collected'}${item.count > 1 ? ` · ×${item.count}` : ''}</small>`;
+        list.appendChild(row);
+      });
       card.append(header,list);collectionHistoryList.appendChild(card);
     });
   }
@@ -4022,57 +4003,10 @@
     }));
   }
 
-  const LEGACY_DUST_VARIANTS = Object.freeze({
-    '1':'base',
-    '2':'gold',
-    '3':'gummy',
-    '4':'galaxy',
-    '5':'holofoil'
-  });
-
-  function normalizeRarityDustVariants(value) {
-    const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
-    const normalized = {};
-    Object.entries(source).forEach(([rawKey,rawAmount]) => {
-      const variantId = LEGACY_DUST_VARIANTS[String(rawKey)] || String(rawKey || '').trim().slice(0,200);
-      const amount = Number(String(rawAmount ?? '').replace(/,/g,''));
-      if (!variantId || !Number.isFinite(amount) || amount < 0) return;
-      normalized[variantId] = Math.min(1000000,Math.round(amount));
-    });
-    return normalized;
-  }
-
-  function dustVariantTypes() {
-    const names = new Map();
-    allFamilies().forEach((family) => {
-      familyVariants(family).forEach((variant) => {
-        const id = String(variant.id || '').trim();
-        if (!id || names.has(id)) return;
-        names.set(id,String(variantView(family,variant).name || variant.name || id));
-      });
-    });
-    const publishedRewards = design.rarityDustLevels || {};
-    const editedRewards = spriteCardEdits.rarityDustLevels || {};
-    [...Object.values(publishedRewards),...Object.values(editedRewards)].forEach((rewards) => {
-      Object.keys(normalizeRarityDustVariants(rewards)).forEach((id) => {
-        if (!names.has(id)) names.set(id,id.replace(/[-_]+/g,' ').replace(/\b\w/g,(letter) => letter.toUpperCase()));
-      });
-    });
-    const preferred = ['base','gold','gummy','galaxy','holofoil','cube','gem','quack'];
-    return [...names.entries()]
-      .map(([id,name]) => ({ id,name }))
-      .sort((a,b) => {
-        const aIndex = preferred.indexOf(a.id);
-        const bIndex = preferred.indexOf(b.id);
-        if (aIndex !== -1 || bIndex !== -1) return (aIndex === -1 ? 999 : aIndex) - (bIndex === -1 ? 999 : bIndex);
-        return a.name.localeCompare(b.name,undefined,{ sensitivity:'base' });
-      });
-  }
-
   function saveSpriteDustLevels(family,variant,inputs) {
     const values = {};
     let invalid = false;
-    inputs.forEach((input) => {
+    inputs.forEach((input,index) => {
       const raw = String(input.value || '').trim();
       if (!raw) return;
       const amount = Number(raw.replace(/,/g,''));
@@ -4103,10 +4037,10 @@
       if (!raw) return;
       const amount = Number(raw);
       if (!Number.isFinite(amount) || amount < 0 || amount > 1000000) invalid = true;
-      else if (input.dataset.dustVariant) values[input.dataset.dustVariant] = Math.round(amount);
+      else values[String(index + 1)] = Math.round(amount);
     });
-    if (invalid) {
-      showToast('Use whole Sprite Dust amounts from 0 to 1,000,000.');
+    if (invalid || Object.keys(values).length !== 5) {
+      showToast('Enter all five whole Sprite Dust amounts from 0 to 1,000,000.');
       return false;
     }
     const previousEdits = cloneJson(spriteCardEdits);
@@ -4114,38 +4048,37 @@
     spriteCardEdits.rarityDustLevels[rarity] = values;
     if (!saveCardEditOrRestore(previousEdits)) return false;
     renderExtractionDust(rarity);
-    showToast(`${rarity} variant rewards saved`);
+    showToast(`${rarity} Sprite Dust rewards saved`);
     return true;
   }
 
   function rarityDustRewards(rarity) {
-    const globalLevels = normalizeRarityDustVariants(
+    const globalLevels = normalizeDustLevels(
       spriteCardEdits.rarityDustLevels?.[rarity]
       || design.rarityDustLevels?.[rarity]
     );
     if (Object.keys(globalLevels).length) return globalLevels;
-    const rewardCounts = Object.fromEntries(dustVariantTypes().map(({ id }) => [id,new Map()]));
+    const rewardCounts = Object.fromEntries([1,2,3,4,5].map((level) => [String(level),new Map()]));
     allFamilies().filter((family) => familyRarity(family) === rarity).forEach((family) => {
       familyVariants(family).forEach((variant) => {
         const levels = variantView(family,variant).dustLevels;
-        const legacyLevel = Object.entries(LEGACY_DUST_VARIANTS).find(([,id]) => id === variant.id)?.[0];
-        if (legacyLevel) {
-          const amount = Number(levels[legacyLevel]);
+        [1,2,3,4,5].forEach((level) => {
+          const amount = Number(levels[String(level)]);
           if (!Number.isFinite(amount) || amount < 0) return;
-          const counts = rewardCounts[variant.id];
+          const counts = rewardCounts[String(level)];
           counts.set(amount,(counts.get(amount) || 0) + 1);
-        }
+        });
       });
     });
-    return Object.fromEntries(dustVariantTypes().flatMap(({ id }) => {
-      const ranked = [...rewardCounts[id].entries()].sort((a,b) => b[1] - a[1] || a[0] - b[0]);
-      return ranked.length ? [[id,ranked[0][0]]] : [];
+    return Object.fromEntries([1,2,3,4,5].flatMap((level) => {
+      const ranked = [...rewardCounts[String(level)].entries()].sort((a,b) => b[1] - a[1] || a[0] - b[0]);
+      return ranked.length ? [[String(level),ranked[0][0]]] : [];
     }));
   }
 
   function spriteDustAtLevel(family,variant,level = 1) {
     const normalizedLevel = String(Math.max(1,Math.min(5,Number(level) || 1)));
-    const rarityReward = Number(rarityDustRewards(familyRarity(family))[variant.id]);
+    const rarityReward = Number(rarityDustRewards(familyRarity(family))[normalizedLevel]);
     if (Number.isFinite(rarityReward) && rarityReward >= 0) return rarityReward;
     const legacy = Number(variantView(family,variant).dustLevels[normalizedLevel]);
     return Number.isFinite(legacy) && legacy >= 0 ? legacy : 0;
@@ -4160,16 +4093,20 @@
       return;
     }
     const rewards = rarityDustRewards(rarity);
+    const editingRewards = spriteEditMode && rarities.includes(rarity) && appView === APP_VIEW_TRACKER;
+    extractionDustLevels.hidden = editingRewards;
     extractionDustLevels.replaceChildren();
-    dustVariantTypes().forEach(({ id,name }) => {
-      const row = document.createElement('span');
-      const label = document.createElement('b');
-      const value = document.createElement('strong');
-      label.textContent = name;
-      value.innerHTML = `${dustBottleSvg()} ${formatDust(rewards[id] || 0)} Dust`;
-      row.append(label,value);
-      extractionDustLevels.appendChild(row);
-    });
+    if (!editingRewards) {
+      [1,2,3,4,5].forEach((level) => {
+        const row = document.createElement('span');
+        const label = document.createElement('b');
+        const value = document.createElement('strong');
+        label.textContent = `Level ${level}`;
+        value.innerHTML = `${dustBottleSvg()} ${formatDust(rewards[String(level)] || 0)} Dust`;
+        row.append(label,value);
+        extractionDustLevels.appendChild(row);
+      });
+    }
     renderRarityDustAdmin(rarity,rewards);
   }
 
@@ -4177,13 +4114,13 @@
     if (!rarityDustAdmin || !rarityDustAdminFields) return;
     rarityDustAdmin.hidden = !spriteEditMode || !rarities.includes(rarity) || appView !== APP_VIEW_TRACKER;
     rarityDustAdminFields.replaceChildren();
-    dustVariantTypes().forEach(({ id,name }) => {
+    [1,2,3,4,5].forEach((level) => {
       const label = document.createElement('label');
-      label.textContent = name;
+      label.textContent = `Level ${level}`;
       const input = document.createElement('input');
       input.type = 'number'; input.min = '0'; input.max = '1000000'; input.step = '1'; input.inputMode = 'numeric';
-      input.value = String(rewards[id] ?? '');
-      input.dataset.dustVariant = id;
+      input.value = String(rewards[String(level)] ?? '');
+      input.dataset.dustLevel = String(level);
       label.appendChild(input);
       rarityDustAdminFields.appendChild(label);
     });
@@ -4305,7 +4242,7 @@
     nextDesign.families ||= {};
     nextDesign.rarityDustLevels = {
       ...(nextDesign.rarityDustLevels && typeof nextDesign.rarityDustLevels === 'object' ? nextDesign.rarityDustLevels : {}),
-      ...Object.fromEntries(Object.entries(spriteCardEdits.rarityDustLevels || {}).map(([rarity,rewards]) => [rarity,normalizeRarityDustVariants(rewards)]))
+      ...Object.fromEntries(Object.entries(spriteCardEdits.rarityDustLevels || {}).map(([rarity,levels]) => [rarity,normalizeDustLevels(levels)]))
     };
     nextDesign.customFamilies = Array.isArray(nextDesign.customFamilies) ? nextDesign.customFamilies : [];
     const assets = [];
@@ -6013,7 +5950,7 @@
 
   function renderFloatingAdmin() {
     if (!floatingAdminToggle) return;
-    const available = adminAccessAvailable();
+    const available = DEV_BUILD || ownerPreviewActive();
     floatingAdminToggle.hidden = !available;
     floatingAdminToggle.setAttribute('aria-pressed',String(spriteEditMode));
     const label = spriteEditMode ? 'Exit Admin Mode' : 'Enter Admin Mode';
@@ -6033,7 +5970,7 @@
     const trigger = Array.from(document.querySelectorAll('[data-help-key]')).find((button) => button.dataset.helpKey === key);
     contextHelpTitle.textContent = trigger?.getAttribute('aria-label')?.replace(/^How\s+/i,'') || 'How it works';
     contextHelpCopy.textContent = helpCopyFor(key);
-    const canEdit = adminAccessAvailable();
+    const canEdit = DEV_BUILD || ownerPreviewActive();
     contextHelpEditor.hidden = !canEdit;
     contextHelpSave.hidden = !canEdit;
     contextHelpInput.value = helpCopyFor(key);
@@ -6041,7 +5978,7 @@
   }
 
   function saveContextHelp() {
-    if (!currentHelpKey || !adminAccessAvailable()) return;
+    if (!currentHelpKey || (!DEV_BUILD && !ownerPreviewActive())) return;
     const copy = String(contextHelpInput.value || '').trim().replace(/\s+/g,' ').slice(0,360);
     if (!copy) return showToast('Add a short help description first.');
     experienceSettings.helpCopy = { ...cleanHelpCopy(experienceSettings.helpCopy),[currentHelpKey]:copy };
@@ -6198,7 +6135,7 @@
   function renderSettings() {
     applyExperienceSettings();
     const adminCard = document.querySelector('.settings-admin-card');
-    if (adminCard) adminCard.hidden = !adminAccessAvailable();
+    if (adminCard) adminCard.hidden = !DEV_BUILD && !ownerPreviewActive();
     const status = window.SPRITE_ACCOUNT_BRIDGE?.status?.();
     settingsSaveStatus.textContent = status?.signedIn
       ? (status.lastSyncedAt ? `Last save at ${formatSettingsSaveTime(status.lastSyncedAt)}` : 'Signed in · your first automatic save is being prepared.')
@@ -6270,9 +6207,9 @@
 
   function sanitizeViewModes(value) {
     if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
-    return Object.fromEntries(pageTabs.flatMap((page) => (
-      ['list','card','sheet'].includes(value[page]) ? [[page,value[page]]] : []
-    )));
+    const savedGlobal = ['list','card','sheet'].includes(value.global) ? value.global : '';
+    const migrated = savedGlobal || pageTabs.map((page) => value[page]).find((mode) => ['list','card','sheet'].includes(mode));
+    return migrated ? { global:migrated } : {};
   }
 
   function sanitizeExperienceSettings(value) {
@@ -6312,7 +6249,7 @@
     const source = value && typeof value === 'object' ? value : {};
     const startedAt = validIsoDate(source.startedAt);
     return {
-      active:false,
+      active:source.active === true && Boolean(startedAt),
       startedAt,
       sessionStartedAt:validIsoDate(source.sessionStartedAt) || startedAt,
       lastDurationMs:Math.max(0,Math.min(7 * 24 * 60 * 60 * 1000,Number(source.lastDurationMs) || 0)),
@@ -7428,7 +7365,7 @@
   function setSpriteEditMode(enabled) {
     if (isUnownedPage() || appView === APP_VIEW_VAULT) return showToast('Open a rarity page in Current Tracker to edit Sprite cards.');
     if (enabled && currentSpriteViewMode() === 'sheet') {
-      spriteViewModes[activeRarity] = 'card';
+      spriteViewModes = { global:'card' };
       try { localStorage.setItem(VIEW_MODES_KEY,JSON.stringify(spriteViewModes)); } catch { /* Editing can continue in card view. */ }
       applySpriteViewMode();
       renderCollections();
@@ -7615,7 +7552,7 @@
   voiceCommandBtn?.addEventListener('click',startVoiceCommand);
   rarityDustAdmin?.addEventListener('submit',(event) => {
     event.preventDefault();
-    saveRarityDustLevels(activeThemeRarity(),[...rarityDustAdminFields.querySelectorAll('input[data-dust-variant]')]);
+    saveRarityDustLevels(activeThemeRarity(),[...rarityDustAdminFields.querySelectorAll('input[data-dust-level]')]);
   });
   compassQuickAddPrev?.addEventListener('click',() => {
     compassQuickAddPage = Math.max(0,compassQuickAddPage - 1);
@@ -7684,13 +7621,13 @@
     document.body.classList.remove('session-review-open');
   });
   clearCollectionHistoryBtn?.addEventListener('click',() => {
-    if (!normalizeJournalHistory().length) return;
-    requestClearConfirmation(async () => {
-      const historyIds = new Set(normalizeJournalHistory().map((entry) => entry.id));
-      journalEntries = journalEntries.filter((entry) => !historyIds.has(entry.id));
-      pendingJournalEntries = pendingJournalEntries.filter((entry) => !historyIds.has(entry.id));
-      if (journalReady) await scheduleJournalSave();
+    if (!huntHistory.length) return;
+    requestClearConfirmation(() => {
+      huntHistory = [];
+      saveHuntHistory();
       renderCollectionHistory();
+      renderHuntHistory();
+      renderCollections();
       showToast('Collection History cleared');
     });
   });
@@ -7974,7 +7911,7 @@
       return;
     }
     if (hashView === APP_VIEW_HUNTS || hashView === 'adventure') {
-      goHomeToRare({ announce:false });
+      setAppView(APP_VIEW_HUNTS,{ announce:false });
       return;
     }
     if (hashView === APP_VIEW_DUST) {
@@ -8017,7 +7954,7 @@
                             : (isUnownedPage() ? `#${missingView}` : `#${activeRarity.toLowerCase()}`)))))));
   if (location.hash !== activeHash) history.replaceState({ rarity:activeRarity },'',activeHash);
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./service-worker.js?v=147',{ updateViaCache:'none' }).then((registration) => registration.update()).catch(() => {});
+    navigator.serviceWorker.register('./service-worker.js?v=148',{ updateViaCache:'none' }).then((registration) => registration.update()).catch(() => {});
   }
   const signalAppRendered = () => window.dispatchEvent(new Event('sprite-app-rendered'));
   if (document.fonts?.ready) {
