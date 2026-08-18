@@ -252,33 +252,33 @@
       const portraitScene = window.matchMedia?.('(max-width:760px) and (orientation:portrait)').matches;
       if (hashName !== 'vault' && rarity === 'Rare') {
         pageImage = portraitScene
-          ? 'assets/page-backgrounds/V148-page-bg-rare-mobile.webp'
-          : 'assets/page-backgrounds/page-bg-rare-lifty-lodge-v113.webp';
+          ? 'V150-bg-rare.webp'
+          : 'V150-bg-rare-desktop.webp';
         pageColor = '#0752c7';
         pageFit = 'cover';
       } else if (hashName !== 'vault' && rarity === 'Epic') {
         pageImage = portraitScene
-          ? 'assets/page-backgrounds/V148-page-bg-epic-mobile.webp'
-          : 'assets/page-backgrounds/page-bg-epic-wonkeeland-v113.webp';
+          ? 'V150-bg-epic.webp'
+          : 'V150-bg-epic-desktop.webp';
         pageColor = '#43128d';
         pageFit = 'cover';
       } else if (hashName !== 'vault' && portraitScene && rarity === 'Legendary') {
-        pageImage = 'assets/page-backgrounds/V148-page-bg-legendary-mobile.webp';
+        pageImage = 'V150-bg-legendary.webp';
         pageColor = '#7b270b';
         pageFit = 'cover';
       } else if (hashName !== 'vault' && portraitScene && rarity === 'Mythic') {
-        pageImage = 'assets/page-backgrounds/V148-page-bg-mythic-mobile.webp';
+        pageImage = 'V150-bg-mythic.webp';
         pageColor = '#a86523';
         pageFit = 'cover';
       }
       if (hashName === 'unowned') {
         pageImage = portraitScene
-          ? 'assets/page-backgrounds/V148-page-bg-unowned-mobile.webp'
-          : 'assets/page-backgrounds/page-bg-unowned.webp?v=93';
+          ? 'V150-bg-unowned.webp'
+          : 'V150-bg-unowned.webp';
         pageColor = portraitScene ? '#6f9827' : '#06101f';
         pageFit = 'cover';
       } else if (hashName === 'unmastered') {
-        pageImage = 'assets/page-backgrounds/page-bg-unmastered.webp?v=93';
+        pageImage = 'V150-bg-unmastered.webp';
         pageColor = '#100a18';
         pageFit = 'cover';
       }
@@ -309,8 +309,7 @@
   <link rel="stylesheet" href="v143.css?v=143">
   <link rel="stylesheet" href="v144.css?v=144">
   <link rel="stylesheet" href="v145.css?v=145">
-  <link rel="stylesheet" href="v148.css?v=148">
-  <link rel="stylesheet" href="v149.css?v=149">
+  <link rel="stylesheet" href="v150.css?v=150">
 </head>
 <body>
   <div class="app-launch-screen" role="dialog" aria-labelledby="launchTitle" aria-describedby="launchHint">
@@ -1349,10 +1348,10 @@
   <script src="data.js?v=82"></script>
   <script src="sprite-events-v140.js?v=140"></script>
   <script src="state-schema-v127.js?v=127"></script>
-<script src="feature-config-v129.js?v=149"></script>
-<script src="app.js?v=149"></script>
+<script src="feature-config-v129.js?v=150"></script>
+<script src="app.js?v=150"></script>
   <script src="cloud-config-v128.js?v=128"></script>
-  <script src="cloud-v128.js?v=149"></script>
-  <script src="profile-v133.js?v=149"></script>
+  <script src="cloud-v128.js?v=150"></script>
+  <script src="profile-v133.js?v=150"></script>
 </body>
 </html>

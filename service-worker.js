@@ -1,4 +1,4 @@
-const CACHE = 'galaxy-sprite-checklist-v149';
+const CACHE = 'galaxy-sprite-checklist-v150';
 const CORE = [
   './',
   './index.html',
@@ -18,18 +18,17 @@ const CORE = [
   './v143.css?v=143',
   './v144.css?v=144',
   './v145.css?v=145',
-  './v148.css?v=148',
-  './v149.css?v=149',
+  './v150.css?v=150',
   './published-design.js',
   './art-config.js?v=67',
   './data.js?v=82',
   './sprite-events-v140.js?v=140',
   './state-schema-v127.js?v=127',
-  './feature-config-v129.js?v=149',
-  './app.js?v=149',
+  './feature-config-v129.js?v=150',
+  './app.js?v=150',
   './cloud-config-v128.js?v=128',
-  './cloud-v128.js?v=149',
-  './profile-v133.js?v=149',
+  './cloud-v128.js?v=150',
+  './profile-v133.js?v=150',
   './manifest.webmanifest?v=101',
   './fonts/Burbank Big Condensed Black.otf',
   './fonts/Fredoka-Regular.woff2',
@@ -65,19 +64,22 @@ const CORE = [
   './assets/page-backgrounds/page-bg-unowned.webp?v=93',
   './assets/page-backgrounds/page-bg-unmastered.webp?v=93',
   './assets/page-backgrounds/page-bg-sprite-vault-v100.webp',
-  './assets/page-backgrounds/V148-page-bg-rare-mobile.webp',
-  './assets/page-backgrounds/V148-page-bg-epic-mobile.webp',
-  './assets/page-backgrounds/V148-page-bg-legendary-mobile.webp',
-  './assets/page-backgrounds/V148-page-bg-mythic-mobile.webp',
-  './assets/page-backgrounds/V148-page-bg-unowned-mobile.webp',
-  './assets/feature-backgrounds/feature-bg-adventure-v139.webp',
-  './assets/feature-backgrounds/feature-bg-profile-v139.webp',
-  './assets/feature-backgrounds/feature-bg-settings-v139.webp',
-  './assets/feature-backgrounds/feature-bg-meadow-v139.webp',
+  './V150-bg-rare.webp',
+  './V150-bg-epic.webp',
+  './V150-bg-legendary.webp',
+  './V150-bg-mythic.webp',
+  './V150-bg-unowned.webp',
+  './V150-bg-unmastered.webp',
+  './V150-bg-rare-desktop.webp',
+  './V150-bg-epic-desktop.webp',
+  './V150-bg-archive.webp',
+  './V150-bg-assistant.webp',
+  './V150-bg-profile.webp',
+  './V150-bg-settings.webp',
   './assets/header/main-header.webp?v=3'
 ];
-const FRESH_CODE_FILES = new Set(['styles.css','vault-v105.css','viewport-v106.css','scene-v126.css','cloud-v128.css','profile-v133.css','v135.css','v136.css','v137.css','v138.css','v139.css','v140.css','v142.css','v143.css','v144.css','v145.css','v148.css','v149.css','art-config.js','data.js','sprite-events-v140.js','state-schema-v127.js','feature-config-v129.js','app.js','cloud-config-v128.js','cloud-v128.js','profile-v133.js','manifest.webmanifest']);
-const FRESH_ASSET_PATHS = ['/assets/header/','/assets/page-backgrounds/','/assets/feature-backgrounds/','/assets/social/','/icons/'];
+const FRESH_CODE_FILES = new Set(['styles.css','vault-v105.css','viewport-v106.css','scene-v126.css','cloud-v128.css','profile-v133.css','v135.css','v136.css','v137.css','v138.css','v139.css','v140.css','v142.css','v143.css','v144.css','v145.css','v150.css','art-config.js','data.js','sprite-events-v140.js','state-schema-v127.js','feature-config-v129.js','app.js','cloud-config-v128.js','cloud-v128.js','profile-v133.js','manifest.webmanifest']);
+const FRESH_ASSET_PATHS = ['/assets/header/','/assets/page-backgrounds/','/assets/feature-backgrounds/','/assets/social/','/icons/','/V150-bg-'];
 
 async function freshOrCached(networkRequest, cachedResponse) {
   try {

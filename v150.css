@@ -1,0 +1,205 @@
+/* V150 — consolidated V148 layout fixes plus reliable flat-root artwork and clean dialog focus. */
+
+/* The rarity heading is text over the artwork, never a glass panel. */
+body.tracker-view:not(.vault-view) .page-head {
+  background:transparent!important;
+  background-image:none!important;
+  border:0!important;
+  border-radius:0!important;
+  box-shadow:none!important;
+  -webkit-backdrop-filter:none!important;
+  backdrop-filter:none!important;
+}
+body.tracker-view:not(.vault-view) .page-head::before,
+body.tracker-view:not(.vault-view) .page-head::after { content:none!important;display:none!important; }
+
+/* Avoid the iOS/Edge sticky-stack jump while the title area scrolls away. */
+@media (max-width:760px) {
+  body.tracker-view:not(.vault-view) .rarity-tabs,
+  body.tracker-view:not(.vault-view) .page-head,
+  body.tracker-view:not(.vault-view) .tracker-filter-bar {
+    position:relative!important;
+    top:auto!important;
+  }
+  body.tracker-view:not(.vault-view) .rarity-tabs {
+    -webkit-backdrop-filter:none!important;
+    backdrop-filter:none!important;
+  }
+}
+
+/* Approved portrait artwork. Desktop keeps its existing widescreen scenes. */
+@media (max-width:900px) and (orientation:portrait) {
+  body.tracker-view:not(.vault-view)[data-page="rare"] .page-backdrop {
+    background-color:#087ad8!important;
+    background-image:linear-gradient(180deg,rgba(0,22,65,.12),rgba(0,12,38,.32)),url("V150-bg-rare.webp")!important;
+  }
+  body.tracker-view:not(.vault-view)[data-page="epic"] .page-backdrop {
+    background-color:#351071!important;
+    background-image:linear-gradient(180deg,rgba(12,0,42,.12),rgba(12,0,34,.34)),url("V150-bg-epic.webp")!important;
+  }
+  body.tracker-view:not(.vault-view)[data-page="legendary"] .page-backdrop {
+    background-color:#7b270b!important;
+    background-image:linear-gradient(180deg,rgba(35,5,0,.12),rgba(27,4,0,.36)),url("V150-bg-legendary.webp")!important;
+  }
+  body.tracker-view:not(.vault-view)[data-page="mythic"] .page-backdrop {
+    background-color:#a86523!important;
+    background-image:linear-gradient(180deg,rgba(49,25,0,.18),rgba(42,18,0,.38)),url("V150-bg-mythic.webp")!important;
+  }
+  body.tracker-view:not(.vault-view)[data-page="unowned"][data-missing-view="unowned"] .page-backdrop {
+    background-color:#6f9827!important;
+    background-image:linear-gradient(180deg,rgba(16,35,2,.10),rgba(9,26,1,.34)),url("V150-bg-unowned.webp")!important;
+  }
+  body.tracker-view:not(.vault-view) .page-backdrop {
+    background-position:center top!important;
+    background-size:cover!important;
+    background-repeat:no-repeat!important;
+  }
+}
+
+/* Overall collection counters use the same polished rarity material as the tabs. */
+body[data-rarity="rare"] { --v148-metal-a:#a9eaff;--v148-metal-b:#1087e8;--v148-metal-c:#0750a8;--v148-metal-glow:#48caff80; }
+body[data-rarity="epic"] { --v148-metal-a:#efc6ff;--v148-metal-b:#a239e7;--v148-metal-c:#5d138d;--v148-metal-glow:#d268ff80; }
+body[data-rarity="legendary"] { --v148-metal-a:#ffd7a0;--v148-metal-b:#ef8a26;--v148-metal-c:#984007;--v148-metal-glow:#ff9e4380; }
+body[data-rarity="mythic"] { --v148-metal-a:#fff4a5;--v148-metal-b:#e9b82d;--v148-metal-c:#987313;--v148-metal-glow:#ffd95a88; }
+body[data-page="unowned"] { --v148-metal-a:#e8f7ee;--v148-metal-b:#7fc048;--v148-metal-c:#3f7b26;--v148-metal-glow:#a7e86d70; }
+.hero .summary-box,
+.hero.summary-text-only .summary-box {
+  overflow:hidden!important;
+  border:1px solid color-mix(in srgb,var(--v148-metal-a,#d8e8ff) 72%,white)!important;
+  background:
+    linear-gradient(180deg,rgba(255,255,255,.42),transparent 29%),
+    linear-gradient(145deg,var(--v148-metal-a,#d8e8ff),var(--v148-metal-b,#528ddd) 48%,var(--v148-metal-c,#244f91))!important;
+  box-shadow:inset 0 1px 0 #fff,inset 0 -9px 20px rgba(0,0,0,.25),0 8px 24px rgba(0,0,0,.3),0 0 18px var(--v148-metal-glow,#80cfff55)!important;
+}
+.hero .summary-box::after {
+  content:"";position:absolute;inset:2px 10% auto;height:31%;border-radius:999px;
+  background:linear-gradient(180deg,rgba(255,255,255,.55),transparent);pointer-events:none;
+}
+.hero .summary-box strong,
+.hero .summary-box > span:not(.progress-track) { position:relative;z-index:1;color:#fff!important; }
+
+/* Extraction Dust shows either the public values or the admin editor, never both. */
+.extraction-dust-levels[hidden],.rarity-dust-admin[hidden] { display:none!important; }
+
+/* Sprite Dust actions stay compact and share one row. */
+.dust-account-actions { display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px!important;width:min(100%,390px);margin-inline:auto; }
+.dust-account-actions button { min-width:0!important;min-height:38px!important;padding:7px 9px!important;font-size:clamp(10px,2.6vw,12px)!important;white-space:nowrap; }
+
+/* My Profile is intentionally lean: identity, bio, edit action, and stats. */
+.profile-owner-panel > .profile-public-favorites,
+.profile-favorites-editor { display:none!important; }
+.profile-owner-display .profile-identity-copy h3 { min-width:0!important;max-width:100%!important;font-size:clamp(22px,7vw,48px); }
+
+/* Quick Add owns the viewport and scrolls internally without shifting the page behind it. */
+html.quick-add-open,body.quick-add-open { overflow:hidden!important;overscroll-behavior:none!important; }
+.quick-add-dialog { max-width:none!important;max-height:none!important;overflow:hidden!important;scrollbar-gutter:auto!important; }
+.quick-add-dialog::backdrop { background:rgba(0,3,12,.78)!important;-webkit-backdrop-filter:blur(7px);backdrop-filter:blur(7px); }
+.quick-add-popup { display:grid!important;grid-template-rows:auto minmax(0,1fr) auto auto!important;height:100%!important;min-height:0!important;padding-bottom:max(14px,env(safe-area-inset-bottom))!important; }
+.quick-add-popup .compass-target-list { min-height:0!important;overflow-x:hidden!important;overflow-y:auto!important;overscroll-behavior:contain!important;-webkit-overflow-scrolling:touch; }
+.quick-add-sprite { isolation:isolate; }
+.quick-add-sprite-image { border:0!important;background:rgba(0,0,0,.11)!important; }
+.quick-add-sprite-image img { position:relative!important;inset:auto!important;margin:0!important; }
+
+/* The Archive keeps its original vault room and a readable white title. */
+body.vault-view .page-backdrop {
+  background-color:#05070b!important;
+  background-image:linear-gradient(180deg,rgba(2,5,10,.08),rgba(2,5,10,.35)),url("V150-bg-archive.webp")!important;
+  background-position:center top!important;background-size:cover!important;background-repeat:no-repeat!important;
+}
+body.vault-view .season-vault-page-head h2 {
+  color:#fff!important;-webkit-text-fill-color:#fff!important;background:none!important;
+  text-shadow:0 3px 0 #02050d,0 0 12px rgba(255,255,255,.82),0 0 28px rgba(107,215,255,.58)!important;
+}
+
+@media (max-width:430px) {
+  .quick-add-dialog { width:calc(100vw - 12px)!important;height:min(92dvh,920px)!important;border-radius:22px!important; }
+  .quick-add-popup { padding:14px 10px max(14px,env(safe-area-inset-bottom))!important; }
+  .quick-add-popup .compass-target-list { grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:7px!important; }
+  .quick-add-sprite { padding:5px!important;border-radius:14px!important; }
+  .dust-account-actions button { font-size:10px!important; }
+}
+
+
+/* V149 — self-contained page artwork recovery and clean dialog-title focus. */
+
+body.tracker-view:not(.vault-view)[data-page="rare"] .page-backdrop {
+  background-color:#087ad8!important;
+  background-image:linear-gradient(180deg,rgba(0,22,65,.10),rgba(0,12,38,.30)),url("V150-bg-rare.webp")!important;
+}
+body.tracker-view:not(.vault-view)[data-page="epic"] .page-backdrop {
+  background-color:#351071!important;
+  background-image:linear-gradient(180deg,rgba(12,0,42,.10),rgba(12,0,34,.32)),url("V150-bg-epic.webp")!important;
+}
+body.tracker-view:not(.vault-view)[data-page="legendary"] .page-backdrop {
+  background-color:#7b270b!important;
+  background-image:linear-gradient(180deg,rgba(35,5,0,.10),rgba(27,4,0,.34)),url("V150-bg-legendary.webp")!important;
+}
+body.tracker-view:not(.vault-view)[data-page="mythic"] .page-backdrop {
+  background-color:#a86523!important;
+  background-image:linear-gradient(180deg,rgba(49,25,0,.15),rgba(42,18,0,.36)),url("V150-bg-mythic.webp")!important;
+}
+body.tracker-view:not(.vault-view)[data-page="unowned"] .page-backdrop {
+  background-color:#6f9827!important;
+  background-image:linear-gradient(180deg,rgba(16,35,2,.08),rgba(9,26,1,.32)),url("V150-bg-unowned.webp")!important;
+}
+body.tracker-view:not(.vault-view)[data-page="unmastered"] .page-backdrop {
+  background-color:#100a18!important;
+  background-image:linear-gradient(180deg,rgba(15,5,28,.12),rgba(8,3,18,.42)),url("V150-bg-unmastered.webp")!important;
+}
+
+body.hunt-history-view .page-backdrop,
+body.journal-view .page-backdrop {
+  background-color:#06152d!important;
+  background-image:linear-gradient(180deg,rgba(3,10,27,.18),rgba(3,9,22,.62)),url("V150-bg-assistant.webp")!important;
+}
+body.sprite-profile-view .page-backdrop {
+  background-color:#102361!important;
+  background-image:linear-gradient(180deg,rgba(9,21,68,.20),rgba(5,11,37,.64)),url("V150-bg-profile.webp")!important;
+}
+body.settings-view .page-backdrop,
+body.dust-account-view .page-backdrop {
+  background-color:#07121f!important;
+  background-image:linear-gradient(180deg,rgba(2,8,15,.26),rgba(2,7,14,.70)),url("V150-bg-settings.webp")!important;
+}
+body.vault-view .page-backdrop {
+  background-color:#05070b!important;
+  background-image:linear-gradient(180deg,rgba(2,5,10,.08),rgba(2,5,10,.35)),url("V150-bg-archive.webp")!important;
+}
+
+body.tracker-view .page-backdrop,
+body.hunt-history-view .page-backdrop,
+body.journal-view .page-backdrop,
+body.sprite-profile-view .page-backdrop,
+body.settings-view .page-backdrop,
+body.dust-account-view .page-backdrop,
+body.vault-view .page-backdrop {
+  display:block!important;
+  visibility:visible!important;
+  background-position:center top!important;
+  background-size:cover!important;
+  background-repeat:no-repeat!important;
+}
+
+.profile-edit-head h2:focus,
+.profile-edit-head h2:focus-visible,
+dialog h1[tabindex="-1"]:focus,
+dialog h1[tabindex="-1"]:focus-visible,
+dialog h2[tabindex="-1"]:focus,
+dialog h2[tabindex="-1"]:focus-visible,
+dialog h3[tabindex="-1"]:focus,
+dialog h3[tabindex="-1"]:focus-visible {
+  outline:0!important;
+  box-shadow:none!important;
+  border-color:transparent!important;
+}
+
+@media (min-width:901px) {
+  body.tracker-view:not(.vault-view)[data-page="rare"] .page-backdrop {
+    background-image:linear-gradient(180deg,rgba(0,13,50,.14),rgba(1,8,31,.46)),url("V150-bg-rare-desktop.webp")!important;
+  }
+  body.tracker-view:not(.vault-view)[data-page="epic"] .page-backdrop {
+    background-image:linear-gradient(180deg,rgba(24,2,65,.14),rgba(13,2,38,.48)),url("V150-bg-epic-desktop.webp")!important;
+  }
+}
+
+
