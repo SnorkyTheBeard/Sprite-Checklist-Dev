@@ -1,0 +1,81 @@
+/* V149 — self-contained page artwork recovery and clean dialog-title focus. */
+
+body.tracker-view:not(.vault-view)[data-page="rare"] .page-backdrop {
+  background-color:#087ad8!important;
+  background-image:linear-gradient(180deg,rgba(0,22,65,.10),rgba(0,12,38,.30)),url("assets/page-backgrounds/V148-page-bg-rare-mobile.webp")!important;
+}
+body.tracker-view:not(.vault-view)[data-page="epic"] .page-backdrop {
+  background-color:#351071!important;
+  background-image:linear-gradient(180deg,rgba(12,0,42,.10),rgba(12,0,34,.32)),url("assets/page-backgrounds/V148-page-bg-epic-mobile.webp")!important;
+}
+body.tracker-view:not(.vault-view)[data-page="legendary"] .page-backdrop {
+  background-color:#7b270b!important;
+  background-image:linear-gradient(180deg,rgba(35,5,0,.10),rgba(27,4,0,.34)),url("assets/page-backgrounds/V148-page-bg-legendary-mobile.webp")!important;
+}
+body.tracker-view:not(.vault-view)[data-page="mythic"] .page-backdrop {
+  background-color:#a86523!important;
+  background-image:linear-gradient(180deg,rgba(49,25,0,.15),rgba(42,18,0,.36)),url("assets/page-backgrounds/V148-page-bg-mythic-mobile.webp")!important;
+}
+body.tracker-view:not(.vault-view)[data-page="unowned"] .page-backdrop {
+  background-color:#6f9827!important;
+  background-image:linear-gradient(180deg,rgba(16,35,2,.08),rgba(9,26,1,.32)),url("assets/page-backgrounds/V148-page-bg-unowned-mobile.webp")!important;
+}
+body.tracker-view:not(.vault-view)[data-page="unmastered"] .page-backdrop {
+  background-color:#100a18!important;
+  background-image:linear-gradient(180deg,rgba(15,5,28,.12),rgba(8,3,18,.42)),url("assets/page-backgrounds/page-bg-unmastered.webp")!important;
+}
+
+body.hunt-history-view .page-backdrop,
+body.journal-view .page-backdrop {
+  background-color:#06152d!important;
+  background-image:linear-gradient(180deg,rgba(3,10,27,.18),rgba(3,9,22,.62)),url("assets/feature-backgrounds/feature-bg-adventure-v139.webp")!important;
+}
+body.sprite-profile-view .page-backdrop {
+  background-color:#102361!important;
+  background-image:linear-gradient(180deg,rgba(9,21,68,.20),rgba(5,11,37,.64)),url("assets/feature-backgrounds/feature-bg-profile-v139.webp")!important;
+}
+body.settings-view .page-backdrop,
+body.dust-account-view .page-backdrop {
+  background-color:#07121f!important;
+  background-image:linear-gradient(180deg,rgba(2,8,15,.26),rgba(2,7,14,.70)),url("assets/feature-backgrounds/feature-bg-settings-v139.webp")!important;
+}
+body.vault-view .page-backdrop {
+  background-color:#05070b!important;
+  background-image:linear-gradient(180deg,rgba(2,5,10,.08),rgba(2,5,10,.35)),url("assets/page-backgrounds/page-bg-sprite-vault-v100.webp")!important;
+}
+
+body.tracker-view .page-backdrop,
+body.hunt-history-view .page-backdrop,
+body.journal-view .page-backdrop,
+body.sprite-profile-view .page-backdrop,
+body.settings-view .page-backdrop,
+body.dust-account-view .page-backdrop,
+body.vault-view .page-backdrop {
+  display:block!important;
+  visibility:visible!important;
+  background-position:center top!important;
+  background-size:cover!important;
+  background-repeat:no-repeat!important;
+}
+
+.profile-edit-head h2:focus,
+.profile-edit-head h2:focus-visible,
+dialog h1[tabindex="-1"]:focus,
+dialog h1[tabindex="-1"]:focus-visible,
+dialog h2[tabindex="-1"]:focus,
+dialog h2[tabindex="-1"]:focus-visible,
+dialog h3[tabindex="-1"]:focus,
+dialog h3[tabindex="-1"]:focus-visible {
+  outline:0!important;
+  box-shadow:none!important;
+  border-color:transparent!important;
+}
+
+@media (min-width:901px) {
+  body.tracker-view:not(.vault-view)[data-page="rare"] .page-backdrop {
+    background-image:linear-gradient(180deg,rgba(0,13,50,.14),rgba(1,8,31,.46)),url("assets/page-backgrounds/page-bg-rare-lifty-lodge-v113.webp")!important;
+  }
+  body.tracker-view:not(.vault-view)[data-page="epic"] .page-backdrop {
+    background-image:linear-gradient(180deg,rgba(24,2,65,.14),rgba(13,2,38,.48)),url("assets/page-backgrounds/page-bg-epic-wonkeeland-v113.webp")!important;
+  }
+}
