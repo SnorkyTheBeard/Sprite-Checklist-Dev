@@ -1,4 +1,4 @@
-const CACHE = 'galaxy-sprite-checklist-v150';
+const CACHE = 'galaxy-sprite-checklist-v151';
 const CORE = [
   './',
   './index.html',
@@ -19,6 +19,7 @@ const CORE = [
   './v144.css?v=144',
   './v145.css?v=145',
   './v150.css?v=150',
+  './v151.css?v=151',
   './published-design.js',
   './art-config.js?v=67',
   './data.js?v=82',
@@ -78,7 +79,7 @@ const CORE = [
   './V150-bg-settings.webp',
   './assets/header/main-header.webp?v=3'
 ];
-const FRESH_CODE_FILES = new Set(['styles.css','vault-v105.css','viewport-v106.css','scene-v126.css','cloud-v128.css','profile-v133.css','v135.css','v136.css','v137.css','v138.css','v139.css','v140.css','v142.css','v143.css','v144.css','v145.css','v150.css','art-config.js','data.js','sprite-events-v140.js','state-schema-v127.js','feature-config-v129.js','app.js','cloud-config-v128.js','cloud-v128.js','profile-v133.js','manifest.webmanifest']);
+const FRESH_CODE_FILES = new Set(['styles.css','vault-v105.css','viewport-v106.css','scene-v126.css','cloud-v128.css','profile-v133.css','v135.css','v136.css','v137.css','v138.css','v139.css','v140.css','v142.css','v143.css','v144.css','v145.css','v150.css','v151.css','art-config.js','data.js','sprite-events-v140.js','state-schema-v127.js','feature-config-v129.js','app.js','cloud-config-v128.js','cloud-v128.js','profile-v133.js','manifest.webmanifest']);
 const FRESH_ASSET_PATHS = ['/assets/header/','/assets/page-backgrounds/','/assets/feature-backgrounds/','/assets/social/','/icons/','/V150-bg-'];
 
 async function freshOrCached(networkRequest, cachedResponse) {

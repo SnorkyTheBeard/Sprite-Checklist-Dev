@@ -1,0 +1,10 @@
+/* V151 — keep portrait rarity artwork fully inside the mobile viewport. */
+
+@media (max-width:900px) and (orientation:portrait) {
+  body.tracker-view:not(.vault-view) .page-backdrop {
+    /* The first layer is the readability tint; the second is the artwork. */
+    background-position:center,center top!important;
+    background-size:100% 100%,100% auto!important;
+    background-repeat:no-repeat,no-repeat!important;
+  }
+}
