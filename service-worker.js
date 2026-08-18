@@ -1,4 +1,4 @@
-const CACHE = 'galaxy-sprite-checklist-v151';
+const CACHE = 'galaxy-sprite-checklist-v152';
 const CORE = [
   './',
   './index.html',
@@ -20,6 +20,8 @@ const CORE = [
   './v145.css?v=145',
   './v150.css?v=150',
   './v151.css?v=151',
+  './v152.css?v=152',
+  './v152.js?v=152',
   './published-design.js',
   './art-config.js?v=67',
   './data.js?v=82',
@@ -79,8 +81,10 @@ const CORE = [
   './V150-bg-settings.webp',
   './assets/header/main-header.webp?v=3'
 ];
-const FRESH_CODE_FILES = new Set(['styles.css','vault-v105.css','viewport-v106.css','scene-v126.css','cloud-v128.css','profile-v133.css','v135.css','v136.css','v137.css','v138.css','v139.css','v140.css','v142.css','v143.css','v144.css','v145.css','v150.css','v151.css','art-config.js','data.js','sprite-events-v140.js','state-schema-v127.js','feature-config-v129.js','app.js','cloud-config-v128.js','cloud-v128.js','profile-v133.js','manifest.webmanifest']);
+const FRESH_CODE_FILES = new Set(['styles.css','vault-v105.css','viewport-v106.css','scene-v126.css','cloud-v128.css','profile-v133.css','v135.css','v136.css','v137.css','v138.css','v139.css','v140.css','v142.css','v143.css','v144.css','v145.css','v150.css','v151.css','v152.css','v152.js','art-config.js','data.js','sprite-events-v140.js','state-schema-v127.js','feature-config-v129.js','app.js','cloud-config-v128.js','cloud-v128.js','profile-v133.js','manifest.webmanifest']);
 const FRESH_ASSET_PATHS = ['/assets/header/','/assets/page-backgrounds/','/assets/feature-backgrounds/','/assets/social/','/icons/','/V150-bg-'];
+const V152_HEAD = '<link rel="stylesheet" href="v152.css?v=152">';
+const V152_BODY = '<script src="v152.js?v=152"><\/script>';
 
 async function freshOrCached(networkRequest, cachedResponse) {
   try {
@@ -89,6 +93,19 @@ async function freshOrCached(networkRequest, cachedResponse) {
   } catch {
     return cachedResponse || Response.error();
   }
+}
+
+async function injectV152(response) {
+  if (!response || !response.ok) return response;
+  const type = response.headers.get('content-type') || '';
+  if (!type.includes('text/html')) return response;
+  const text = await response.text();
+  let html = text;
+  if (!html.includes('v152.css?v=152')) html = html.replace('</head>',`${V152_HEAD}\n</head>`);
+  if (!html.includes('v152.js?v=152')) html = html.replace('</body>',`${V152_BODY}\n</body>`);
+  const headers = new Headers(response.headers);
+  headers.delete('content-length');
+  return new Response(html,{ status:response.status,statusText:response.statusText,headers });
 }
 
 self.addEventListener('install', (event) => {
@@ -141,17 +158,20 @@ self.addEventListener('fetch', (event) => {
   }
 
   if (event.request.mode === 'navigate') {
-    const networkUpdate = fetch(event.request).then(async (response) => {
-      if (response.ok) {
+    const networkUpdate = fetch(event.request,{ cache:'no-cache' }).then(async (response) => {
+      const injected = await injectV152(response);
+      if (injected.ok) {
         const cache = await caches.open(CACHE);
-        await cache.put('./index.html',response.clone());
+        await cache.put('./index.html',injected.clone());
       }
-      return response;
+      return injected;
     });
     event.waitUntil(networkUpdate.catch(() => null));
-    event.respondWith(
-      caches.match('./index.html').then((cached) => freshOrCached(networkUpdate,cached))
-    );
+    event.respondWith((async () => {
+      const cached = await caches.match('./index.html');
+      const response = await freshOrCached(networkUpdate,cached);
+      return injectV152(response);
+    })());
     return;
   }
 

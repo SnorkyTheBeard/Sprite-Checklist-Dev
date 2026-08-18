@@ -1,0 +1,120 @@
+/* V152 — full-height mobile artwork continuation, missing-page title color, and local variant collapse controls. */
+
+/*
+   V151 preserves every pixel across the width of the portrait artwork.
+   V152 keeps that intact, then places a second cover-sized copy behind it so
+   tall/scrolling pages never fall through to a flat blank color at the bottom.
+*/
+@media (max-width:900px) and (orientation:portrait) {
+  body.tracker-view:not(.vault-view)[data-page="rare"] .page-backdrop {
+    background-color:#087ad8!important;
+    background-image:
+      linear-gradient(180deg,rgba(0,22,65,.12),rgba(0,12,38,.34)),
+      url("V150-bg-rare.webp"),
+      url("V150-bg-rare.webp")!important;
+    background-position:center,center top,center bottom!important;
+    background-size:100% 100%,100% auto,cover!important;
+    background-repeat:no-repeat,no-repeat,no-repeat!important;
+  }
+
+  body.tracker-view:not(.vault-view)[data-page="epic"] .page-backdrop {
+    background-color:#351071!important;
+    background-image:
+      linear-gradient(180deg,rgba(12,0,42,.12),rgba(12,0,34,.36)),
+      url("V150-bg-epic.webp"),
+      url("V150-bg-epic.webp")!important;
+    background-position:center,center top,center bottom!important;
+    background-size:100% 100%,100% auto,cover!important;
+    background-repeat:no-repeat,no-repeat,no-repeat!important;
+  }
+
+  body.tracker-view:not(.vault-view)[data-page="legendary"] .page-backdrop {
+    background-color:#7b270b!important;
+    background-image:
+      linear-gradient(180deg,rgba(35,5,0,.12),rgba(27,4,0,.38)),
+      url("V150-bg-legendary.webp"),
+      url("V150-bg-legendary.webp")!important;
+    background-position:center,center top,center bottom!important;
+    background-size:100% 100%,100% auto,cover!important;
+    background-repeat:no-repeat,no-repeat,no-repeat!important;
+  }
+
+  body.tracker-view:not(.vault-view)[data-page="mythic"] .page-backdrop {
+    background-color:#a86523!important;
+    background-image:
+      linear-gradient(180deg,rgba(49,25,0,.18),rgba(42,18,0,.40)),
+      url("V150-bg-mythic.webp"),
+      url("V150-bg-mythic.webp")!important;
+    background-position:center,center top,center bottom!important;
+    background-size:100% 100%,100% auto,cover!important;
+    background-repeat:no-repeat,no-repeat,no-repeat!important;
+  }
+
+  body.tracker-view:not(.vault-view)[data-page="unowned"] .page-backdrop,
+  body.tracker-view:not(.vault-view)[data-page="unowned"][data-missing-view="unowned"] .page-backdrop {
+    background-color:#6f9827!important;
+    background-image:
+      linear-gradient(180deg,rgba(16,35,2,.10),rgba(9,26,1,.36)),
+      url("V150-bg-unowned.webp"),
+      url("V150-bg-unowned.webp")!important;
+    background-position:center,center top,center bottom!important;
+    background-size:100% 100%,100% auto,cover!important;
+    background-repeat:no-repeat,no-repeat,no-repeat!important;
+  }
+
+  body.tracker-view:not(.vault-view)[data-page="unmastered"] .page-backdrop,
+  body.tracker-view:not(.vault-view)[data-page="unowned"][data-missing-view="unmastered"] .page-backdrop {
+    background-color:#476b22!important;
+    background-image:
+      linear-gradient(180deg,rgba(14,31,4,.10),rgba(8,24,2,.38)),
+      url("V150-bg-unmastered.webp"),
+      url("V150-bg-unmastered.webp")!important;
+    background-position:center,center top,center bottom!important;
+    background-size:100% 100%,100% auto,cover!important;
+    background-repeat:no-repeat,no-repeat,no-repeat!important;
+  }
+}
+
+/* Missing-Sprite pages use green instead of the inherited Rare blue heading. */
+body[data-page="unowned"] #activePageTitle,
+body[data-page="unmastered"] #activePageTitle,
+body[data-page="unowned"][data-missing-view="unowned"] #activePageTitle,
+body[data-page="unowned"][data-missing-view="unmastered"] #activePageTitle {
+  color:#b8ff7a!important;
+  -webkit-text-fill-color:#b8ff7a!important;
+  background:none!important;
+  text-shadow:
+    0 3px 0 rgba(18,55,7,.82),
+    0 0 10px rgba(129,255,78,.82),
+    0 0 25px rgba(82,220,47,.68)!important;
+}
+
+/* Per-Sprite collapse control shown after the global variants view is expanded. */
+.v152-family-collapse {
+  display:block;
+  width:min(calc(100% - 24px),340px);
+  min-height:42px;
+  margin:12px auto 14px;
+  padding:9px 16px;
+  border:1px solid rgba(255,255,255,.32);
+  border-radius:999px;
+  color:#fff;
+  background:linear-gradient(180deg,rgba(35,51,83,.92),rgba(9,18,38,.94));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.18),0 7px 18px rgba(0,0,0,.24);
+  font:800 13px/1.1 var(--font-button,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif);
+  letter-spacing:.01em;
+  cursor:pointer;
+}
+.v152-family-collapse:active { transform:translateY(1px); }
+.v152-family-collapse:focus-visible { outline:2px solid #fff;outline-offset:3px; }
+
+.collection.v152-family-collapsed > :not(.collection-head):not(.v152-family-collapse) {
+  display:none!important;
+}
+.collection.v152-family-collapsed .v152-family-collapse {
+  margin-top:8px;
+}
+
+@media (prefers-reduced-motion:reduce) {
+  .v152-family-collapse { transition:none!important; }
+}
