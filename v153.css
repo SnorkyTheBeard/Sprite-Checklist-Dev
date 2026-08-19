@@ -161,3 +161,14 @@ body.showcase-dialog-open { overflow:hidden!important; }
   .v153-import-row { grid-template-columns:1fr; }
   .v153-import-dialog { width:calc(100vw - 10px); }
 }
+
+/* V157 — fix per-family Collapse Variants for current .variant-row markup. */
+.collection.v153-family-collapsed > .variant-row {
+  display:none!important;
+}
+.collection.v153-family-collapsed > .collection-head {
+  display:flex!important;
+}
+.collection.v153-family-collapsed > .v153-family-collapse-wrap {
+  display:flex!important;
+}

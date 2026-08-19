@@ -1,4 +1,4 @@
-const CACHE = 'galaxy-sprite-checklist-v156';
+const CACHE = 'galaxy-sprite-checklist-v157';
 const CORE = [
   './',
   './index.html',
@@ -22,7 +22,7 @@ const CORE = [
   './v151.css?v=151',
   './v152.css?v=152',
   './v152.js?v=152',
-  './v153.css?v=1531',
+  './v153.css?v=157',
   './v155.css?v=155',
   './v155.js?v=155',
   './published-design.js',
