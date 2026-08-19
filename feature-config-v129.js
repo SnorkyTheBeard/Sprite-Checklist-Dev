@@ -72,6 +72,7 @@ window.SPRITE_FEATURE_CONFIG = Object.freeze({
   })();
   const renameKey = `galaxy_sprite_tracker_name_overrides_v153_${scope}`;
   const progressKey = `galaxy_sprite_tracker_progress_v2_${scope}`;
+  const resumeAdminKey = `galaxy_sprite_tracker_resume_admin_v156_${scope}`;
   const css = document.createElement('link');
   css.rel = 'stylesheet';
   css.href = 'v153.css?v=153';
@@ -201,6 +202,7 @@ window.SPRITE_FEATURE_CONFIG = Object.freeze({
       renames.families[familyId].name = familyName;
       renames.families[familyId].variants[variantId] = variantName;
       writeJson(renameKey,renames);
+      try { sessionStorage.setItem(resumeAdminKey,'1'); } catch {}
       dialog.close();
       location.reload();
     });
@@ -460,5 +462,38 @@ window.SPRITE_FEATURE_CONFIG = Object.freeze({
     enhance();
     const observer = new MutationObserver(() => enhance());
     observer.observe(document.body,{ subtree:true,childList:true,attributes:true,attributeFilter:['class'] });
+  },{ once:true });
+})();
+
+
+/* V156 — restore Admin Mode after a DEV name-change reload. */
+(() => {
+  'use strict';
+  const first = decodeURIComponent(location.pathname.split('/').filter(Boolean)[0] || 'root');
+  const scope = first.toLowerCase().replace(/[^a-z0-9_-]+/g,'-') || 'root';
+  const key = `galaxy_sprite_tracker_resume_admin_v156_${scope}`;
+  let shouldResume = false;
+  try {
+    shouldResume = sessionStorage.getItem(key) === '1';
+    if (shouldResume) sessionStorage.removeItem(key);
+  } catch {}
+  if (!shouldResume) return;
+
+  const restore = () => {
+    const toggle = document.getElementById('spriteEditorToggle');
+    if (!toggle) return false;
+    if (document.body.classList.contains('sprite-edit-mode')) return true;
+    toggle.click();
+    return document.body.classList.contains('sprite-edit-mode');
+  };
+
+  window.addEventListener('sprite-app-rendered',() => {
+    requestAnimationFrame(() => {
+      if (!restore()) setTimeout(restore,180);
+    });
+  },{ once:true });
+
+  window.addEventListener('DOMContentLoaded',() => {
+    setTimeout(restore,450);
   },{ once:true });
 })();

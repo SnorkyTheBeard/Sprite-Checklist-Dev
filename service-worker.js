@@ -1,4 +1,4 @@
-const CACHE = 'galaxy-sprite-checklist-v155';
+const CACHE = 'galaxy-sprite-checklist-v156';
 const CORE = [
   './',
   './index.html',
@@ -30,7 +30,7 @@ const CORE = [
   './data.js?v=82',
   './sprite-events-v140.js?v=140',
   './state-schema-v127.js?v=127',
-  './feature-config-v129.js?v=150',
+  './feature-config-v129.js?v=156',
   './app.js?v=150',
   './cloud-config-v128.js?v=128',
   './cloud-v128.js?v=150',
@@ -96,6 +96,9 @@ const V152_BODY = '<script src="v152.js?v=152"><\/script>';
 const V155_HEAD = '<link rel="stylesheet" href="v155.css?v=155">';
 const V155_BODY = '<script src="v155.js?v=155"><\/script>';
 
+const V156_EARLY_HEAD = "<script>\n(() => {\n  const key='galaxy_sprite_tracker_skip_launch_v156';\n  let skip=false;\n  try { skip=localStorage.getItem(key)==='1'; } catch {}\n  if (!skip) return;\n  const root=document.documentElement;\n  root.classList.remove('app-booting');\n  root.classList.add('app-ready','app-launch-skip');\n})();\n</script>\n<style>\nhtml.app-launch-skip .app-launch-screen{display:none!important}\n.app-launch-optout{display:flex!important;align-items:center;justify-content:center;gap:8px;color:#c8d6e8!important;font:700 13px/1.2 -apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif!important;letter-spacing:0!important;text-transform:none!important}\n.app-launch-optout input{width:18px;height:18px;accent-color:#67d5ff}\n</style>";
+const V156_LAUNCH_BODY = "<script>\n(() => {\n  'use strict';\n  const key='galaxy_sprite_tracker_skip_launch_v156';\n  const mark=document.querySelector('.app-launch-mark');\n  const start=document.getElementById('launchStartBtn');\n  if (!mark || !start || document.getElementById('launchDontShow')) return;\n\n  const label=document.createElement('label');\n  label.className='app-launch-optout';\n  const checkbox=document.createElement('input');\n  checkbox.id='launchDontShow';\n  checkbox.type='checkbox';\n  const text=document.createElement('span');\n  text.textContent=\"Don't show me again\";\n  label.append(checkbox,text);\n  mark.insertBefore(label,start);\n\n  start.addEventListener('click',() => {\n    if (!checkbox.checked) return;\n    try { localStorage.setItem(key,'1'); } catch {}\n  },{ capture:true });\n})();\n</script>";
+
 async function freshOrCached(networkRequest, cachedResponse) {
   try {
     const response = await networkRequest;
@@ -111,6 +114,10 @@ async function injectV152(response) {
   if (!type.includes('text/html')) return response;
   const text = await response.text();
   let html = text;
+  if (!html.includes('galaxy_sprite_tracker_skip_launch_v156')) {
+    html = html.replace('<head>','<head>\n' + V156_EARLY_HEAD);
+    html = html.replace('</body>',V156_LAUNCH_BODY + '\n</body>');
+  }
   if (!html.includes('v152.css?v=152')) html = html.replace('</head>',`${V152_HEAD}\n</head>`);
   if (!html.includes('v152.js?v=152')) html = html.replace('</body>',`${V152_BODY}\n</body>`);
   if (!html.includes('v155.css?v=155')) html = html.replace('</head>',`${V155_HEAD}\n</head>`);
