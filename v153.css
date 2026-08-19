@@ -1,0 +1,156 @@
+
+/* V153 — mobile showcase safety, replacement tracker scenes, name editor, and screenshot import beta. */
+
+/* Replacement mobile tracker scenes. Full viewport fill: no continuation layer. */
+@media (max-width:900px) and (orientation:portrait) {
+  body.tracker-view:not(.vault-view)[data-page="rare"] .page-backdrop {
+    background-image:linear-gradient(180deg,rgba(0,22,65,.10),rgba(0,12,38,.28)),url("assets/page-backgrounds/V153-bg-rare.webp")!important;
+  }
+  body.tracker-view:not(.vault-view)[data-page="epic"] .page-backdrop {
+    background-image:linear-gradient(180deg,rgba(12,0,42,.10),rgba(12,0,34,.30)),url("assets/page-backgrounds/V153-bg-epic.webp")!important;
+  }
+  body.tracker-view:not(.vault-view)[data-page="legendary"] .page-backdrop {
+    background-image:linear-gradient(180deg,rgba(35,5,0,.08),rgba(27,4,0,.30)),url("assets/page-backgrounds/V153-bg-legendary.webp")!important;
+  }
+  body.tracker-view:not(.vault-view)[data-page="mythic"] .page-backdrop {
+    background-image:linear-gradient(180deg,rgba(49,25,0,.10),rgba(42,18,0,.30)),url("assets/page-backgrounds/V153-bg-mythic.webp")!important;
+  }
+  body.tracker-view:not(.vault-view)[data-page="unowned"] .page-backdrop,
+  body.tracker-view:not(.vault-view)[data-page="unmastered"] .page-backdrop {
+    background-image:linear-gradient(180deg,rgba(16,35,2,.06),rgba(9,26,1,.25)),url("assets/page-backgrounds/V153-bg-missing.webp")!important;
+  }
+  body.tracker-view:not(.vault-view) .page-backdrop {
+    background-position:center top!important;
+    background-size:100% 100%!important;
+    background-repeat:no-repeat!important;
+  }
+}
+
+/* Unowned / Unmastered headings follow the green page. */
+body[data-page="unowned"] #activePageTitle,
+body[data-page="unmastered"] #activePageTitle,
+body[data-page="unowned"][data-missing-view="unowned"] #activePageTitle,
+body[data-page="unowned"][data-missing-view="unmastered"] #activePageTitle {
+  color:#b9ff79!important;
+  -webkit-text-fill-color:#b9ff79!important;
+  background:none!important;
+  text-shadow:0 2px 0 #173d0a,0 0 12px rgba(137,255,82,.95),0 0 28px rgba(90,220,45,.72)!important;
+}
+
+/* Generated collection image: controls never fall below the iPhone viewport. */
+html.showcase-dialog-open,
+body.showcase-dialog-open { overflow:hidden!important; }
+#showcaseDialog[open] {
+  width:min(94vw,720px)!important;
+  max-width:720px!important;
+  height:min(92dvh,920px)!important;
+  max-height:92dvh!important;
+  padding:0!important;
+  overflow:hidden!important;
+}
+#showcaseDialog .showcase-popup,
+#showcaseDialog form,
+#showcaseDialog .dialog-card {
+  min-height:0!important;
+  max-height:100%!important;
+}
+#showcaseDialog form {
+  display:flex!important;
+  flex-direction:column!important;
+  height:100%!important;
+  overflow:hidden!important;
+}
+#showcaseDialog .showcase-preview-wrap {
+  flex:1 1 auto!important;
+  min-height:0!important;
+  max-height:none!important;
+  overflow:auto!important;
+  overscroll-behavior:contain!important;
+  -webkit-overflow-scrolling:touch!important;
+  padding-bottom:10px!important;
+}
+#showcaseDialog .showcase-preview-wrap img {
+  display:block!important;
+  width:100%!important;
+  max-width:100%!important;
+  height:auto!important;
+}
+#showcaseDialog .showcase-actions {
+  position:sticky!important;
+  bottom:0!important;
+  z-index:20!important;
+  flex:0 0 auto!important;
+  margin-top:auto!important;
+  padding:10px 10px max(10px,env(safe-area-inset-bottom))!important;
+  background:linear-gradient(180deg,rgba(5,10,22,.82),rgba(5,10,22,.98) 34%)!important;
+  backdrop-filter:blur(12px)!important;
+  -webkit-backdrop-filter:blur(12px)!important;
+}
+
+/* DEV name editor */
+.v153-name-edit-btn {
+  min-height:30px!important;
+  padding:5px 9px!important;
+  border-radius:999px!important;
+  font-size:11px!important;
+  font-weight:900!important;
+}
+.v153-dialog {
+  width:min(92vw,560px);
+  max-height:88dvh;
+  color:#f8fbff;
+  border:1px solid rgba(255,255,255,.18);
+  border-radius:24px;
+  background:linear-gradient(165deg,#13233c,#07101f 75%);
+  box-shadow:0 24px 80px rgba(0,0,0,.55);
+}
+.v153-dialog::backdrop { background:rgba(0,3,12,.78);backdrop-filter:blur(6px); }
+.v153-dialog form { display:grid;gap:14px; }
+.v153-dialog h2 { margin:0;font-size:28px; }
+.v153-dialog label { display:grid;gap:6px;font-weight:800; }
+.v153-dialog input,.v153-dialog select {
+  width:100%;min-height:44px;box-sizing:border-box;
+  color:#fff;border:1px solid rgba(255,255,255,.2);border-radius:12px;
+  background:#09172a;padding:8px 10px;font:inherit;
+}
+.v153-dialog-actions { display:flex;gap:8px;justify-content:flex-end;position:sticky;bottom:0;padding-top:8px;background:#07101f; }
+.v153-dialog-actions button { min-height:42px;padding:8px 14px;border-radius:999px;font-weight:900; }
+.v153-dialog-actions .primary { background:#7ee45b;color:#082306;border:0; }
+
+/* Per-family collapse control. */
+.v153-family-collapse-wrap { display:flex;justify-content:center;padding:8px 8px 14px; }
+.v153-family-collapse {
+  min-height:38px;padding:7px 16px;border-radius:999px;
+  color:#fff;border:1px solid rgba(255,255,255,.28);
+  background:rgba(4,12,28,.72);font-weight:900;
+}
+.collection.v153-family-collapsed .cards,
+.collection.v153-family-collapsed .card-grid,
+.collection.v153-family-collapsed > .card,
+.collection.v153-family-collapsed .collection-grid { display:none!important; }
+
+/* Screenshot importer */
+.v153-import-launch { margin-left:6px;white-space:nowrap; }
+.v153-import-dialog { width:min(94vw,720px);max-height:92dvh;overflow:hidden; }
+.v153-import-dialog form { height:min(88dvh,860px);grid-template-rows:auto auto minmax(0,1fr) auto; }
+.v153-import-top { display:grid;gap:10px; }
+.v153-import-preview {
+  max-height:190px;overflow:hidden;border-radius:16px;
+  border:1px solid rgba(255,255,255,.16);background:#020711;
+}
+.v153-import-preview img { display:block;width:100%;height:190px;object-fit:contain; }
+.v153-import-status { margin:0;color:#b9cce4;font-size:13px;line-height:1.4; }
+.v153-import-review { min-height:0;overflow:auto;display:grid;gap:10px;padding-right:2px; }
+.v153-import-row {
+  display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;
+  padding:10px;border:1px solid rgba(255,255,255,.14);border-radius:16px;background:rgba(255,255,255,.05);
+}
+.v153-import-row-copy { display:grid;gap:6px; }
+.v153-import-row select { min-width:0; }
+.v153-import-row label { display:flex;align-items:center;gap:6px;white-space:nowrap; }
+.v153-import-confidence { color:#9fb6d3;font-size:11px; }
+@media (max-width:430px) {
+  #showcaseDialog[open] { width:calc(100vw - 10px)!important;height:94dvh!important;max-height:94dvh!important; }
+  .v153-import-row { grid-template-columns:1fr; }
+  .v153-import-dialog { width:calc(100vw - 10px); }
+}
