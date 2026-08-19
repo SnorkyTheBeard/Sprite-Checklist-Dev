@@ -1,0 +1,76 @@
+/* V155 — cleaner rarity navigation and compact search toggle. */
+
+/* Let the rarity buttons float directly on the artwork. */
+.rarity-tabs {
+  background:transparent!important;
+  background-image:none!important;
+  border-color:transparent!important;
+  box-shadow:none!important;
+  backdrop-filter:none!important;
+  -webkit-backdrop-filter:none!important;
+}
+.rarity-tabs::before,
+.rarity-tabs::after {
+  background:none!important;
+  border:0!important;
+  box-shadow:none!important;
+  backdrop-filter:none!important;
+  -webkit-backdrop-filter:none!important;
+}
+
+/* Search is hidden until the round search tool is pressed. */
+.sprite-search.v155-search-collapsed {
+  display:none!important;
+}
+.sprite-search.v155-search-open {
+  display:block!important;
+  animation:v155-search-reveal .14s ease-out both;
+}
+@keyframes v155-search-reveal {
+  from { opacity:0; transform:translateY(-5px); }
+  to { opacity:1; transform:translateY(0); }
+}
+
+/* New round search button sits immediately left of Quick Match. */
+#v155SearchToggle {
+  flex:0 0 auto!important;
+  width:var(--v155-tool-width,52px)!important;
+  height:var(--v155-tool-height,52px)!important;
+  min-width:var(--v155-tool-width,52px)!important;
+  min-height:var(--v155-tool-height,52px)!important;
+  max-width:var(--v155-tool-width,52px)!important;
+  max-height:var(--v155-tool-height,52px)!important;
+  padding:0!important;
+  border-radius:50%!important;
+  display:grid!important;
+  place-items:center!important;
+}
+#v155SearchToggle svg {
+  width:52%!important;
+  height:52%!important;
+  fill:none!important;
+  stroke:currentColor!important;
+  stroke-width:2!important;
+  stroke-linecap:round!important;
+  stroke-linejoin:round!important;
+}
+#v155SearchToggle[aria-expanded="true"] {
+  transform:translateY(-1px);
+}
+#v155SearchToggle:focus-visible {
+  outline:2px solid #fff!important;
+  outline-offset:3px!important;
+}
+
+/* Keep the revealed search bar compact and clearly separate from the tools. */
+.sprite-search.v155-search-open {
+  margin-top:8px!important;
+  margin-bottom:10px!important;
+}
+.sprite-search.v155-search-open .sprite-search-form {
+  width:100%!important;
+}
+
+@media (prefers-reduced-motion:reduce) {
+  .sprite-search.v155-search-open { animation:none!important; }
+}

@@ -1,28 +1,35 @@
 
 /* V153 — mobile showcase safety, replacement tracker scenes, name editor, and screenshot import beta. */
 
-/* Replacement mobile tracker scenes. Full viewport fill: no continuation layer. */
+/* Replacement mobile tracker scenes. Exact user artwork; no V152 continuation layer. */
 @media (max-width:900px) and (orientation:portrait) {
-  body.tracker-view:not(.vault-view)[data-page="rare"] .page-backdrop {
+  html body.tracker-view:not(.vault-view)[data-page="rare"] .page-backdrop {
+    background-color:#0752c7!important;
     background-image:linear-gradient(180deg,rgba(0,22,65,.10),rgba(0,12,38,.28)),url("assets/page-backgrounds/V153-bg-rare.webp")!important;
   }
-  body.tracker-view:not(.vault-view)[data-page="epic"] .page-backdrop {
+  html body.tracker-view:not(.vault-view)[data-page="epic"] .page-backdrop {
+    background-color:#43128d!important;
     background-image:linear-gradient(180deg,rgba(12,0,42,.10),rgba(12,0,34,.30)),url("assets/page-backgrounds/V153-bg-epic.webp")!important;
   }
-  body.tracker-view:not(.vault-view)[data-page="legendary"] .page-backdrop {
+  html body.tracker-view:not(.vault-view)[data-page="legendary"] .page-backdrop {
+    background-color:#7b270b!important;
     background-image:linear-gradient(180deg,rgba(35,5,0,.08),rgba(27,4,0,.30)),url("assets/page-backgrounds/V153-bg-legendary.webp")!important;
   }
-  body.tracker-view:not(.vault-view)[data-page="mythic"] .page-backdrop {
+  html body.tracker-view:not(.vault-view)[data-page="mythic"] .page-backdrop {
+    background-color:#a86523!important;
     background-image:linear-gradient(180deg,rgba(49,25,0,.10),rgba(42,18,0,.30)),url("assets/page-backgrounds/V153-bg-mythic.webp")!important;
   }
-  body.tracker-view:not(.vault-view)[data-page="unowned"] .page-backdrop,
-  body.tracker-view:not(.vault-view)[data-page="unmastered"] .page-backdrop {
+  html body.tracker-view:not(.vault-view)[data-page="unowned"] .page-backdrop,
+  html body.tracker-view:not(.vault-view)[data-page="unmastered"] .page-backdrop,
+  html body.tracker-view:not(.vault-view)[data-page="unowned"][data-missing-view="unowned"] .page-backdrop,
+  html body.tracker-view:not(.vault-view)[data-page="unowned"][data-missing-view="unmastered"] .page-backdrop {
+    background-color:#6f9827!important;
     background-image:linear-gradient(180deg,rgba(16,35,2,.06),rgba(9,26,1,.25)),url("assets/page-backgrounds/V153-bg-missing.webp")!important;
   }
-  body.tracker-view:not(.vault-view) .page-backdrop {
-    background-position:center top!important;
-    background-size:100% 100%!important;
-    background-repeat:no-repeat!important;
+  html body.tracker-view:not(.vault-view) .page-backdrop {
+    background-position:center,center top!important;
+    background-size:100% 100%,100% auto!important;
+    background-repeat:no-repeat,no-repeat!important;
   }
 }
 

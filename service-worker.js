@@ -1,4 +1,4 @@
-const CACHE = 'galaxy-sprite-checklist-v153';
+const CACHE = 'galaxy-sprite-checklist-v155';
 const CORE = [
   './',
   './index.html',
@@ -22,7 +22,9 @@ const CORE = [
   './v151.css?v=151',
   './v152.css?v=152',
   './v152.js?v=152',
-  './v153.css?v=153',
+  './v153.css?v=1531',
+  './v155.css?v=155',
+  './v155.js?v=155',
   './published-design.js',
   './art-config.js?v=67',
   './data.js?v=82',
@@ -87,10 +89,12 @@ const CORE = [
   './assets/page-backgrounds/V153-bg-missing.webp',
   './assets/header/main-header.webp?v=3'
 ];
-const FRESH_CODE_FILES = new Set(['styles.css','vault-v105.css','viewport-v106.css','scene-v126.css','cloud-v128.css','profile-v133.css','v135.css','v136.css','v137.css','v138.css','v139.css','v140.css','v142.css','v143.css','v144.css','v145.css','v150.css','v151.css','v152.css','v152.js','v153.css','art-config.js','data.js','sprite-events-v140.js','state-schema-v127.js','feature-config-v129.js','app.js','cloud-config-v128.js','cloud-v128.js','profile-v133.js','manifest.webmanifest']);
+const FRESH_CODE_FILES = new Set(['styles.css','vault-v105.css','viewport-v106.css','scene-v126.css','cloud-v128.css','profile-v133.css','v135.css','v136.css','v137.css','v138.css','v139.css','v140.css','v142.css','v143.css','v144.css','v145.css','v150.css','v151.css','v152.css','v152.js','v153.css','v155.css','v155.js','art-config.js','data.js','sprite-events-v140.js','state-schema-v127.js','feature-config-v129.js','app.js','cloud-config-v128.js','cloud-v128.js','profile-v133.js','manifest.webmanifest']);
 const FRESH_ASSET_PATHS = ['/assets/header/','/assets/page-backgrounds/','/assets/feature-backgrounds/','/assets/social/','/icons/','/V150-bg-','/V153-bg-'];
 const V152_HEAD = '<link rel="stylesheet" href="v152.css?v=152">';
 const V152_BODY = '<script src="v152.js?v=152"><\/script>';
+const V155_HEAD = '<link rel="stylesheet" href="v155.css?v=155">';
+const V155_BODY = '<script src="v155.js?v=155"><\/script>';
 
 async function freshOrCached(networkRequest, cachedResponse) {
   try {
@@ -109,6 +113,8 @@ async function injectV152(response) {
   let html = text;
   if (!html.includes('v152.css?v=152')) html = html.replace('</head>',`${V152_HEAD}\n</head>`);
   if (!html.includes('v152.js?v=152')) html = html.replace('</body>',`${V152_BODY}\n</body>`);
+  if (!html.includes('v155.css?v=155')) html = html.replace('</head>',`${V155_HEAD}\n</head>`);
+  if (!html.includes('v155.js?v=155')) html = html.replace('</body>',`${V155_BODY}\n</body>`);
   const headers = new Headers(response.headers);
   headers.delete('content-length');
   return new Response(html,{ status:response.status,statusText:response.statusText,headers });
