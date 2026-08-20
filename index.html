@@ -249,37 +249,30 @@
           if (pageConfig.color) pageColor = pageConfig.color;
         }
       }
-      const portraitScene = window.matchMedia?.('(max-width:760px) and (orientation:portrait)').matches;
       if (hashName !== 'vault' && rarity === 'Rare') {
-        pageImage = portraitScene
-          ? 'V150-bg-rare.webp'
-          : 'V150-bg-rare-desktop.webp';
-        pageColor = '#0752c7';
+        pageImage = 'assets/page-backgrounds/page-bg-rare.webp';
+        pageColor = '#061a3d';
         pageFit = 'cover';
       } else if (hashName !== 'vault' && rarity === 'Epic') {
-        pageImage = portraitScene
-          ? 'V150-bg-epic.webp'
-          : 'V150-bg-epic-desktop.webp';
-        pageColor = '#43128d';
+        pageImage = 'assets/page-backgrounds/page-bg-epic.webp';
+        pageColor = '#21103e';
         pageFit = 'cover';
-      } else if (hashName !== 'vault' && portraitScene && rarity === 'Legendary') {
-        pageImage = 'V150-bg-legendary.webp';
-        pageColor = '#7b270b';
+      } else if (hashName !== 'vault' && rarity === 'Legendary') {
+        pageImage = 'assets/page-backgrounds/page-bg-legendary.webp';
+        pageColor = '#3b1608';
         pageFit = 'cover';
-      } else if (hashName !== 'vault' && portraitScene && rarity === 'Mythic') {
-        pageImage = 'V150-bg-mythic.webp';
-        pageColor = '#a86523';
+      } else if (hashName !== 'vault' && rarity === 'Mythic') {
+        pageImage = 'assets/page-backgrounds/page-bg-mythic.webp';
+        pageColor = '#2b2008';
         pageFit = 'cover';
       }
       if (hashName === 'unowned') {
-        pageImage = portraitScene
-          ? 'V150-bg-unowned.webp'
-          : 'V150-bg-unowned.webp';
-        pageColor = portraitScene ? '#6f9827' : '#06101f';
+        pageImage = 'assets/page-backgrounds/page-bg-unowned.webp';
+        pageColor = '#122510';
         pageFit = 'cover';
       } else if (hashName === 'unmastered') {
-        pageImage = 'V150-bg-unmastered.webp';
-        pageColor = '#100a18';
+        pageImage = 'assets/page-backgrounds/page-bg-unmastered.webp';
+        pageColor = '#170d24';
         pageFit = 'cover';
       }
       set('--theme-page-bg',pageColor);
@@ -312,6 +305,7 @@
   <link rel="stylesheet" href="v150.css?v=150">
   <link rel="stylesheet" href="v151.css?v=151">
   <link rel="stylesheet" href="v158.css?v=158">
+  <link rel="stylesheet" href="v160.css?v=160">
 </head>
 <body>
   <div class="app-launch-screen" role="dialog" aria-labelledby="launchTitle" aria-describedby="launchHint">

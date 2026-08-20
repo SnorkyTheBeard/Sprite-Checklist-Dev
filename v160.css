@@ -1,0 +1,34 @@
+/* V160 — restore the original abstract rarity artwork on tracker pages only. */
+
+body.tracker-view:not(.vault-view)[data-page="rare"] .page-backdrop {
+  background-color:#061a3d!important;
+  background-image:linear-gradient(180deg,rgba(1,12,35,.08),rgba(1,8,25,.26)),url("assets/page-backgrounds/page-bg-rare.webp")!important;
+}
+body.tracker-view:not(.vault-view)[data-page="epic"] .page-backdrop {
+  background-color:#21103e!important;
+  background-image:linear-gradient(180deg,rgba(19,5,42,.08),rgba(11,3,27,.28)),url("assets/page-backgrounds/page-bg-epic.webp")!important;
+}
+body.tracker-view:not(.vault-view)[data-page="legendary"] .page-backdrop {
+  background-color:#3b1608!important;
+  background-image:linear-gradient(180deg,rgba(42,12,1,.08),rgba(29,8,1,.28)),url("assets/page-backgrounds/page-bg-legendary.webp")!important;
+}
+body.tracker-view:not(.vault-view)[data-page="mythic"] .page-backdrop {
+  background-color:#2b2008!important;
+  background-image:linear-gradient(180deg,rgba(39,27,2,.08),rgba(24,15,1,.28)),url("assets/page-backgrounds/page-bg-mythic.webp")!important;
+}
+body.tracker-view:not(.vault-view)[data-page="unowned"] .page-backdrop {
+  background-color:#122510!important;
+  background-image:linear-gradient(180deg,rgba(8,29,10,.08),rgba(5,20,7,.28)),url("assets/page-backgrounds/page-bg-unowned.webp")!important;
+}
+body.tracker-view:not(.vault-view)[data-page="unmastered"] .page-backdrop {
+  background-color:#170d24!important;
+  background-image:linear-gradient(180deg,rgba(20,7,32,.08),rgba(12,4,21,.30)),url("assets/page-backgrounds/page-bg-unmastered.webp")!important;
+}
+
+body.tracker-view:not(.vault-view) .page-backdrop {
+  display:block!important;
+  visibility:visible!important;
+  background-position:center top!important;
+  background-size:cover!important;
+  background-repeat:no-repeat!important;
+}
