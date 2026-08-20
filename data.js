@@ -1,7 +1,8 @@
 window.SPRITE_SEASONS = [
+  { id:"chapter-7-season-4", label:"Chapter 7 Season 4" },
   { id:"chapter-7-season-3", label:"Chapter 7 Season 3" }
 ];
-window.CURRENT_SPRITE_SEASON = "chapter-7-season-3";
+window.CURRENT_SPRITE_SEASON = "chapter-7-season-4";
 
 window.SPRITE_DATA = [
   {

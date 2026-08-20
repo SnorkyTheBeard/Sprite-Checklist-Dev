@@ -1,0 +1,110 @@
+/* V162 — CSS-only pages, paused scene effects, and archived collection locks. */
+
+body .page-backdrop {
+  display:block!important;
+  visibility:visible!important;
+  background-repeat:no-repeat!important;
+  background-position:center!important;
+  background-size:cover!important;
+}
+
+body.tracker-view:not(.vault-view)[data-page="rare"] .page-backdrop {
+  background-color:#061a3d!important;
+  background-image:radial-gradient(circle at 18% 15%,rgba(68,194,255,.22),transparent 32%),linear-gradient(145deg,#0b3f82 0%,#071c46 48%,#040d24 100%)!important;
+}
+body.tracker-view:not(.vault-view)[data-page="epic"] .page-backdrop {
+  background-color:#21103e!important;
+  background-image:radial-gradient(circle at 80% 14%,rgba(210,91,255,.22),transparent 33%),linear-gradient(145deg,#55209a 0%,#27104d 48%,#10071f 100%)!important;
+}
+body.tracker-view:not(.vault-view)[data-page="legendary"] .page-backdrop {
+  background-color:#3b1608!important;
+  background-image:radial-gradient(circle at 18% 14%,rgba(255,169,54,.24),transparent 34%),linear-gradient(145deg,#8e3d0a 0%,#471b06 49%,#1d0902 100%)!important;
+}
+body.tracker-view:not(.vault-view)[data-page="mythic"] .page-backdrop {
+  background-color:#2b2008!important;
+  background-image:radial-gradient(circle at 80% 13%,rgba(255,224,80,.22),transparent 34%),linear-gradient(145deg,#786019 0%,#382908 48%,#171003 100%)!important;
+}
+body.tracker-view:not(.vault-view)[data-page="unowned"] .page-backdrop {
+  background-color:#122510!important;
+  background-image:radial-gradient(circle at 20% 14%,rgba(145,219,91,.18),transparent 34%),linear-gradient(145deg,#315b27 0%,#172d16 50%,#091209 100%)!important;
+}
+body.tracker-view:not(.vault-view)[data-page="unmastered"] .page-backdrop {
+  background-color:#170d24!important;
+  background-image:radial-gradient(circle at 80% 13%,rgba(183,119,255,.18),transparent 34%),linear-gradient(145deg,#42265f 0%,#21132f 50%,#0d0713 100%)!important;
+}
+
+body.vault-view .page-backdrop,
+body.hunt-history-view .page-backdrop,
+body.journal-view .page-backdrop,
+body.sprite-profile-view .page-backdrop,
+body.settings-view .page-backdrop,
+body.dust-account-view .page-backdrop {
+  background-color:#07111f!important;
+  background-image:radial-gradient(circle at 78% 8%,rgba(62,135,214,.16),transparent 34%),linear-gradient(155deg,#102844 0%,#081526 50%,#030912 100%)!important;
+}
+
+/* Pause the currently installed snow, stars, glows, and drifting motes.
+   The motion layer remains in the app so future rarity animations can be added. */
+.page-motion-layer .page-motion-effect {
+  display:none!important;
+  visibility:hidden!important;
+  animation:none!important;
+}
+
+/* Archived Sprites remain visible even when they were never checked off. */
+body.vault-view .card.vault-locked .image-wrap img {
+  opacity:.22!important;
+  filter:grayscale(.35) saturate(.45) brightness(1.22)!important;
+}
+body.vault-view .card.vault-locked .image-wrap::before {
+  opacity:.28!important;
+}
+.vault-lock-button {
+  position:absolute;
+  z-index:24;
+  inset:50% auto auto 50%;
+  width:64px;
+  height:64px;
+  display:grid;
+  place-items:center;
+  transform:translate(-50%,-50%);
+  border:1px solid rgba(255,255,255,.72);
+  border-radius:50%;
+  color:#fff;
+  background:rgba(4,9,18,.78);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.25),0 8px 24px rgba(0,0,0,.48),0 0 18px rgba(150,207,255,.26);
+  -webkit-backdrop-filter:blur(7px);
+  backdrop-filter:blur(7px);
+  cursor:pointer;
+}
+.vault-lock-button svg {
+  width:30px;
+  height:30px;
+  fill:none;
+  stroke:currentColor;
+  stroke-width:2.2;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+}
+.vault-lock-button[hidden] { display:none!important; }
+.vault-lock-button:focus-visible { outline:3px solid #fff;outline-offset:4px; }
+
+.vault-unlock-dialog form { text-align:center; }
+.vault-unlock-icon {
+  width:58px;
+  height:58px;
+  margin:0 auto 10px;
+  display:grid;
+  place-items:center;
+  border-radius:50%;
+  font-size:28px;
+  background:linear-gradient(145deg,#203c5f,#091629);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.28),0 0 20px rgba(89,200,255,.28);
+}
+.vault-unlock-dialog h2 { margin-bottom:8px; }
+.vault-unlock-dialog p { margin:0 0 18px;color:#dcecff;font-weight:800; }
+
+@media (max-width:600px) {
+  .vault-lock-button { width:56px;height:56px; }
+  .vault-lock-button svg { width:27px;height:27px; }
+}

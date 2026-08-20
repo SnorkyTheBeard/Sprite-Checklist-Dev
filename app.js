@@ -15,6 +15,7 @@
   const CURRENT_SEASON_ID = seasonCatalog.some((season) => season.id === window.CURRENT_SPRITE_SEASON)
     ? window.CURRENT_SPRITE_SEASON
     : seasonCatalog[0].id;
+  const ARCHIVE_FALLBACK_SEASON_ID = seasonCatalog.find((season) => season.id !== CURRENT_SEASON_ID)?.id || CURRENT_SEASON_ID;
   const SEASON_FEATURE_VISIBLE = true;
   const SEASON_VIEW_ALL = 'all';
   const APP_VIEW_TRACKER = 'tracker';
@@ -31,7 +32,7 @@
     'hot-drop':'Hottest Drop uses anonymous totals from signed-in collectors during the past hour. It never shows usernames or individual activity, and it waits for at least three collectors before naming a location.',
     journal:'Collection History groups the Sprites you finalized by match. It does not include ordinary checklist taps.',
     profile:'Your profile holds your Meadow Code, selected collection stats, favorite Sprites, and account save status. Share the code so another collector can visit.',
-    meadow:'Sprite Archive is a clean gallery of the Sprites already in your collection. Change the selected season to revisit older collections.',
+    meadow:'Sprite Archive shows every Sprite from past seasons. Collected Sprites are displayed normally; missing Sprites stay faded and locked until you confirm that you owned them.',
     settings:'Settings controls background motion, reduced motion, your default tracker view, account access, and DEV owner tools.'
   });
   const FEATURE_STATES = new Set(['hidden','coming-soon','preview','public']);
@@ -469,10 +470,11 @@
     try {
       const saved = localStorage.getItem(SEASON_VIEW_KEY);
       if (!SEASON_FEATURE_VISIBLE) return CURRENT_SEASON_ID;
-      if (saved === 'current' || saved === 'previous') return CURRENT_SEASON_ID;
-      return SEASON_VIEWS.includes(saved) ? saved : CURRENT_SEASON_ID;
+      if (saved === 'current') return CURRENT_SEASON_ID;
+      if (saved === 'previous') return ARCHIVE_FALLBACK_SEASON_ID;
+      return SEASON_VIEWS.includes(saved) ? saved : ARCHIVE_FALLBACK_SEASON_ID;
     } catch {
-      return CURRENT_SEASON_ID;
+      return ARCHIVE_FALLBACK_SEASON_ID;
     }
   }
 
@@ -718,14 +720,14 @@
       id:johnWickFamilyId,
       name:'John Wick',
       rarity:'Mythic',
-      seasonId:CURRENT_SEASON_ID,
+      seasonId:ARCHIVE_FALLBACK_SEASON_ID,
       variants:[{ id:'base', name:'Base', image:'' }]
     });
     design.families[johnWickFamilyId] = {
       ...(design.families[johnWickFamilyId] || {}),
       name:'John Wick',
       rarity:'Mythic',
-      seasonId:CURRENT_SEASON_ID,
+      seasonId:ARCHIVE_FALLBACK_SEASON_ID,
       visible:true,
       deleted:false,
       variants:{
@@ -773,6 +775,7 @@
   let pendingJournalMemoryId = '';
   let pendingJournalMemoryPhoto = '';
   let pendingClearAction = null;
+  let pendingVaultUnlock = null;
   let huntMode = loadHuntMode();
   let huntTimerInterval = 0;
   let huntCart = loadStoredArray(HUNT_CART_KEY,normalizeHuntCart);
@@ -967,6 +970,9 @@
   const clearDataDialog = document.getElementById('clearDataDialog');
   const clearDataForm = document.getElementById('clearDataForm');
   const clearDataTitle = document.getElementById('clearDataTitle');
+  const vaultUnlockDialog = document.getElementById('vaultUnlockDialog');
+  const vaultUnlockForm = document.getElementById('vaultUnlockForm');
+  const vaultUnlockSpriteName = document.getElementById('vaultUnlockSpriteName');
   const floatingHomeBtn = document.getElementById('floatingHomeBtn');
   const floatingAdminToggle = document.getElementById('floatingAdminToggle');
   const contextHelpDialog = document.getElementById('contextHelpDialog');
@@ -2161,7 +2167,7 @@
   function familyView(family) {
     const custom = design.families[family.id] || {};
     const cardEdits = spriteCardEdits.families?.[family.id] || {};
-    const savedSeason = hasOwn(cardEdits,'seasonId') ? cardEdits.seasonId : (custom.seasonId || family.seasonId);
+    const savedSeason = hasOwn(cardEdits,'seasonId') ? cardEdits.seasonId : (custom.seasonId || family.seasonId || ARCHIVE_FALLBACK_SEASON_ID);
     const seasonId = SEASON_VIEWS.includes(savedSeason) && savedSeason !== SEASON_VIEW_ALL
       ? savedSeason
       : CURRENT_SEASON_ID;
@@ -4687,6 +4693,13 @@
     const vaultDisplay = appView === APP_VIEW_VAULT;
     const huntDisplay = huntMode.active && !vaultDisplay;
     card.setAttribute('aria-label',`${variantName} ${groupName}${current.mastered ? ', mastered' : ''}`);
+    const vaultLocked = vaultDisplay && !current.collected && !current.mastered;
+    card.classList.toggle('vault-locked',vaultLocked);
+    const vaultLockButton = card.querySelector('.vault-lock-button');
+    if (vaultLockButton) {
+      vaultLockButton.hidden = !vaultLocked;
+      vaultLockButton.setAttribute('aria-label',`Unlock ${variantName} ${groupName}`);
+    }
     imageButton.disabled = vaultDisplay || huntDisplay;
     imageButton.tabIndex = vaultDisplay || huntDisplay ? -1 : 0;
     imageButton.setAttribute('aria-label',vaultDisplay
@@ -4871,6 +4884,34 @@
     updateCounters();
     showToast(`${variantView(family,variant).name || family.name}: ${message}`);
     return journalEntry;
+  }
+
+  function openVaultUnlockDialog(family,variant) {
+    if (appView !== APP_VIEW_VAULT) return;
+    const current = variantState(family.id,variant.id);
+    if (current.collected || current.mastered) return;
+    const familyName = familyView(family).name || 'Sprite';
+    const variantName = variantView(family,variant).name || 'Variant';
+    pendingVaultUnlock = { family,variant };
+    vaultUnlockSpriteName.textContent = `${familyName} · ${variantName}`;
+    if (!vaultUnlockDialog.open) vaultUnlockDialog.showModal();
+    requestAnimationFrame(() => document.getElementById('confirmVaultUnlockBtn')?.focus({ preventScroll:true }));
+  }
+
+  function confirmVaultUnlock(event) {
+    event.preventDefault();
+    const pending = pendingVaultUnlock;
+    pendingVaultUnlock = null;
+    vaultUnlockDialog.close();
+    if (!pending) return;
+    const current = variantState(pending.family.id,pending.variant.id);
+    if (current.collected) return;
+    current.collected = true;
+    current.mastered = false;
+    delete current.collectionCount;
+    saveProgress();
+    renderAll();
+    showToast(`${variantView(pending.family,pending.variant).name || 'Sprite'} added to the Archive`);
   }
 
   function cardDropAfter(card,event) {
@@ -5241,7 +5282,17 @@
     const archivePlaque = document.createElement('span');
     archivePlaque.className = 'archive-match-plaque';
     archivePlaque.hidden = true;
-    card.append(crown,seasonBadge,imageWrap,editorTools,nameEditor,percentageEditor,variantLine,listLabel,collect,huntCartButton,masterLabel,archivePlaque);
+    const vaultLockButton = document.createElement('button');
+    vaultLockButton.type = 'button';
+    vaultLockButton.className = 'vault-lock-button';
+    vaultLockButton.innerHTML = '<svg viewBox="0 0 32 32" aria-hidden="true"><path d="M9 14v-4a7 7 0 0 1 14 0v4"/><rect x="6" y="14" width="20" height="15" rx="4"/><path d="M16 20v4"/></svg>';
+    vaultLockButton.hidden = true;
+    vaultLockButton.addEventListener('click',(event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      openVaultUnlockDialog(family,variant);
+    });
+    card.append(crown,seasonBadge,imageWrap,editorTools,nameEditor,percentageEditor,variantLine,listLabel,collect,huntCartButton,masterLabel,archivePlaque,vaultLockButton);
 
     const toggleCollected = () => {
       if (huntMode.active) return;
@@ -5519,8 +5570,7 @@
         if (!familyMatchesSeason(family)) return;
         const rowVariants = variantsForSeason(family).filter((variant) => (
           (!variantFilter || variantFilter(family,variant))
-          && (unownedPage || trackerFilterMatches(family,variant))
-          && (appView !== APP_VIEW_VAULT || variantState(family.id,variant.id).collected)
+          && (unownedPage || appView === APP_VIEW_VAULT || trackerFilterMatches(family,variant))
         ));
         if (!rowVariants.length && !spriteEditMode) return;
         if (currentSpriteViewMode() === 'sheet') {
@@ -7598,6 +7648,9 @@
     document.documentElement.classList.remove('clear-data-open');
     document.body.classList.remove('clear-data-open');
   });
+  vaultUnlockForm.addEventListener('submit',confirmVaultUnlock);
+  document.getElementById('cancelVaultUnlockBtn').addEventListener('click',() => vaultUnlockDialog.close());
+  vaultUnlockDialog.addEventListener('close',() => { pendingVaultUnlock = null; });
   huntModeBtn.addEventListener('click',toggleHuntMode);
   huntModeBtn.addEventListener('pointerup',() => requestAnimationFrame(() => huntModeBtn.blur()));
   compassStartSearchBtn.addEventListener('click',() => {
@@ -8068,7 +8121,7 @@
                             : (isUnownedPage() ? `#${missingView}` : `#${activeRarity.toLowerCase()}`)))))));
   if (location.hash !== activeHash) history.replaceState({ rarity:activeRarity },'',activeHash);
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./service-worker.js?v=148',{ updateViaCache:'none' }).then((registration) => registration.update()).catch(() => {});
+    navigator.serviceWorker.register('./service-worker.js?v=162',{ updateViaCache:'none' }).then((registration) => registration.update()).catch(() => {});
   }
   const signalAppRendered = () => window.dispatchEvent(new Event('sprite-app-rendered'));
   if (document.fonts?.ready) {

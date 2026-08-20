@@ -286,7 +286,7 @@
   <link rel="stylesheet" href="v150.css?v=150">
   <link rel="stylesheet" href="v151.css?v=151">
   <link rel="stylesheet" href="v158.css?v=158">
-  <link rel="stylesheet" href="v161.css?v=161">
+  <link rel="stylesheet" href="v162.css?v=162">
 </head>
 <body>
   <div class="app-launch-screen" role="dialog" aria-labelledby="launchTitle" aria-describedby="launchHint">
@@ -1297,6 +1297,18 @@
     </form>
   </dialog>
 
+  <dialog class="reset-dialog vault-unlock-dialog" id="vaultUnlockDialog" aria-labelledby="vaultUnlockTitle">
+    <form id="vaultUnlockForm">
+      <span class="vault-unlock-icon" aria-hidden="true">🔒</span>
+      <h2 id="vaultUnlockTitle" tabindex="-1">Did you collect this Sprite?</h2>
+      <p id="vaultUnlockSpriteName"></p>
+      <div class="dialog-actions">
+        <button id="cancelVaultUnlockBtn" type="button">Cancel</button>
+        <button class="primary-btn" id="confirmVaultUnlockBtn" type="submit">Collected</button>
+      </div>
+    </form>
+  </dialog>
+
   <dialog class="welcome-dialog" id="welcomeDialog" aria-labelledby="welcomeTitle">
     <div class="welcome-card">
       <span class="welcome-step" id="welcomeStep">1 of 4</span>
@@ -1322,11 +1334,11 @@
   <div class="status-toast" id="statusToast" role="status" aria-live="polite"></div>
   <noscript>This checklist needs JavaScript enabled to save progress.</noscript>
 
-  <script src="data.js?v=82"></script>
+  <script src="data.js?v=162"></script>
   <script src="sprite-events-v140.js?v=140"></script>
   <script src="state-schema-v127.js?v=127"></script>
 <script src="feature-config-v129.js?v=158"></script>
-<script src="app.js?v=158"></script>
+<script src="app.js?v=162"></script>
   <script src="cloud-config-v128.js?v=128"></script>
   <script src="cloud-v128.js?v=150"></script>
   <script src="profile-v133.js?v=150"></script>
