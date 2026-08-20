@@ -286,7 +286,7 @@
   <link rel="stylesheet" href="v150.css?v=150">
   <link rel="stylesheet" href="v151.css?v=151">
   <link rel="stylesheet" href="v158.css?v=158">
-  <link rel="stylesheet" href="v162.css?v=162">
+  <link rel="stylesheet" href="v163.css?v=163">
 </head>
 <body>
   <div class="app-launch-screen" role="dialog" aria-labelledby="launchTitle" aria-describedby="launchHint">
@@ -904,6 +904,32 @@
     <span>Admin</span>
   </button>
 
+  <dialog class="admin-center-dialog" id="adminCenterDialog" aria-labelledby="adminCenterTitle">
+    <section class="admin-center-panel">
+      <header class="admin-center-head">
+        <div><span>Owner tools</span><h2 id="adminCenterTitle" tabindex="-1">Admin Center</h2></div>
+        <button id="closeAdminCenterBtn" type="button" aria-label="Close Admin Center">×</button>
+      </header>
+      <p class="admin-center-intro">Add and maintain the current season catalog, then publish everything in one step.</p>
+      <label class="admin-center-rarity">Page to manage
+        <select id="adminCenterRarity">
+          <option value="Rare">Rare</option><option value="Epic">Epic</option><option value="Legendary">Legendary</option><option value="Mythic">Mythic</option><option value="Special">Special</option><option value="Uncommon">Uncommon</option><option value="Common">Common</option>
+        </select>
+      </label>
+      <div class="admin-center-status" id="adminCenterStatus" role="status" aria-live="polite"></div>
+      <div class="admin-center-actions">
+        <button class="admin-primary-action" id="adminAddGroupBtn" type="button"><strong>＋ Add new Sprite group</strong><span>Creates a new group with its Base card.</span></button>
+        <button id="adminEditPageBtn" type="button"><strong>✎ Edit Sprites on this page</strong><span>Rename, upload artwork, add variants, delete, or reorder.</span></button>
+        <button id="adminDustBtn" type="button"><strong>✦ Edit Sprite Dust</strong><span>Set the five extraction rewards for this rarity.</span></button>
+        <button class="admin-publish-action" id="adminPublishBtn" type="button"><strong>Publish changes</strong><span>Send all pending catalog edits to GitHub.</span></button>
+      </div>
+      <footer class="admin-center-footer">
+        <button id="adminExitEditBtn" type="button">Exit editing</button>
+        <small>Changes remain private on this device until you publish.</small>
+      </footer>
+    </section>
+  </dialog>
+
   <button class="floating-voice-button" id="voiceCommandBtn" type="button" aria-label="Use voice commands" aria-pressed="false" title="Ask about or update a Sprite by voice">
     <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M5 11a7 7 0 0 0 14 0M12 18v3M9 21h6"></path></svg>
   </button>
@@ -1334,11 +1360,11 @@
   <div class="status-toast" id="statusToast" role="status" aria-live="polite"></div>
   <noscript>This checklist needs JavaScript enabled to save progress.</noscript>
 
-  <script src="data.js?v=162"></script>
+  <script src="data.js?v=163"></script>
   <script src="sprite-events-v140.js?v=140"></script>
   <script src="state-schema-v127.js?v=127"></script>
 <script src="feature-config-v129.js?v=158"></script>
-<script src="app.js?v=162"></script>
+<script src="app.js?v=163"></script>
   <script src="cloud-config-v128.js?v=128"></script>
   <script src="cloud-v128.js?v=150"></script>
   <script src="profile-v133.js?v=150"></script>

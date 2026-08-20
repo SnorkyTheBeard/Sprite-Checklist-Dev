@@ -523,15 +523,15 @@
   });
 
   const DEFAULT_PAGE_BACKGROUNDS = {
-    Rare:{ enabled:true, color:'#0752c7', image:'assets/page-backgrounds/page-bg-rare-lifty-lodge-v113.webp', mode:'cover' },
-    Epic:{ enabled:true, color:'#43128d', image:'assets/page-backgrounds/page-bg-epic-wonkeeland-v113.webp', mode:'cover' },
-    Legendary:{ enabled:true, color:'#1a0d05', image:'assets/page-backgrounds/page-bg-legendary.webp', mode:'cover' },
-    Mythic:{ enabled:true, color:'#100c08', image:'assets/page-backgrounds/page-bg-mythic.webp', mode:'cover' }
+    Rare:{ enabled:false, color:'#0752c7', image:'', mode:'cover' },
+    Epic:{ enabled:false, color:'#43128d', image:'', mode:'cover' },
+    Legendary:{ enabled:false, color:'#1a0d05', image:'', mode:'cover' },
+    Mythic:{ enabled:false, color:'#100c08', image:'', mode:'cover' }
   };
 
   const DEFAULT_MISSING_PAGE_BACKGROUNDS = {
-    unowned:{ enabled:true, color:'#06101f', image:'assets/page-backgrounds/page-bg-unowned.webp?v=93', mode:'cover' },
-    unmastered:{ enabled:true, color:'#100a18', image:'assets/page-backgrounds/page-bg-unmastered.webp?v=93', mode:'cover' }
+    unowned:{ enabled:false, color:'#06101f', image:'', mode:'cover' },
+    unmastered:{ enabled:false, color:'#100a18', image:'', mode:'cover' }
   };
 
   const DEFAULT_THEME = {
@@ -975,6 +975,10 @@
   const vaultUnlockSpriteName = document.getElementById('vaultUnlockSpriteName');
   const floatingHomeBtn = document.getElementById('floatingHomeBtn');
   const floatingAdminToggle = document.getElementById('floatingAdminToggle');
+  const adminCenterDialog = document.getElementById('adminCenterDialog');
+  const adminCenterRarity = document.getElementById('adminCenterRarity');
+  const adminCenterStatus = document.getElementById('adminCenterStatus');
+  const adminPublishBtn = document.getElementById('adminPublishBtn');
   const contextHelpDialog = document.getElementById('contextHelpDialog');
   const contextHelpTitle = document.getElementById('contextHelpTitle');
   const contextHelpCopy = document.getElementById('contextHelpCopy');
@@ -4224,6 +4228,42 @@
     const pending = hasUnpublishedSpriteChanges();
     publishSpritesBtn.disabled = !pending;
     publishSpritesBtn.textContent = pending ? 'Publish sprite changes' : 'No changes to publish';
+    if (adminPublishBtn) {
+      adminPublishBtn.disabled = !pending;
+      const title = adminPublishBtn.querySelector('strong');
+      const note = adminPublishBtn.querySelector('span');
+      if (title) title.textContent = pending ? 'Publish changes' : 'Everything is published';
+      if (note) note.textContent = pending ? 'Send all pending catalog edits to GitHub.' : 'There are no unpublished catalog changes.';
+    }
+    if (adminCenterStatus) {
+      adminCenterStatus.dataset.pending = String(pending);
+      adminCenterStatus.textContent = pending ? 'Unpublished changes are ready.' : 'Catalog is up to date.';
+    }
+  }
+
+  function selectedAdminRarity() {
+    return rarities.includes(adminCenterRarity?.value) ? adminCenterRarity.value : defaultRarity;
+  }
+
+  function openAdminCenter() {
+    if (!adminCenterDialog) return;
+    adminCenterRarity.value = rarities.includes(activeRarity) ? activeRarity : defaultRarity;
+    updatePublishButton();
+    if (!adminCenterDialog.open) adminCenterDialog.showModal();
+    requestAnimationFrame(() => {
+      const title = document.getElementById('adminCenterTitle');
+      try { title.focus({ preventScroll:true }); }
+      catch { title.focus(); }
+    });
+  }
+
+  function openAdminPage(rarity,{ edit = true } = {}) {
+    if (adminCenterDialog?.open) adminCenterDialog.close();
+    setAppView(APP_VIEW_TRACKER,{ announce:false });
+    seasonView = CURRENT_SEASON_ID;
+    switchRarity(rarity,{ historyMode:'push',announce:false });
+    if (edit && !spriteEditMode) setSpriteEditMode(true);
+    window.scrollTo({ top:0,left:0,behavior:'auto' });
   }
 
   function setPublishStatus(message,state = '') {
@@ -6117,11 +6157,11 @@
     const available = DEV_BUILD || ownerPreviewActive();
     floatingAdminToggle.hidden = !available;
     floatingAdminToggle.setAttribute('aria-pressed',String(spriteEditMode));
-    const label = spriteEditMode ? 'Exit Admin Mode' : 'Enter Admin Mode';
+    const label = 'Open Admin Center';
     floatingAdminToggle.setAttribute('aria-label',label);
     floatingAdminToggle.title = label;
     const text = floatingAdminToggle.querySelector('span');
-    if (text) text.textContent = spriteEditMode ? 'Exit' : 'Admin';
+    if (text) text.textContent = spriteEditMode ? 'Editing' : 'Admin';
   }
 
   function helpCopyFor(key) {
@@ -7800,9 +7840,27 @@
   });
   floatingHomeBtn.addEventListener('click',() => goHomeToRare());
   floatingAdminToggle?.addEventListener('click',() => {
-    if (spriteEditMode) return setSpriteEditMode(false);
-    if (appView !== APP_VIEW_TRACKER || isUnownedPage()) goHomeToRare({ announce:false });
-    setSpriteEditMode(true);
+    openAdminCenter();
+  });
+  document.getElementById('closeAdminCenterBtn')?.addEventListener('click',() => adminCenterDialog.close());
+  adminCenterDialog?.addEventListener('click',(event) => { if (event.target === adminCenterDialog) adminCenterDialog.close(); });
+  document.getElementById('adminEditPageBtn')?.addEventListener('click',() => openAdminPage(selectedAdminRarity()));
+  document.getElementById('adminAddGroupBtn')?.addEventListener('click',() => {
+    openAdminPage(selectedAdminRarity());
+    openAddSpriteGroupDialog();
+  });
+  document.getElementById('adminDustBtn')?.addEventListener('click',() => {
+    openAdminPage(selectedAdminRarity());
+    requestAnimationFrame(() => rarityDustAdmin?.scrollIntoView({ block:'center',behavior:'smooth' }));
+  });
+  adminPublishBtn?.addEventListener('click',() => {
+    if (!hasUnpublishedSpriteChanges()) return;
+    adminCenterDialog.close();
+    openPublishSpritesDialog();
+  });
+  document.getElementById('adminExitEditBtn')?.addEventListener('click',() => {
+    if (spriteEditMode) setSpriteEditMode(false);
+    adminCenterDialog.close();
   });
   document.querySelectorAll('[data-help-key]').forEach((button) => {
     button.addEventListener('click',() => openContextHelp(button.dataset.helpKey || ''));
@@ -8121,7 +8179,7 @@
                             : (isUnownedPage() ? `#${missingView}` : `#${activeRarity.toLowerCase()}`)))))));
   if (location.hash !== activeHash) history.replaceState({ rarity:activeRarity },'',activeHash);
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./service-worker.js?v=162',{ updateViaCache:'none' }).then((registration) => registration.update()).catch(() => {});
+    navigator.serviceWorker.register('./service-worker.js?v=163',{ updateViaCache:'none' }).then((registration) => registration.update()).catch(() => {});
   }
   const signalAppRendered = () => window.dispatchEvent(new Event('sprite-app-rendered'));
   if (document.fonts?.ready) {
