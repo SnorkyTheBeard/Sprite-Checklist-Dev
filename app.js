@@ -2123,6 +2123,7 @@
     if (!Array.isArray(edits.order)) edits.order = [];
     if (!Array.isArray(edits.publishedAdded)) edits.publishedAdded = [];
     if (!edits.images || typeof edits.images !== 'object' || Array.isArray(edits.images)) edits.images = {};
+    if (!edits.names || typeof edits.names !== 'object' || Array.isArray(edits.names)) edits.names = {};
     if (!edits.percentages || typeof edits.percentages !== 'object' || Array.isArray(edits.percentages)) edits.percentages = {};
     if (!edits.dustLevels || typeof edits.dustLevels !== 'object' || Array.isArray(edits.dustLevels)) edits.dustLevels = {};
     if (!edits.archived || typeof edits.archived !== 'object' || Array.isArray(edits.archived)) edits.archived = {};
@@ -2165,7 +2166,7 @@
       ? savedSeason
       : CURRENT_SEASON_ID;
     return {
-      name:hasOwn(custom,'name') ? custom.name : family.name,
+      name:hasOwn(cardEdits,'name') ? cardEdits.name : (hasOwn(custom,'name') ? custom.name : family.name),
       visible:hasOwn(custom,'visible') ? Boolean(custom.visible) : true,
       deleted:Boolean(custom.deleted),
       seasonId,
@@ -2181,7 +2182,7 @@
     const custom = design.families[family.id]?.variants?.[variant.id] || {};
     const cardEdits = spriteCardEdits.families?.[family.id] || {};
     return {
-      name:hasOwn(custom,'name') ? custom.name : variant.name,
+      name:hasOwn(cardEdits.names,variant.id) ? cardEdits.names[variant.id] : (hasOwn(custom,'name') ? custom.name : variant.name),
       image:hasOwn(cardEdits.images,variant.id) ? cardEdits.images[variant.id] : (hasOwn(custom,'image') ? custom.image : variant.image),
       rarityPercentage:hasOwn(cardEdits.percentages,variant.id) ? cardEdits.percentages[variant.id] : String(custom.rarityPercentage || ''),
       dustLevels:normalizeDustLevels(hasOwn(cardEdits.dustLevels,variant.id) ? cardEdits.dustLevels[variant.id] : custom.dustLevels),
@@ -3979,6 +3980,56 @@
     return `${Number(whole)}${normalizedFraction ? `.${normalizedFraction}` : ''}%`;
   }
 
+  function normalizeSpriteName(value) {
+    return String(value || '').replace(/\s+/g,' ').trim().slice(0,60);
+  }
+
+  function publishedFamilyName(family) {
+    const custom = design.families[family.id] || {};
+    return normalizeSpriteName(hasOwn(custom,'name') ? custom.name : family.name);
+  }
+
+  function publishedVariantName(family,variant) {
+    const custom = design.families[family.id]?.variants?.[variant.id] || {};
+    return normalizeSpriteName(hasOwn(custom,'name') ? custom.name : variant.name);
+  }
+
+  function saveFamilyName(family,value) {
+    const name = normalizeSpriteName(value);
+    if (!name) {
+      showToast('A Sprite group name cannot be blank.');
+      return false;
+    }
+    if (name === normalizeSpriteName(familyView(family).name)) return true;
+    const previousEdits = cloneJson(spriteCardEdits);
+    const edits = familyCardEdits(family.id);
+    if (name === publishedFamilyName(family)) delete edits.name;
+    else edits.name = name;
+    if (!saveCardEditOrRestore(previousEdits)) return false;
+    renderCollections();
+    updateCounters();
+    showToast(`Sprite group renamed to ${name}`);
+    return true;
+  }
+
+  function saveVariantName(family,variant,value) {
+    const name = normalizeSpriteName(value);
+    if (!name) {
+      showToast('A Sprite name cannot be blank.');
+      return false;
+    }
+    if (name === normalizeSpriteName(variantView(family,variant).name)) return true;
+    const previousEdits = cloneJson(spriteCardEdits);
+    const edits = familyCardEdits(family.id);
+    if (name === publishedVariantName(family,variant)) delete edits.names[variant.id];
+    else edits.names[variant.id] = name;
+    if (!saveCardEditOrRestore(previousEdits)) return false;
+    renderCollections();
+    updateCounters();
+    showToast(`Sprite renamed to ${name}`);
+    return true;
+  }
+
   function saveRarityPercentage(family,variant,value) {
     const percentage = normalizeRarityPercentage(value);
     if (percentage === null) {
@@ -4148,6 +4199,8 @@
       (Array.isArray(edits.added) && edits.added.length)
       || (Array.isArray(edits.deleted) && edits.deleted.length)
       || (Array.isArray(edits.order) && edits.order.length)
+      || hasOwn(edits,'name')
+      || (edits.names && typeof edits.names === 'object' && Object.keys(edits.names).length)
       || (edits.images && typeof edits.images === 'object' && Object.keys(edits.images).length)
       || (edits.percentages && typeof edits.percentages === 'object' && Object.keys(edits.percentages).length)
       || (edits.dustLevels && typeof edits.dustLevels === 'object' && Object.keys(edits.dustLevels).length)
@@ -4250,9 +4303,10 @@
     (Array.isArray(spriteCardEdits.customFamilies) ? spriteCardEdits.customFamilies : []).forEach((localFamily) => {
       if (!localFamily?.id) return;
       const publishedFamily = nextDesign.customFamilies.find((family) => family.id === localFamily.id);
+      const localFamilyEdits = spriteCardEdits.families?.[localFamily.id] || {};
       const familyRecord = {
         id:localFamily.id,
-        name:localFamily.name || 'New sprite group',
+        name:(hasOwn(localFamilyEdits,'name') ? localFamilyEdits.name : localFamily.name) || 'New sprite group',
         rarity:rarities.includes(localFamily.rarity) ? localFamily.rarity : defaultRarity,
         seasonId:SEASON_VIEWS.includes(localFamily.seasonId) ? localFamily.seasonId : CURRENT_SEASON_ID,
         variants:Array.isArray(localFamily.variants) && localFamily.variants.length
@@ -4281,6 +4335,7 @@
       const family = nextDesign.families[familyId] ||= {};
       family.variants ||= {};
       family.addedVariants = Array.isArray(family.addedVariants) ? family.addedVariants : [];
+      if (hasOwn(edits,'name')) family.name = normalizeSpriteName(edits.name);
       if (hasOwn(edits,'archivedGroup')) family.archived = Boolean(edits.archivedGroup);
 
       (Array.isArray(edits.added) ? edits.added : []).forEach((variant) => {
@@ -4330,6 +4385,16 @@
         family.variants[variantId] ||= {};
         if (percentage) family.variants[variantId].rarityPercentage = String(percentage);
         else delete family.variants[variantId].rarityPercentage;
+      });
+
+      Object.entries(edits.names && typeof edits.names === 'object' ? edits.names : {}).forEach(([variantId,name]) => {
+        if (Array.isArray(edits.deleted) && edits.deleted.includes(variantId)) return;
+        const cleanName = normalizeSpriteName(name);
+        if (!cleanName) return;
+        family.variants[variantId] ||= {};
+        family.variants[variantId].name = cleanName;
+        const addedVariant = family.addedVariants.find((item) => item?.id === variantId);
+        if (addedVariant) addedVariant.name = cleanName;
       });
 
       Object.entries(edits.dustLevels && typeof edits.dustLevels === 'object' ? edits.dustLevels : {}).forEach(([variantId,levels]) => {
@@ -5078,6 +5143,7 @@
 
         edits.order = edits.order.filter((id) => id !== variant.id);
         delete edits.images[variant.id];
+        delete edits.names[variant.id];
         delete edits.percentages[variant.id];
         delete edits.dustLevels[variant.id];
         delete edits.archived[variant.id];
@@ -5101,6 +5167,18 @@
 
       editorTools.append(deleteButton);
     }
+    const nameEditor = document.createElement('label');
+    nameEditor.className = 'sprite-name-editor';
+    const nameEditorLabel = document.createElement('span');
+    nameEditorLabel.textContent = 'Sprite name';
+    const nameInput = document.createElement('input');
+    nameInput.type = 'text';
+    nameInput.maxLength = 60;
+    nameInput.autocomplete = 'off';
+    nameInput.spellcheck = false;
+    nameInput.value = view.name || '';
+    nameInput.setAttribute('aria-label',`Edit the name of ${view.name || 'this Sprite'}`);
+    nameEditor.append(nameEditorLabel,nameInput);
     const percentageEditor = document.createElement('label');
     percentageEditor.className = 'sprite-percentage-editor';
     const percentageEditorLabel = document.createElement('span');
@@ -5163,7 +5241,7 @@
     const archivePlaque = document.createElement('span');
     archivePlaque.className = 'archive-match-plaque';
     archivePlaque.hidden = true;
-    card.append(crown,seasonBadge,imageWrap,editorTools,percentageEditor,variantLine,listLabel,collect,huntCartButton,masterLabel,archivePlaque);
+    card.append(crown,seasonBadge,imageWrap,editorTools,nameEditor,percentageEditor,variantLine,listLabel,collect,huntCartButton,masterLabel,archivePlaque);
 
     const toggleCollected = () => {
       if (huntMode.active) return;
@@ -5209,6 +5287,18 @@
     });
     moveLeft.addEventListener('click',() => moveSpriteCard(family,variant.id,-1));
     moveRight.addEventListener('click',() => moveSpriteCard(family,variant.id,1));
+    nameInput.addEventListener('change',() => {
+      if (!saveVariantName(family,variant,nameInput.value)) {
+        nameInput.value = variantView(family,variant).name || '';
+        nameInput.focus();
+      }
+    });
+    nameInput.addEventListener('keydown',(event) => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        nameInput.blur();
+      }
+    });
     percentageInput.addEventListener('change',() => {
       if (!saveRarityPercentage(family,variant,percentageInput.value)) {
         percentageInput.value = String(view.rarityPercentage || '').replace(/%$/,'');
@@ -5463,11 +5553,35 @@
         const title = document.createElement('h3');
         title.textContent = group.name || '';
         title.hidden = !group.name;
+        const groupNameEditor = document.createElement('label');
+        groupNameEditor.className = 'sprite-group-name-editor';
+        const groupNameEditorLabel = document.createElement('span');
+        groupNameEditorLabel.textContent = 'Group name';
+        const groupNameInput = document.createElement('input');
+        groupNameInput.type = 'text';
+        groupNameInput.maxLength = 60;
+        groupNameInput.autocomplete = 'off';
+        groupNameInput.spellcheck = false;
+        groupNameInput.value = group.name || '';
+        groupNameInput.setAttribute('aria-label',`Edit the name of ${group.name || 'this Sprite group'}`);
+        groupNameInput.addEventListener('change',() => {
+          if (!saveFamilyName(family,groupNameInput.value)) {
+            groupNameInput.value = familyView(family).name || '';
+            groupNameInput.focus();
+          }
+        });
+        groupNameInput.addEventListener('keydown',(event) => {
+          if (event.key === 'Enter') {
+            event.preventDefault();
+            groupNameInput.blur();
+          }
+        });
+        groupNameEditor.append(groupNameEditorLabel,groupNameInput);
         const groupSeasonBadge = document.createElement('span');
         groupSeasonBadge.className = 'group-season-badge';
         groupSeasonBadge.textContent = seasonViewLabel(group.seasonId);
         groupSeasonBadge.hidden = !SEASON_FEATURE_VISIBLE || !group.archived;
-        titleWrap.append(title,groupSeasonBadge);
+        titleWrap.append(title,groupNameEditor,groupSeasonBadge);
         const meta = document.createElement('div');
         const progressCounts = document.createElement('div');
         const masteredCount = document.createElement('span');

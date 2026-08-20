@@ -1,0 +1,165 @@
+/* V158 recovery — reachable collection-image actions and safe Admin Mode name editing. */
+
+/* Keep tall portrait previews inside the phone viewport instead of letting the
+   generated image push Share and Close below Safari/Edge's visible area. */
+.showcase-dialog {
+  box-sizing:border-box !important;
+  max-height:calc(100vh - 24px) !important;
+  max-height:calc(100dvh - max(20px,env(safe-area-inset-top)) - max(20px,env(safe-area-inset-bottom))) !important;
+  overflow:hidden !important;
+}
+
+.showcase-dialog > form {
+  box-sizing:border-box;
+  max-height:calc(100vh - 24px);
+  max-height:calc(100dvh - max(20px,env(safe-area-inset-top)) - max(20px,env(safe-area-inset-bottom)));
+  overflow-y:auto;
+  overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch;
+}
+
+.showcase-preview-wrap {
+  min-height:120px;
+  max-height:min(45dvh,620px) !important;
+  flex:1 1 auto;
+  overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch;
+}
+
+.showcase-preview-wrap img {
+  width:auto !important;
+  max-width:100% !important;
+  height:auto !important;
+  max-height:none !important;
+}
+
+.showcase-actions {
+  position:sticky;
+  z-index:12;
+  bottom:0;
+  flex:none;
+  margin-top:12px !important;
+  padding:12px 0 max(2px,env(safe-area-inset-bottom));
+  background:linear-gradient(180deg,rgba(23,23,63,0),#17173f 22%,#17173f 100%);
+  box-shadow:0 -12px 24px rgba(23,23,63,.8);
+}
+
+/* Admin-only name fields. IDs never change, so renaming preserves progress,
+   images, card order, and cloud data. */
+.sprite-name-editor,
+.sprite-group-name-editor {
+  display:none;
+}
+
+body.sprite-edit-mode .sprite-name-editor,
+body.sprite-edit-mode .sprite-group-name-editor {
+  min-width:0;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  color:#fff;
+  font-family:var(--font-button);
+  font-size:10px;
+  font-weight:900;
+}
+
+body.sprite-edit-mode .sprite-name-editor {
+  justify-content:space-between;
+  margin-top:7px;
+}
+
+body.sprite-edit-mode .sprite-group-name-editor {
+  width:min(100%,330px);
+  justify-content:center;
+  margin:2px auto 0;
+}
+
+body.sprite-edit-mode .sprite-name-editor input,
+body.sprite-edit-mode .sprite-group-name-editor input {
+  box-sizing:border-box;
+  min-width:0;
+  height:34px;
+  padding:6px 9px;
+  color:#fff;
+  border:1px solid rgba(255,255,255,.38);
+  border-radius:10px;
+  outline:none;
+  background:rgba(8,10,20,.82);
+  font-family:var(--font-body) !important;
+  font-size:13px;
+  font-weight:800;
+}
+
+body.sprite-edit-mode .sprite-name-editor input {
+  width:min(72%,190px);
+}
+
+body.sprite-edit-mode .sprite-group-name-editor input {
+  width:min(74%,240px);
+}
+
+body.sprite-edit-mode .sprite-name-editor input:focus,
+body.sprite-edit-mode .sprite-group-name-editor input:focus {
+  border-color:#9be8ff;
+  box-shadow:0 0 0 2px rgba(155,232,255,.25),0 0 16px rgba(89,200,255,.2);
+}
+
+body.sprite-edit-mode .collection-title-wrap > h3 {
+  display:none;
+}
+
+body.sprite-list-view.sprite-edit-mode .sprite-name-editor {
+  grid-column:1 / -1;
+  grid-row:3;
+  margin:0;
+}
+
+body.sprite-list-view.sprite-edit-mode .sprite-percentage-editor {
+  grid-row:4 !important;
+}
+
+body.sprite-list-view.sprite-edit-mode .master-label {
+  grid-row:5 !important;
+}
+
+@media (max-width:620px) {
+  .showcase-dialog {
+    width:calc(100vw - 16px) !important;
+    max-height:calc(100dvh - max(12px,env(safe-area-inset-top)) - max(12px,env(safe-area-inset-bottom))) !important;
+  }
+
+  .showcase-dialog > form {
+    max-height:calc(100dvh - max(12px,env(safe-area-inset-top)) - max(12px,env(safe-area-inset-bottom)));
+    padding:18px;
+  }
+
+  .showcase-preview-wrap {
+    max-height:38dvh !important;
+  }
+
+  .showcase-actions {
+    gap:8px;
+  }
+
+  body.sprite-list-view.sprite-edit-mode .sprite-card-tools {
+    grid-row:3 !important;
+  }
+
+  body.sprite-list-view.sprite-edit-mode .sprite-name-editor {
+    grid-row:4 !important;
+  }
+
+  body.sprite-list-view.sprite-edit-mode .sprite-percentage-editor {
+    grid-row:5 !important;
+  }
+
+  body.sprite-list-view.sprite-edit-mode .master-label {
+    grid-row:6 !important;
+  }
+}
+
+@media (max-height:700px) {
+  .showcase-preview-wrap {
+    max-height:32dvh !important;
+  }
+}

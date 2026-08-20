@@ -1,4 +1,4 @@
-const CACHE = 'galaxy-sprite-checklist-v157';
+const CACHE = 'galaxy-sprite-checklist-v158';
 const CORE = [
   './',
   './index.html',
@@ -20,18 +20,14 @@ const CORE = [
   './v145.css?v=145',
   './v150.css?v=150',
   './v151.css?v=151',
-  './v152.css?v=152',
-  './v152.js?v=152',
-  './v153.css?v=157',
-  './v155.css?v=155',
-  './v155.js?v=155',
+  './v158.css?v=158',
   './published-design.js',
   './art-config.js?v=67',
   './data.js?v=82',
   './sprite-events-v140.js?v=140',
   './state-schema-v127.js?v=127',
-  './feature-config-v129.js?v=156',
-  './app.js?v=150',
+  './feature-config-v129.js?v=158',
+  './app.js?v=158',
   './cloud-config-v128.js?v=128',
   './cloud-v128.js?v=150',
   './profile-v133.js?v=150',
@@ -82,22 +78,10 @@ const CORE = [
   './V150-bg-assistant.webp',
   './V150-bg-profile.webp',
   './V150-bg-settings.webp',
-  './assets/page-backgrounds/V153-bg-epic.webp',
-  './assets/page-backgrounds/V153-bg-rare.webp',
-  './assets/page-backgrounds/V153-bg-legendary.webp',
-  './assets/page-backgrounds/V153-bg-mythic.webp',
-  './assets/page-backgrounds/V153-bg-missing.webp',
   './assets/header/main-header.webp?v=3'
 ];
-const FRESH_CODE_FILES = new Set(['styles.css','vault-v105.css','viewport-v106.css','scene-v126.css','cloud-v128.css','profile-v133.css','v135.css','v136.css','v137.css','v138.css','v139.css','v140.css','v142.css','v143.css','v144.css','v145.css','v150.css','v151.css','v152.css','v152.js','v153.css','v155.css','v155.js','art-config.js','data.js','sprite-events-v140.js','state-schema-v127.js','feature-config-v129.js','app.js','cloud-config-v128.js','cloud-v128.js','profile-v133.js','manifest.webmanifest']);
-const FRESH_ASSET_PATHS = ['/assets/header/','/assets/page-backgrounds/','/assets/feature-backgrounds/','/assets/social/','/icons/','/V150-bg-','/V153-bg-'];
-const V152_HEAD = '<link rel="stylesheet" href="v152.css?v=152">';
-const V152_BODY = '<script src="v152.js?v=152"><\/script>';
-const V155_HEAD = '<link rel="stylesheet" href="v155.css?v=155">';
-const V155_BODY = '<script src="v155.js?v=155"><\/script>';
-
-const V156_EARLY_HEAD = "<script>\n(() => {\n  const key='galaxy_sprite_tracker_skip_launch_v156';\n  let skip=false;\n  try { skip=localStorage.getItem(key)==='1'; } catch {}\n  if (!skip) return;\n  const root=document.documentElement;\n  root.classList.remove('app-booting');\n  root.classList.add('app-ready','app-launch-skip');\n})();\n</script>\n<style>\nhtml.app-launch-skip .app-launch-screen{display:none!important}\n.app-launch-optout{display:flex!important;align-items:center;justify-content:center;gap:8px;color:#c8d6e8!important;font:700 13px/1.2 -apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif!important;letter-spacing:0!important;text-transform:none!important}\n.app-launch-optout input{width:18px;height:18px;accent-color:#67d5ff}\n</style>";
-const V156_LAUNCH_BODY = "<script>\n(() => {\n  'use strict';\n  const key='galaxy_sprite_tracker_skip_launch_v156';\n  const mark=document.querySelector('.app-launch-mark');\n  const start=document.getElementById('launchStartBtn');\n  if (!mark || !start || document.getElementById('launchDontShow')) return;\n\n  const label=document.createElement('label');\n  label.className='app-launch-optout';\n  const checkbox=document.createElement('input');\n  checkbox.id='launchDontShow';\n  checkbox.type='checkbox';\n  const text=document.createElement('span');\n  text.textContent=\"Don't show me again\";\n  label.append(checkbox,text);\n  mark.insertBefore(label,start);\n\n  start.addEventListener('click',() => {\n    if (!checkbox.checked) return;\n    try { localStorage.setItem(key,'1'); } catch {}\n  },{ capture:true });\n})();\n</script>";
+const FRESH_CODE_FILES = new Set(['styles.css','vault-v105.css','viewport-v106.css','scene-v126.css','cloud-v128.css','profile-v133.css','v135.css','v136.css','v137.css','v138.css','v139.css','v140.css','v142.css','v143.css','v144.css','v145.css','v150.css','v151.css','v158.css','art-config.js','data.js','sprite-events-v140.js','state-schema-v127.js','feature-config-v129.js','app.js','cloud-config-v128.js','cloud-v128.js','profile-v133.js','manifest.webmanifest']);
+const FRESH_ASSET_PATHS = ['/assets/header/','/assets/page-backgrounds/','/assets/feature-backgrounds/','/assets/social/','/icons/','/V150-bg-'];
 
 async function freshOrCached(networkRequest, cachedResponse) {
   try {
@@ -106,25 +90,6 @@ async function freshOrCached(networkRequest, cachedResponse) {
   } catch {
     return cachedResponse || Response.error();
   }
-}
-
-async function injectV152(response) {
-  if (!response || !response.ok) return response;
-  const type = response.headers.get('content-type') || '';
-  if (!type.includes('text/html')) return response;
-  const text = await response.text();
-  let html = text;
-  if (!html.includes('galaxy_sprite_tracker_skip_launch_v156')) {
-    html = html.replace('<head>','<head>\n' + V156_EARLY_HEAD);
-    html = html.replace('</body>',V156_LAUNCH_BODY + '\n</body>');
-  }
-  if (!html.includes('v152.css?v=152')) html = html.replace('</head>',`${V152_HEAD}\n</head>`);
-  if (!html.includes('v152.js?v=152')) html = html.replace('</body>',`${V152_BODY}\n</body>`);
-  if (!html.includes('v155.css?v=155')) html = html.replace('</head>',`${V155_HEAD}\n</head>`);
-  if (!html.includes('v155.js?v=155')) html = html.replace('</body>',`${V155_BODY}\n</body>`);
-  const headers = new Headers(response.headers);
-  headers.delete('content-length');
-  return new Response(html,{ status:response.status,statusText:response.statusText,headers });
 }
 
 self.addEventListener('install', (event) => {
@@ -177,20 +142,17 @@ self.addEventListener('fetch', (event) => {
   }
 
   if (event.request.mode === 'navigate') {
-    const networkUpdate = fetch(event.request,{ cache:'no-cache' }).then(async (response) => {
-      const injected = await injectV152(response);
-      if (injected.ok) {
+    const networkUpdate = fetch(event.request).then(async (response) => {
+      if (response.ok) {
         const cache = await caches.open(CACHE);
-        await cache.put('./index.html',injected.clone());
+        await cache.put('./index.html',response.clone());
       }
-      return injected;
+      return response;
     });
     event.waitUntil(networkUpdate.catch(() => null));
-    event.respondWith((async () => {
-      const cached = await caches.match('./index.html');
-      const response = await freshOrCached(networkUpdate,cached);
-      return injectV152(response);
-    })());
+    event.respondWith(
+      caches.match('./index.html').then((cached) => freshOrCached(networkUpdate,cached))
+    );
     return;
   }
 
