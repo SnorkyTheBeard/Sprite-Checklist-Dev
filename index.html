@@ -153,8 +153,6 @@
   <link rel="preload" as="image" type="image/webp" href="assets/variant-backgrounds/variant-well-gummy.webp">
   <link rel="preload" as="image" type="image/webp" href="assets/variant-backgrounds/variant-well-galaxy.webp">
   <link rel="preload" as="image" type="image/webp" href="assets/variant-backgrounds/variant-well-john-wick.webp?v=92">
-  <link rel="preload" as="image" type="image/webp" href="assets/page-backgrounds/page-bg-unowned.webp?v=93">
-  <link rel="preload" as="image" type="image/webp" href="assets/page-backgrounds/page-bg-unmastered.webp?v=93">
   <script src="published-design.js?v=67" fetchpriority="high"></script>
   <script src="art-config.js?v=67"></script>
   <script>
@@ -249,32 +247,15 @@
           if (pageConfig.color) pageColor = pageConfig.color;
         }
       }
-      if (hashName !== 'vault' && rarity === 'Rare') {
-        pageImage = 'assets/page-backgrounds/page-bg-rare.webp';
-        pageColor = '#061a3d';
-        pageFit = 'cover';
-      } else if (hashName !== 'vault' && rarity === 'Epic') {
-        pageImage = 'assets/page-backgrounds/page-bg-epic.webp';
-        pageColor = '#21103e';
-        pageFit = 'cover';
-      } else if (hashName !== 'vault' && rarity === 'Legendary') {
-        pageImage = 'assets/page-backgrounds/page-bg-legendary.webp';
-        pageColor = '#3b1608';
-        pageFit = 'cover';
-      } else if (hashName !== 'vault' && rarity === 'Mythic') {
-        pageImage = 'assets/page-backgrounds/page-bg-mythic.webp';
-        pageColor = '#2b2008';
-        pageFit = 'cover';
-      }
-      if (hashName === 'unowned') {
-        pageImage = 'assets/page-backgrounds/page-bg-unowned.webp';
-        pageColor = '#122510';
-        pageFit = 'cover';
-      } else if (hashName === 'unmastered') {
-        pageImage = 'assets/page-backgrounds/page-bg-unmastered.webp';
-        pageColor = '#170d24';
-        pageFit = 'cover';
-      }
+      /* V161: page scenery is CSS-only. Do not request a background image. */
+      pageImage = '';
+      pageFit = 'cover';
+      if (hashName === 'unowned') pageColor = '#122510';
+      else if (hashName === 'unmastered') pageColor = '#170d24';
+      else if (rarity === 'Epic') pageColor = '#21103e';
+      else if (rarity === 'Legendary') pageColor = '#3b1608';
+      else if (rarity === 'Mythic') pageColor = '#2b2008';
+      else pageColor = '#061a3d';
       set('--theme-page-bg',pageColor);
       setImage('page',pageImage,pageFit);
       if (pageImage) {
@@ -305,7 +286,7 @@
   <link rel="stylesheet" href="v150.css?v=150">
   <link rel="stylesheet" href="v151.css?v=151">
   <link rel="stylesheet" href="v158.css?v=158">
-  <link rel="stylesheet" href="v160.css?v=160">
+  <link rel="stylesheet" href="v161.css?v=161">
 </head>
 <body>
   <div class="app-launch-screen" role="dialog" aria-labelledby="launchTitle" aria-describedby="launchHint">

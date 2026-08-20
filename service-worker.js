@@ -1,4 +1,4 @@
-const CACHE = 'galaxy-sprite-checklist-v160';
+const CACHE = 'galaxy-sprite-checklist-v161';
 const CORE = [
   './',
   './index.html',
@@ -21,7 +21,7 @@ const CORE = [
   './v150.css?v=150',
   './v151.css?v=151',
   './v158.css?v=158',
-  './v160.css?v=160',
+  './v161.css?v=161',
   './published-design.js',
   './art-config.js?v=67',
   './data.js?v=82',
@@ -56,33 +56,10 @@ const CORE = [
   './assets/variant-backgrounds/variant-well-holofoil.webp',
   './assets/variant-backgrounds/variant-well-john-wick.webp?v=92',
   './published-assets/sprite-custom-john-wick-base.webp',
-  './assets/page-backgrounds/page-bg-rare.webp',
-  './assets/page-backgrounds/page-bg-epic.webp',
-  './assets/page-backgrounds/page-bg-rare-lifty-lodge-v113.webp',
-  './assets/page-backgrounds/page-bg-rare-lifty-lodge-mobile-v113.webp',
-  './assets/page-backgrounds/page-bg-epic-wonkeeland-v113.webp',
-  './assets/page-backgrounds/page-bg-epic-wonkeeland-mobile-v113.webp',
-  './assets/page-backgrounds/page-bg-legendary.webp',
-  './assets/page-backgrounds/page-bg-mythic.webp',
-  './assets/page-backgrounds/page-bg-unowned.webp?v=93',
-  './assets/page-backgrounds/page-bg-unmastered.webp?v=93',
-  './assets/page-backgrounds/page-bg-sprite-vault-v100.webp',
-  './V150-bg-rare.webp',
-  './V150-bg-epic.webp',
-  './V150-bg-legendary.webp',
-  './V150-bg-mythic.webp',
-  './V150-bg-unowned.webp',
-  './V150-bg-unmastered.webp',
-  './V150-bg-rare-desktop.webp',
-  './V150-bg-epic-desktop.webp',
-  './V150-bg-archive.webp',
-  './V150-bg-assistant.webp',
-  './V150-bg-profile.webp',
-  './V150-bg-settings.webp',
   './assets/header/main-header.webp?v=3'
 ];
-const FRESH_CODE_FILES = new Set(['styles.css','vault-v105.css','viewport-v106.css','scene-v126.css','cloud-v128.css','profile-v133.css','v135.css','v136.css','v137.css','v138.css','v139.css','v140.css','v142.css','v143.css','v144.css','v145.css','v150.css','v151.css','v158.css','v160.css','art-config.js','data.js','sprite-events-v140.js','state-schema-v127.js','feature-config-v129.js','app.js','cloud-config-v128.js','cloud-v128.js','profile-v133.js','manifest.webmanifest']);
-const FRESH_ASSET_PATHS = ['/assets/header/','/assets/page-backgrounds/','/assets/feature-backgrounds/','/assets/social/','/icons/','/V150-bg-'];
+const FRESH_CODE_FILES = new Set(['styles.css','vault-v105.css','viewport-v106.css','scene-v126.css','cloud-v128.css','profile-v133.css','v135.css','v136.css','v137.css','v138.css','v139.css','v140.css','v142.css','v143.css','v144.css','v145.css','v150.css','v151.css','v158.css','v161.css','art-config.js','data.js','sprite-events-v140.js','state-schema-v127.js','feature-config-v129.js','app.js','cloud-config-v128.js','cloud-v128.js','profile-v133.js','manifest.webmanifest']);
+const FRESH_ASSET_PATHS = ['/assets/header/','/assets/feature-backgrounds/','/assets/social/','/icons/'];
 
 async function freshOrCached(networkRequest, cachedResponse) {
   try {
