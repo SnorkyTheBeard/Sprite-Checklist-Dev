@@ -2988,6 +2988,116 @@
     });
   }
 
+  const SPRITE_IMAGE_DB = 'sprite-tracker-admin-images-v164';
+  const SPRITE_IMAGE_STORE = 'images';
+  const SPRITE_IMAGE_REF_PREFIX = 'idb-sprite-image:';
+  let spriteImageDatabasePromise = null;
+  const stagedSpriteImageSources = new Map();
+
+  function openSpriteImageDatabase() {
+    if (!('indexedDB' in window)) return Promise.reject(new Error('indexeddb-unavailable'));
+    if (spriteImageDatabasePromise) return spriteImageDatabasePromise;
+    spriteImageDatabasePromise = new Promise((resolve,reject) => {
+      const request = indexedDB.open(SPRITE_IMAGE_DB,1);
+      request.onupgradeneeded = () => {
+        if (!request.result.objectStoreNames.contains(SPRITE_IMAGE_STORE)) request.result.createObjectStore(SPRITE_IMAGE_STORE);
+      };
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error || new Error('image-database-failed'));
+      request.onblocked = () => reject(new Error('image-database-blocked'));
+    });
+    return spriteImageDatabasePromise;
+  }
+
+  function spriteImageReference(familyId,variantId) {
+    return `${SPRITE_IMAGE_REF_PREFIX}${encodeURIComponent(familyId)}/${encodeURIComponent(variantId)}`;
+  }
+
+  function isSpriteImageReference(value) {
+    return String(value || '').startsWith(SPRITE_IMAGE_REF_PREFIX);
+  }
+
+  async function writeSpriteImage(reference,dataUrl) {
+    const database = await openSpriteImageDatabase();
+    await new Promise((resolve,reject) => {
+      const transaction = database.transaction(SPRITE_IMAGE_STORE,'readwrite');
+      transaction.objectStore(SPRITE_IMAGE_STORE).put(dataUrl,reference);
+      transaction.oncomplete = resolve;
+      transaction.onerror = () => reject(transaction.error || new Error('image-storage-failed'));
+      transaction.onabort = () => reject(transaction.error || new Error('image-storage-failed'));
+    });
+    stagedSpriteImageSources.set(reference,dataUrl);
+    return reference;
+  }
+
+  async function readSpriteImage(reference) {
+    if (!isSpriteImageReference(reference)) return reference;
+    const database = await openSpriteImageDatabase();
+    return new Promise((resolve,reject) => {
+      const transaction = database.transaction(SPRITE_IMAGE_STORE,'readonly');
+      const request = transaction.objectStore(SPRITE_IMAGE_STORE).get(reference);
+      request.onsuccess = () => {
+        if (!request.result) return reject(new Error('staged-image-missing'));
+        stagedSpriteImageSources.set(reference,request.result);
+        resolve(request.result);
+      };
+      request.onerror = () => reject(request.error || new Error('image-read-failed'));
+    });
+  }
+
+  async function migrateInlineSpriteImages() {
+    const migrations = [];
+    Object.entries(spriteCardEdits.families || {}).forEach(([familyId,edits]) => {
+      Object.entries(edits?.images || {}).forEach(([variantId,value]) => {
+        if (!String(value || '').startsWith('data:image/')) return;
+        migrations.push({ familyId,variantId,value,reference:spriteImageReference(familyId,variantId) });
+      });
+    });
+    if (!migrations.length) return;
+    try {
+      for (const item of migrations) {
+        await writeSpriteImage(item.reference,item.value);
+        familyCardEdits(item.familyId).images[item.variantId] = item.reference;
+      }
+      localStorage.setItem(SPRITE_CARD_EDITS_KEY,JSON.stringify(spriteCardEdits));
+      queueFutureStateSync();
+      renderCollections();
+      updatePublishButton();
+      showToast(`${migrations.length} staged image${migrations.length === 1 ? '' : 's'} moved to reliable storage`);
+    } catch {
+      showToast('Existing images could not be moved to reliable storage. Publish current edits before adding more.');
+    }
+  }
+
+  async function hydrateStagedSpriteImages() {
+    const references = new Set();
+    Object.values(spriteCardEdits.families || {}).forEach((family) => {
+      Object.values(family?.images || {}).forEach((value) => {
+        if (isSpriteImageReference(value)) references.add(value);
+      });
+    });
+    if (!references.size) return;
+    await Promise.allSettled([...references].map((reference) => readSpriteImage(reference)));
+    renderAll();
+  }
+
+  async function prepareAdminImageStorage() {
+    await migrateInlineSpriteImages();
+    await hydrateStagedSpriteImages();
+  }
+
+  async function spriteEditsForPublishing() {
+    const edits = cloneJson(spriteCardEdits);
+    for (const family of Object.values(edits.families || {})) {
+      for (const [variantId,value] of Object.entries(family?.images || {})) {
+        if (!isSpriteImageReference(value)) continue;
+        try { family.images[variantId] = await readSpriteImage(value); }
+        catch { throw new Error('A staged Sprite image is missing. Upload that image again before publishing.'); }
+      }
+    }
+    return edits;
+  }
+
   function loadedMemoryImage(source) {
     return new Promise((resolve,reject) => {
       const image = new Image();
@@ -3879,6 +3989,7 @@
 
   function displayImageSource(source) {
     const value = String(source || '');
+    if (isSpriteImageReference(value)) return stagedSpriteImageSources.get(value) || '';
     const version = Number(design._meta?.publishedAt || 0);
     if (!value || !version || !/^(?:\.\/)?published-assets\//.test(value)) return value;
     return `${value}${value.includes('?') ? '&' : '?'}v=${version}`;
@@ -3970,9 +4081,11 @@
     if (!isImageFile(file)) throw new Error('not-an-image');
     showToast('Preparing sprite image…');
     const image = await resizeSpriteImage(file);
+    const reference = spriteImageReference(family.id,variant.id);
+    await writeSpriteImage(reference,image);
     const previousEdits = cloneJson(spriteCardEdits);
-    familyCardEdits(family.id).images[variant.id] = image;
-    if (!saveCardEditOrRestore(previousEdits)) return false;
+    familyCardEdits(family.id).images[variant.id] = reference;
+    if (!saveCardEditOrRestore(previousEdits)) throw new Error('catalog-save-failed');
     renderCollections();
     updateCounters();
     showToast('Sprite image saved');
@@ -4334,22 +4447,22 @@
     };
   }
 
-  function buildPublishedSpriteDesign(basePublishedDesign) {
+  function buildPublishedSpriteDesign(basePublishedDesign,sourceEdits = spriteCardEdits) {
     const nextDesign = cloneJson(basePublishedDesign);
     nextDesign.seasons = cloneJson(seasonCatalog);
     nextDesign.currentSeasonId = CURRENT_SEASON_ID;
     nextDesign.families ||= {};
     nextDesign.rarityDustLevels = {
       ...(nextDesign.rarityDustLevels && typeof nextDesign.rarityDustLevels === 'object' ? nextDesign.rarityDustLevels : {}),
-      ...Object.fromEntries(Object.entries(spriteCardEdits.rarityDustLevels || {}).map(([rarity,levels]) => [rarity,normalizeDustLevels(levels)]))
+      ...Object.fromEntries(Object.entries(sourceEdits.rarityDustLevels || {}).map(([rarity,levels]) => [rarity,normalizeDustLevels(levels)]))
     };
     nextDesign.customFamilies = Array.isArray(nextDesign.customFamilies) ? nextDesign.customFamilies : [];
     const assets = [];
 
-    (Array.isArray(spriteCardEdits.customFamilies) ? spriteCardEdits.customFamilies : []).forEach((localFamily) => {
+    (Array.isArray(sourceEdits.customFamilies) ? sourceEdits.customFamilies : []).forEach((localFamily) => {
       if (!localFamily?.id) return;
       const publishedFamily = nextDesign.customFamilies.find((family) => family.id === localFamily.id);
-      const localFamilyEdits = spriteCardEdits.families?.[localFamily.id] || {};
+      const localFamilyEdits = sourceEdits.families?.[localFamily.id] || {};
       const familyRecord = {
         id:localFamily.id,
         name:(hasOwn(localFamilyEdits,'name') ? localFamilyEdits.name : localFamily.name) || 'New sprite group',
@@ -4375,7 +4488,7 @@
       });
     });
 
-    Object.entries(spriteCardEdits.families || {}).forEach(([familyId,rawEdits]) => {
+    Object.entries(sourceEdits.families || {}).forEach(([familyId,rawEdits]) => {
       if (!rawEdits || typeof rawEdits !== 'object' || Array.isArray(rawEdits)) return;
       const edits = rawEdits;
       const family = nextDesign.families[familyId] ||= {};
@@ -4475,7 +4588,8 @@
     if (!baseTreeSha) throw new Error('GitHub did not return the current file tree.');
     const publishedFile = await githubRequest(token,`${repository}/contents/published-design.js?ref=${encodeURIComponent(branch)}`);
     const basePublishedDesign = parsePublishedDesignFile(decodeBase64Utf8(publishedFile?.content));
-    const { nextDesign,assets } = buildPublishedSpriteDesign(basePublishedDesign);
+    const publishEdits = await spriteEditsForPublishing();
+    const { nextDesign,assets } = buildPublishedSpriteDesign(basePublishedDesign,publishEdits);
     const treeEntries = [];
 
     for (const asset of assets) {
@@ -5123,7 +5237,6 @@
     const imageSource = displayImageSource(view.image);
     if (imageSource) {
       const image = document.createElement('img');
-      image.src = imageSource;
       image.alt = `${view.name || familyInfo.name || 'Sprite'} artwork`;
       image.width = 512;
       image.height = 512;
@@ -5137,6 +5250,7 @@
         fallback.textContent = 'Image unavailable';
         imageButton.prepend(fallback);
       },{ once:true });
+      image.src = imageSource;
       imageButton.appendChild(image);
     } else {
       const fallback = document.createElement('span');
@@ -5407,8 +5521,11 @@
       uploadHint.textContent = 'Saving image…';
       try {
         await replaceSpriteImage(family,variant,file);
-      } catch {
-        showToast('Choose a PNG, JPG, WebP, GIF, or AVIF image.');
+      } catch (error) {
+        if (error?.message === 'not-an-image') showToast('Choose a PNG, JPG, WebP, GIF, or AVIF image.');
+        else if (error?.message === 'catalog-save-failed') showToast('The catalog edit could not be saved. Publish or reload, then try again.');
+        else if (/storage|database|indexeddb/i.test(error?.message || '')) showToast('The browser could not stage that image. Check private browsing or storage permissions.');
+        else showToast('That image could not be prepared. Try a PNG, JPG, or WebP copy.');
       } finally {
         imageWrap.classList.remove('drop-saving','drop-ready');
         uploadHint.textContent = 'Drop image or tap to upload';
@@ -8179,7 +8296,7 @@
                             : (isUnownedPage() ? `#${missingView}` : `#${activeRarity.toLowerCase()}`)))))));
   if (location.hash !== activeHash) history.replaceState({ rarity:activeRarity },'',activeHash);
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./service-worker.js?v=163',{ updateViaCache:'none' }).then((registration) => registration.update()).catch(() => {});
+    navigator.serviceWorker.register('./service-worker.js?v=164',{ updateViaCache:'none' }).then((registration) => registration.update()).catch(() => {});
   }
   const signalAppRendered = () => window.dispatchEvent(new Event('sprite-app-rendered'));
   if (document.fonts?.ready) {
@@ -8191,5 +8308,6 @@
     signalAppRendered();
   }
   applyExperienceSettings();
+  prepareAdminImageStorage();
   window.setTimeout(maybeShowSpriteEventNotice,1100);
 })();
