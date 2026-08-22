@@ -515,7 +515,8 @@
     cube:'assets/variant-backgrounds/variant-well-cube.webp',
     gem:'assets/variant-backgrounds/variant-well-gem.webp',
     quack:'assets/variant-backgrounds/variant-well-quack.webp',
-    holofoil:'assets/variant-backgrounds/variant-well-holofoil.webp'
+    holofoil:'assets/variant-backgrounds/variant-well-holofoil.webp',
+    'cheat-master':'assets/variant-backgrounds/variant-well-cheat-master.webp'
   };
 
   const FEATURED_VARIANT_BACKGROUNDS = Object.freeze({
@@ -8296,7 +8297,7 @@
                             : (isUnownedPage() ? `#${missingView}` : `#${activeRarity.toLowerCase()}`)))))));
   if (location.hash !== activeHash) history.replaceState({ rarity:activeRarity },'',activeHash);
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./service-worker.js?v=164',{ updateViaCache:'none' }).then((registration) => registration.update()).catch(() => {});
+    navigator.serviceWorker.register('./service-worker.js?v=165',{ updateViaCache:'none' }).then((registration) => registration.update()).catch(() => {});
   }
   const signalAppRendered = () => window.dispatchEvent(new Event('sprite-app-rendered'));
   if (document.fonts?.ready) {

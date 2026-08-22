@@ -1,0 +1,140 @@
+/* V162 — CSS-only pages, paused scene effects, and archived collection locks. */
+
+body .page-backdrop {
+  display:block!important;
+  visibility:visible!important;
+  background-repeat:no-repeat!important;
+  background-position:center!important;
+  background-size:cover!important;
+}
+
+body.tracker-view:not(.vault-view)[data-page="rare"] .page-backdrop {
+  background-color:#061a3d!important;
+  background-image:radial-gradient(circle at 18% 15%,rgba(68,194,255,.22),transparent 32%),linear-gradient(145deg,#0b3f82 0%,#071c46 48%,#040d24 100%)!important;
+}
+body.tracker-view:not(.vault-view)[data-page="epic"] .page-backdrop {
+  background-color:#21103e!important;
+  background-image:radial-gradient(circle at 80% 14%,rgba(210,91,255,.22),transparent 33%),linear-gradient(145deg,#55209a 0%,#27104d 48%,#10071f 100%)!important;
+}
+body.tracker-view:not(.vault-view)[data-page="legendary"] .page-backdrop {
+  background-color:#3b1608!important;
+  background-image:radial-gradient(circle at 18% 14%,rgba(255,169,54,.24),transparent 34%),linear-gradient(145deg,#8e3d0a 0%,#471b06 49%,#1d0902 100%)!important;
+}
+body.tracker-view:not(.vault-view)[data-page="mythic"] .page-backdrop {
+  background-color:#2b2008!important;
+  background-image:radial-gradient(circle at 80% 13%,rgba(255,224,80,.22),transparent 34%),linear-gradient(145deg,#786019 0%,#382908 48%,#171003 100%)!important;
+}
+body.tracker-view:not(.vault-view)[data-page="unowned"] .page-backdrop {
+  background-color:#122510!important;
+  background-image:radial-gradient(circle at 20% 14%,rgba(145,219,91,.18),transparent 34%),linear-gradient(145deg,#315b27 0%,#172d16 50%,#091209 100%)!important;
+}
+body.tracker-view:not(.vault-view)[data-page="unmastered"] .page-backdrop {
+  background-color:#170d24!important;
+  background-image:radial-gradient(circle at 80% 13%,rgba(183,119,255,.18),transparent 34%),linear-gradient(145deg,#42265f 0%,#21132f 50%,#0d0713 100%)!important;
+}
+
+body.vault-view .page-backdrop,
+body.hunt-history-view .page-backdrop,
+body.journal-view .page-backdrop,
+body.sprite-profile-view .page-backdrop,
+body.settings-view .page-backdrop,
+body.dust-account-view .page-backdrop {
+  background-color:#07111f!important;
+  background-image:radial-gradient(circle at 78% 8%,rgba(62,135,214,.16),transparent 34%),linear-gradient(155deg,#102844 0%,#081526 50%,#030912 100%)!important;
+}
+
+/* Pause the currently installed snow, stars, glows, and drifting motes.
+   The motion layer remains in the app so future rarity animations can be added. */
+.page-motion-layer .page-motion-effect {
+  display:none!important;
+  visibility:hidden!important;
+  animation:none!important;
+}
+
+/* Archived Sprites remain visible even when they were never checked off. */
+body.vault-view .card.vault-locked .image-wrap img {
+  opacity:.22!important;
+  filter:grayscale(.35) saturate(.45) brightness(1.22)!important;
+}
+body.vault-view .card.vault-locked .image-wrap::before {
+  opacity:.28!important;
+}
+.vault-lock-button {
+  position:absolute;
+  z-index:24;
+  inset:50% auto auto 50%;
+  width:64px;
+  height:64px;
+  display:grid;
+  place-items:center;
+  transform:translate(-50%,-50%);
+  border:1px solid rgba(255,255,255,.72);
+  border-radius:50%;
+  color:#fff;
+  background:rgba(4,9,18,.78);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.25),0 8px 24px rgba(0,0,0,.48),0 0 18px rgba(150,207,255,.26);
+  -webkit-backdrop-filter:blur(7px);
+  backdrop-filter:blur(7px);
+  cursor:pointer;
+}
+.vault-lock-button svg {
+  width:30px;
+  height:30px;
+  fill:none;
+  stroke:currentColor;
+  stroke-width:2.2;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+}
+.vault-lock-button[hidden] { display:none!important; }
+.vault-lock-button:focus-visible { outline:3px solid #fff;outline-offset:4px; }
+
+.vault-unlock-dialog form { text-align:center; }
+.vault-unlock-icon {
+  width:58px;
+  height:58px;
+  margin:0 auto 10px;
+  display:grid;
+  place-items:center;
+  border-radius:50%;
+  font-size:28px;
+  background:linear-gradient(145deg,#203c5f,#091629);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.28),0 0 20px rgba(89,200,255,.28);
+}
+.vault-unlock-dialog h2 { margin-bottom:8px; }
+.vault-unlock-dialog p { margin:0 0 18px;color:#dcecff;font-weight:800; }
+
+@media (max-width:600px) {
+  .vault-lock-button { width:56px;height:56px; }
+  .vault-lock-button svg { width:27px;height:27px; }
+}
+
+/* V163: one owner-only home for catalog maintenance. */
+.admin-center-dialog { width:min(94vw,560px);max-height:min(90dvh,820px);padding:0;border:1px solid rgba(133,211,255,.48);border-radius:28px;background:rgba(4,12,31,.96);color:#fff;box-shadow:0 28px 90px rgba(0,0,0,.72),0 0 34px rgba(56,174,255,.2); }
+.admin-center-dialog::backdrop { background:rgba(0,4,16,.72);backdrop-filter:blur(7px); }
+.admin-center-panel { padding:22px;overflow:auto;max-height:90dvh;box-sizing:border-box; }
+.admin-center-head { display:flex;align-items:flex-start;justify-content:space-between;gap:16px; }
+.admin-center-head span { color:#77d8ff;text-transform:uppercase;letter-spacing:.14em;font-weight:900;font-size:.78rem; }
+.admin-center-head h2 { margin:3px 0 0;font-size:clamp(2rem,9vw,3.4rem);line-height:.92;color:#fff;text-shadow:0 3px #08132a,0 0 18px rgba(103,205,255,.46); }
+.admin-center-head > button { width:44px;height:44px;flex:0 0 44px;border-radius:50%;font-size:1.8rem;line-height:1;color:#fff;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.22); }
+.admin-center-intro { margin:17px 0;color:#dcecff;line-height:1.45; }
+.admin-center-rarity { display:grid;gap:7px;font-weight:900;color:#fff;margin-bottom:12px; }
+.admin-center-rarity select { width:100%;min-height:52px;border-radius:15px;padding:0 15px;color:#fff;background:#0b1936;border:1px solid rgba(124,207,255,.45);font:inherit; }
+.admin-center-status { margin:12px 0 15px;padding:11px 14px;border-radius:14px;background:rgba(77,214,143,.12);border:1px solid rgba(77,214,143,.35);color:#a8ffd0;font-weight:800; }
+.admin-center-status[data-pending="true"] { background:rgba(255,188,67,.13);border-color:rgba(255,188,67,.45);color:#ffe09b; }
+.admin-center-actions { display:grid;gap:11px; }
+.admin-center-actions > button { width:100%;text-align:left;display:grid;gap:4px;padding:15px 17px;border-radius:17px;color:#fff;background:linear-gradient(145deg,rgba(30,51,91,.96),rgba(8,18,42,.96));border:1px solid rgba(149,202,255,.28);box-shadow:inset 0 1px rgba(255,255,255,.1); }
+.admin-center-actions strong { font-size:1.03rem; }
+.admin-center-actions span { color:#b9c9df;font-size:.82rem;line-height:1.3;font-weight:600; }
+.admin-center-actions .admin-primary-action { border-color:rgba(87,202,255,.72);background:linear-gradient(145deg,#176cac,#10345d); }
+.admin-center-actions .admin-publish-action:not(:disabled) { border-color:rgba(255,198,78,.74);background:linear-gradient(145deg,#7c5210,#392305); }
+.admin-center-actions button:disabled { opacity:.55; }
+.admin-center-footer { display:flex;align-items:center;justify-content:space-between;gap:14px;margin-top:17px;padding-top:15px;border-top:1px solid rgba(255,255,255,.12); }
+.admin-center-footer button { flex:0 0 auto;border-radius:999px;padding:10px 15px;color:#fff;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.2); }
+.admin-center-footer small { color:#9fb0c8;text-align:right;line-height:1.3; }
+html:has(.admin-center-dialog[open]),body:has(.admin-center-dialog[open]) { overflow:hidden!important; }
+@media (max-width:520px) {
+  .admin-center-dialog { width:calc(100vw - 22px);border-radius:24px; }
+  .admin-center-panel { padding:18px; }
+  .admin-center-footer { align-items:flex-start; }
+}
